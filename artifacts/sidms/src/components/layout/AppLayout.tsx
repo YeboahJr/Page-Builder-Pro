@@ -18,7 +18,6 @@ import {
   CreditCard,
   Calendar,
   Plus,
-  FileWarning,
   FileText,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
@@ -38,7 +37,6 @@ const navItems: NavItem[] = [
     label: "Leitstelle",
     href: "/leitstelle",
     children: [
-      { label: "Meldung", href: "/leitstelle/meldungen" },
       { label: "Streifen", href: "/leitstelle/streifen" },
     ],
   },
@@ -66,7 +64,6 @@ const navItems: NavItem[] = [
 
 const quickLinks = [
   { icon: Plus, label: "Neuer Fall", href: "/fallmanagement?new=1" },
-  { icon: FileWarning, label: "Neue Meldung", href: "/leitstelle/meldungen?new=1" },
   { icon: Car, label: "Neuer Streifen", href: "/leitstelle/streifen" },
   { icon: Package, label: "Neues Beweismittel", href: "/beweismittel?new=1" },
 ];
