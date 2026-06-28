@@ -1289,11 +1289,13 @@ components:
           type: string
         patrolType:
           type: string
-          description: "Regelstreife | Sonderstreife | Undercover"
+          description: "Regelstreife | Undercoverstreife | Zivilstreife | Overwatch"
         status:
           type: string
-          description: "Code 1 | MD-Dienst | Geiselnahme | Event | Zivil Streife | Undercover Streife | Standby | Abwesend | Nicht Stören! | Ghetto-Streife | Korruptionsfall | Anwaltsgespräch | Abteilungsarbeit | Kongress"
+          description: "Code 1 | MD-Dienst | Geiselnahme | Event | Standby | Abwesend | Nicht Stören! | Ghetto-Streife | Korruptionsfall | Anwaltsgespräch | Abteilungsarbeit | Kongress"
         vehicle:
+          type: ["string", "null"]
+        notes:
           type: ["string", "null"]
         slots:
           type: array
@@ -1332,6 +1334,8 @@ components:
         status:
           type: string
         vehicle:
+          type: ["string", "null"]
+        notes:
           type: ["string", "null"]
         slots:
           type: array

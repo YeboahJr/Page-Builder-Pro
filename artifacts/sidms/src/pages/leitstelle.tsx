@@ -8,14 +8,12 @@ import {
 import { useQueryClient } from "@tanstack/react-query";
 import { AlertCircle, Check, Loader2, Users } from "lucide-react";
 
-const PATROL_TYPES = ["Regelstreife", "Sonderstreife", "Undercover"];
+const PATROL_TYPES = ["Regelstreife", "Undercoverstreife", "Zivilstreife", "Overwatch"];
 const STATUS_META: Record<string, { text: string; dot: string }> = {
   "Code 1": { text: "text-green-400", dot: "bg-green-500" },
   "MD-Dienst": { text: "text-blue-400", dot: "bg-blue-500" },
   "Geiselnahme": { text: "text-red-400", dot: "bg-red-500" },
   "Event": { text: "text-purple-400", dot: "bg-purple-500" },
-  "Zivil Streife": { text: "text-cyan-400", dot: "bg-cyan-500" },
-  "Undercover Streife": { text: "text-indigo-400", dot: "bg-indigo-500" },
   "Standby": { text: "text-yellow-400", dot: "bg-yellow-500" },
   "Abwesend": { text: "text-gray-400", dot: "bg-gray-500" },
   "Nicht Stören!": { text: "text-rose-400", dot: "bg-rose-500" },
@@ -77,6 +75,7 @@ interface PatrolDraft {
   patrolType: string;
   status: string;
   vehicle: string | null;
+  notes: string | null;
   slots: PatrolSlot[];
 }
 
@@ -140,6 +139,7 @@ export default function Streifen() {
       patrolType: p?.patrolType ?? "Regelstreife",
       status: p?.status ?? DEFAULT_STATUS,
       vehicle: p?.vehicle ?? null,
+      notes: p?.notes ?? null,
       slots: (p?.slots as PatrolSlot[]) ?? [],
     };
   };
@@ -165,6 +165,7 @@ export default function Streifen() {
             patrolType: draft.patrolType,
             status: draft.status,
             vehicle: draft.vehicle,
+            notes: draft.notes,
             slots: draft.slots,
           },
         });
@@ -343,92 +344,82 @@ export default function Streifen() {
                       </label>
                     </div>
 
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-xs">
-                        <thead>
-                          <tr className="border-b border-[#1e2d4a]/50">
-                            {["Position", "Dienstnummer / Agent", "Notizen"].map(h => (
-                              <th
-                                key={h}
-                                className="text-left px-2 py-1.5 text-gray-500 font-medium whitespace-nowrap"
+                    <div className="p-3 space-y-3">
+                      <div className="grid grid-cols-2 gap-2">
+                        {draft.slots.map((slot, idx) => (
+                          <div
+                            key={idx}
+                            className="border border-[#1e2d4a]/60 rounded bg-[#0a0f1a]/40 p-2 flex flex-col gap-1.5"
+                            data-testid={`slot-${patrol.id}-${idx}`}
+                          >
+                            <span className="text-[10px] uppercase tracking-wide text-gray-500 font-mono">
+                              Position {slot.position}
+                            </span>
+                            <select
+                              value={slot.officerName ?? ""}
+                              onChange={e => {
+                                const name = e.target.value;
+                                const officer = officers?.find(o => o.name != null && o.name === name);
+                                updateSlot(patrol.id, idx, {
+                                  officerName: name || null,
+                                  officerId: officer?.id ?? null,
+                                  abwesend: false,
+                                  funkAus: false,
+                                });
+                              }}
+                              className="bg-[#0a0f1a] border border-[#253650] text-gray-300 text-xs px-1 py-1 rounded focus:outline-none w-full"
+                              data-testid={`select-officer-${patrol.id}-${idx}`}
+                            >
+                              <option value="">Dienstnummer wählen</option>
+                              {officers?.map(o => (
+                                <option key={o.id} value={o.name}>
+                                  {o.dienstnummer} – {o.name}
+                                </option>
+                              ))}
+                            </select>
+                            <div className="flex items-center gap-3">
+                              <label
+                                className={`flex items-center gap-1 text-[10px] ${slot.officerId ? "text-gray-300" : "text-gray-600"}`}
                               >
-                                {h}
-                              </th>
-                            ))}
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {draft.slots.map((slot, idx) => (
-                            <tr key={idx} className="border-b border-[#1e2d4a]/30 align-top">
-                              <td className="px-2 py-1.5 text-gray-400 font-mono">{slot.position}</td>
-                              <td className="px-2 py-1">
-                                <div className="flex flex-col gap-1">
-                                  <select
-                                    value={slot.officerName ?? ""}
-                                    onChange={e => {
-                                      const name = e.target.value;
-                                      const officer = officers?.find(o => o.name != null && o.name === name);
-                                      updateSlot(patrol.id, idx, {
-                                        officerName: name || null,
-                                        officerId: officer?.id ?? null,
-                                        abwesend: false,
-                                        funkAus: false,
-                                      });
-                                    }}
-                                    className="bg-[#0a0f1a] border border-[#253650] text-gray-300 text-xs px-1 py-0.5 rounded focus:outline-none w-full min-w-[150px]"
-                                    data-testid={`select-officer-${patrol.id}-${idx}`}
-                                  >
-                                    <option value="">Dienstnummer wählen</option>
-                                    {officers?.map(o => (
-                                      <option key={o.id} value={o.name}>
-                                        {o.dienstnummer} – {o.name}
-                                      </option>
-                                    ))}
-                                  </select>
-                                  <div className="flex items-center gap-3">
-                                    <label
-                                      className={`flex items-center gap-1 text-[10px] ${slot.officerId ? "text-gray-300" : "text-gray-600"}`}
-                                    >
-                                      <input
-                                        type="checkbox"
-                                        checked={!!slot.abwesend}
-                                        disabled={!slot.officerId}
-                                        onChange={e => updateSlot(patrol.id, idx, { abwesend: e.target.checked })}
-                                        className="accent-[#c9a227] w-3 h-3"
-                                        data-testid={`check-abwesend-${patrol.id}-${idx}`}
-                                      />
-                                      Abwesend
-                                    </label>
-                                    <label
-                                      className={`flex items-center gap-1 text-[10px] ${slot.officerId ? "text-gray-300" : "text-gray-600"}`}
-                                    >
-                                      <input
-                                        type="checkbox"
-                                        checked={!!slot.funkAus}
-                                        disabled={!slot.officerId}
-                                        onChange={e => updateSlot(patrol.id, idx, { funkAus: e.target.checked })}
-                                        className="accent-[#c9a227] w-3 h-3"
-                                        data-testid={`check-funkaus-${patrol.id}-${idx}`}
-                                      />
-                                      Funk aus
-                                    </label>
-                                  </div>
-                                </div>
-                              </td>
-                              <td className="px-2 py-1">
                                 <input
-                                  type="text"
-                                  value={slot.notes ?? ""}
-                                  onChange={e => updateSlot(patrol.id, idx, { notes: e.target.value || null })}
-                                  placeholder="—"
-                                  className="bg-[#0a0f1a] border border-[#253650] text-gray-300 text-xs px-1.5 py-0.5 rounded focus:outline-none w-full min-w-[80px]"
-                                  data-testid={`input-notes-${patrol.id}-${idx}`}
+                                  type="checkbox"
+                                  checked={!!slot.abwesend}
+                                  disabled={!slot.officerId}
+                                  onChange={e => updateSlot(patrol.id, idx, { abwesend: e.target.checked })}
+                                  className="accent-[#c9a227] w-3 h-3"
+                                  data-testid={`check-abwesend-${patrol.id}-${idx}`}
                                 />
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                                Abwesend
+                              </label>
+                              <label
+                                className={`flex items-center gap-1 text-[10px] ${slot.officerId ? "text-gray-300" : "text-gray-600"}`}
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={!!slot.funkAus}
+                                  disabled={!slot.officerId}
+                                  onChange={e => updateSlot(patrol.id, idx, { funkAus: e.target.checked })}
+                                  className="accent-[#c9a227] w-3 h-3"
+                                  data-testid={`check-funkaus-${patrol.id}-${idx}`}
+                                />
+                                Funk aus
+                              </label>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+
+                      <label className="flex flex-col gap-1">
+                        <span className="text-[10px] uppercase tracking-wide text-gray-500">Notizen</span>
+                        <textarea
+                          value={draft.notes ?? ""}
+                          onChange={e => patchDraft(patrol.id, { notes: e.target.value || null })}
+                          placeholder="Notizen zur Streife…"
+                          rows={4}
+                          className="bg-[#0a0f1a] border border-[#253650] text-gray-300 text-xs px-2 py-1.5 rounded focus:outline-none w-full resize-y min-h-[80px]"
+                          data-testid={`textarea-notes-${patrol.id}`}
+                        />
+                      </label>
                     </div>
                   </div>
                 );

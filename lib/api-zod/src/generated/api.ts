@@ -435,9 +435,10 @@ export const UpdateReportResponse = zod.object({
 export const GetPatrolsResponseItem = zod.object({
   "id": zod.number(),
   "name": zod.string(),
-  "patrolType": zod.string().describe('Regelstreife | Sonderstreife | Undercover'),
-  "status": zod.string().describe('Code 1 | MD-Dienst | Geiselnahme | Event | Zivil Streife | Undercover Streife | Standby | Abwesend | Nicht Stören! | Ghetto-Streife | Korruptionsfall | Anwaltsgespräch | Abteilungsarbeit | Kongress'),
+  "patrolType": zod.string().describe('Regelstreife | Undercoverstreife | Zivilstreife | Overwatch'),
+  "status": zod.string().describe('Code 1 | MD-Dienst | Geiselnahme | Event | Standby | Abwesend | Nicht Stören! | Ghetto-Streife | Korruptionsfall | Anwaltsgespräch | Abteilungsarbeit | Kongress'),
   "vehicle": zod.string().nullish(),
+  "notes": zod.string().nullish(),
   "slots": zod.array(zod.object({
   "position": zod.string(),
   "officerId": zod.number().nullish(),
@@ -460,9 +461,10 @@ export const CreatePatrolBody = zod.object({
 export const CreatePatrolResponse = zod.object({
   "id": zod.number(),
   "name": zod.string(),
-  "patrolType": zod.string().describe('Regelstreife | Sonderstreife | Undercover'),
-  "status": zod.string().describe('Code 1 | MD-Dienst | Geiselnahme | Event | Zivil Streife | Undercover Streife | Standby | Abwesend | Nicht Stören! | Ghetto-Streife | Korruptionsfall | Anwaltsgespräch | Abteilungsarbeit | Kongress'),
+  "patrolType": zod.string().describe('Regelstreife | Undercoverstreife | Zivilstreife | Overwatch'),
+  "status": zod.string().describe('Code 1 | MD-Dienst | Geiselnahme | Event | Standby | Abwesend | Nicht Stören! | Ghetto-Streife | Korruptionsfall | Anwaltsgespräch | Abteilungsarbeit | Kongress'),
   "vehicle": zod.string().nullish(),
+  "notes": zod.string().nullish(),
   "slots": zod.array(zod.object({
   "position": zod.string(),
   "officerId": zod.number().nullish(),
@@ -485,6 +487,7 @@ export const UpdatePatrolBody = zod.object({
   "patrolType": zod.string().optional(),
   "status": zod.string().optional(),
   "vehicle": zod.string().nullish(),
+  "notes": zod.string().nullish(),
   "slots": zod.array(zod.object({
   "position": zod.string(),
   "officerId": zod.number().nullish(),
@@ -498,9 +501,10 @@ export const UpdatePatrolBody = zod.object({
 export const UpdatePatrolResponse = zod.object({
   "id": zod.number(),
   "name": zod.string(),
-  "patrolType": zod.string().describe('Regelstreife | Sonderstreife | Undercover'),
-  "status": zod.string().describe('Code 1 | MD-Dienst | Geiselnahme | Event | Zivil Streife | Undercover Streife | Standby | Abwesend | Nicht Stören! | Ghetto-Streife | Korruptionsfall | Anwaltsgespräch | Abteilungsarbeit | Kongress'),
+  "patrolType": zod.string().describe('Regelstreife | Undercoverstreife | Zivilstreife | Overwatch'),
+  "status": zod.string().describe('Code 1 | MD-Dienst | Geiselnahme | Event | Standby | Abwesend | Nicht Stören! | Ghetto-Streife | Korruptionsfall | Anwaltsgespräch | Abteilungsarbeit | Kongress'),
   "vehicle": zod.string().nullish(),
+  "notes": zod.string().nullish(),
   "slots": zod.array(zod.object({
   "position": zod.string(),
   "officerId": zod.number().nullish(),

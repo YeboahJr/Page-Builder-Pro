@@ -34,6 +34,7 @@ router.patch("/:id", async (req, res) => {
   if ("patrolType" in body) update.patrolType = String(body.patrolType);
   if ("status" in body) update.status = String(body.status);
   if ("vehicle" in body) update.vehicle = body.vehicle == null ? null : String(body.vehicle);
+  if ("notes" in body) update.notes = body.notes == null ? null : String(body.notes);
   if ("slots" in body) update.slots = body.slots;
   if (Object.keys(update).length === 0) {
     return res.status(400).json({ error: "Keine Änderungen übermittelt" });

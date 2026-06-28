@@ -12,5 +12,7 @@ export interface PatrolUpdate {
   status?: string;
   /** @nullable */
   vehicle?: string | null;
+  /** @nullable */
+  notes?: string | null;
   slots?: PatrolSlot[];
 }

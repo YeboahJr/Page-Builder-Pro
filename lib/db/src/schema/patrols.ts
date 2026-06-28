@@ -8,6 +8,7 @@ export const patrolsTable = pgTable("patrols", {
   patrolType: text("patrol_type").notNull().default("Regelstreife"),
   status: text("status").notNull().default("Code 1"),
   vehicle: text("vehicle"),
+  notes: text("notes"),
   slots: jsonb("slots").notNull().default([]),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),

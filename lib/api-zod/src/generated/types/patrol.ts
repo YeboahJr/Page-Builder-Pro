@@ -10,11 +10,13 @@ import type { PatrolSlot } from './patrolSlot';
 export interface Patrol {
   id: number;
   name: string;
-  /** Regelstreife | Sonderstreife | Undercover */
+  /** Regelstreife | Undercoverstreife | Zivilstreife | Overwatch */
   patrolType: string;
-  /** Code 1 | MD-Dienst | Geiselnahme | Event | Zivil Streife | Undercover Streife | Standby | Abwesend | Nicht Stören! | Ghetto-Streife | Korruptionsfall | Anwaltsgespräch | Abteilungsarbeit | Kongress */
+  /** Code 1 | MD-Dienst | Geiselnahme | Event | Standby | Abwesend | Nicht Stören! | Ghetto-Streife | Korruptionsfall | Anwaltsgespräch | Abteilungsarbeit | Kongress */
   status: string;
   /** @nullable */
   vehicle?: string | null;
+  /** @nullable */
+  notes?: string | null;
   slots: PatrolSlot[];
 }
