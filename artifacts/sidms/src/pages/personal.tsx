@@ -17,9 +17,9 @@ const CHECKBOX_COLS = [
   { key: "freigabeCCU", label: "CCU" },
   { key: "freigabeZivil", label: "Zivil" },
   { key: "freigabeUndercover", label: "Undercover" },
-  { key: "meldeamtSAHP", label: "Meldeamt San Andreas Highway Patrol" },
-  { key: "meldeamtPD", label: "Meldeamt Los Santos Police Department" },
-  { key: "meldeamtLI", label: "Meldeamt lifeinvader" },
+  { key: "meldeamtSAHP", label: "Meldeamt SAHP" },
+  { key: "meldeamtPD", label: "Meldeamt LSPD" },
+  { key: "meldeamtLI", label: "Meldeamt LI" },
   { key: "idChange", label: "ID Change" },
 ] as const;
 
