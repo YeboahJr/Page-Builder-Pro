@@ -29,6 +29,28 @@ const SLOT_STATUSES = Object.keys(STATUS_META);
 const DEFAULT_STATUS = "Code 1";
 const VEHICLES = ["Fahrzeug wählen", "Streifenwagen 1", "Streifenwagen 2", "SUV", "Motorrad", "Zivilfahrzeug"];
 
+const TEN_CODES: { label: string; code: string }[] = [
+  { label: "Verstanden", code: "10-4" },
+  { label: "Funkspruch wiederholen", code: "10-5" },
+  { label: "Ich/Wir sind eine Geisel", code: "10-6" },
+  { label: "Bereit für Zugriff", code: "10-10" },
+  { label: "Aktuelle Position", code: "10-20" },
+  { label: "Status Lokaler/Globaler", code: "10-30" },
+  { label: "Verstärkung", code: "10-34" },
+  { label: "Korruptionsfall", code: "10-50" },
+  { label: "Geiselnahme", code: "10-60" },
+  { label: "Personenkontrolle", code: "10-70" },
+  { label: "Verfolgung", code: "10-80" },
+  { label: "Agent in Not", code: "11-99" },
+  { label: "Frei auf Streife", code: "Code 1" },
+  { label: "Anfahren ohne Martinshorn", code: "Code 2" },
+  { label: "Anfahren mit Sondersignal", code: "Code 3" },
+  { label: "Einsatz beendet", code: "Code 4" },
+];
+
+const MIRANDA_TEXT =
+  "\u201eSie haben das Recht zu schweigen. Alles, was Sie sagen kann und wird vor Gericht gegen Sie verwendet werden. Sie haben das Recht einen Anwalt zurate zu ziehen, diesen müssen sie innerhalb von 3 Minuten bennen. Falls Sie sich keinen leisten können, wird Ihnen einer gestellt. Haben Sie Ihre Rechte verstanden?\u201c";
+
 const ACCENTS = [
   "#e0922f", // amber
   "#3ba776", // green
@@ -462,19 +484,32 @@ export default function Streifen() {
               })}
             </div>
 
-            {/* Legend */}
-            <div className="px-4 py-3 border-t border-[#1e2d4a] space-y-1.5">
-              {[
-                { color: "bg-green-500", label: "1 · Status", desc: "Grün = in Streife eingetragen, Rot = abwesend" },
-                { color: "bg-blue-500", label: "2 · Streife", desc: "Status der zugewiesenen Streife" },
-                { color: "bg-green-500", label: "3 · Funk", desc: "Grün = Funk aktiv, Grau = Funk aus" },
-              ].map(l => (
-                <div key={l.label} className="flex items-center gap-2 text-xs">
-                  <div className={`w-2 h-2 rounded-full ${l.color} flex-shrink-0`} />
-                  <span className="text-gray-400">{l.label} –</span>
-                  <span className="text-gray-500">{l.desc}</span>
+          </div>
+
+          {/* Ten Codes */}
+          <div className="mt-4 bg-[#0d1526] border border-[#1e2d4a] rounded-lg overflow-hidden">
+            <div className="px-4 py-2.5 border-b border-[#1e2d4a] bg-[#0a0f1a]">
+              <h2 className="text-sm font-bold text-white text-center tracking-wide">Ten Codes</h2>
+            </div>
+            <div className="px-4 py-3 divide-y divide-[#1e2d4a]/40">
+              {TEN_CODES.map(c => (
+                <div key={c.code} className="flex items-center justify-between py-1 text-xs">
+                  <span className="text-gray-300">{c.label}</span>
+                  <span className="text-[#c9a227] font-mono font-semibold">{c.code}</span>
                 </div>
               ))}
+            </div>
+          </div>
+
+          {/* Rechte des Bürgers (Miranda) */}
+          <div className="mt-4 bg-[#0d1526] border border-[#1e2d4a] rounded-lg overflow-hidden">
+            <div className="px-4 py-2.5 border-b border-[#1e2d4a] bg-[#0a0f1a]">
+              <h2 className="text-sm font-bold text-white text-center tracking-wide">
+                Rechte des Bürgers <span className="italic font-medium text-gray-300">(Miranda)</span>
+              </h2>
+            </div>
+            <div className="px-4 py-3">
+              <p className="text-xs text-gray-300 italic leading-relaxed text-center">{MIRANDA_TEXT}</p>
             </div>
           </div>
         </div>
