@@ -70,6 +70,16 @@ function slotStatusColor(s: string) {
   return map[s] ?? "text-gray-400";
 }
 
+function patrolStatusDot(s: string | null) {
+  const map: Record<string, string> = {
+    "Frei auf Streife": "bg-green-500",
+    "10-80": "bg-yellow-500",
+    "10-66": "bg-blue-500",
+    "Nicht verfügbar": "bg-red-500",
+  };
+  return (s && map[s]) || "bg-gray-600";
+}
+
 export default function Streifen() {
   const qc = useQueryClient();
   const { data: patrols, isLoading } = useGetPatrols();
@@ -129,7 +139,10 @@ export default function Streifen() {
   const sortedPatrols = [...(patrols ?? [])].sort((a, b) => patrolNum(a.name) - patrolNum(b.name));
 
   // Derive each officer's duty status from their patrol assignment (live, incl. drafts).
-  const assignedMap = new Map<number, { abwesend: boolean; funkAus: boolean }>();
+  const assignedMap = new Map<
+    number,
+    { abwesend: boolean; funkAus: boolean; patrolStatus: string | null }
+  >();
   for (const p of sortedPatrols) {
     const d = getDraft(p.id);
     for (const s of d.slots) {
@@ -138,6 +151,7 @@ export default function Streifen() {
         assignedMap.set(s.officerId, {
           abwesend: (prev?.abwesend ?? false) || !!s.abwesend,
           funkAus: (prev?.funkAus ?? false) || !!s.funkAus,
+          patrolStatus: prev?.patrolStatus ?? d.status ?? null,
         });
       }
     }
@@ -340,6 +354,7 @@ export default function Streifen() {
                 const a = assignedMap.get(o.id);
                 const status = a ? (a.abwesend ? "Abwesend" : "Anwesend") : "Abwesend";
                 const funk = a ? (a.funkAus ? "Aus" : "Aktiv") : "Aus";
+                const patrolStatus = a?.patrolStatus ?? null;
                 return (
                   <div
                     key={o.id}
@@ -361,7 +376,11 @@ export default function Streifen() {
                       <div className="text-right">
                         <p className="text-xs text-gray-400">{status}</p>
                       </div>
-                      <div className={`w-2 h-2 rounded-full ${statusDot(status)}`} title={status} />
+                      <div className={`w-2 h-2 rounded-full ${statusDot(status)}`} title={`Status: ${status}`} />
+                      <div
+                        className={`w-2 h-2 rounded-full ${patrolStatusDot(patrolStatus)}`}
+                        title={`Streife: ${patrolStatus ?? "—"}`}
+                      />
                       <div className={`w-2 h-2 rounded-full ${radioStatusDot(funk)}`} title={`Funk ${funk}`} />
                     </div>
                   </div>
@@ -372,11 +391,9 @@ export default function Streifen() {
             {/* Legend */}
             <div className="px-4 py-3 border-t border-[#1e2d4a] space-y-1.5">
               {[
-                { color: "bg-green-500", label: "Anwesend", desc: "Officer ist verfügbar" },
-                { color: "bg-yellow-500", label: "In Einsatz", desc: "Officer ist in einem Einsatz" },
-                { color: "bg-blue-500", label: "Pause", desc: "Officer ist in Pause" },
-                { color: "bg-red-500", label: "Abwesend", desc: "Officer ist nicht verfügbar" },
-                { color: "bg-gray-600", label: "Ausgeschaltet", desc: "Funk ist ausgeschaltet" },
+                { color: "bg-green-500", label: "1 · Status", desc: "Grün = in Streife eingetragen, Rot = abwesend" },
+                { color: "bg-blue-500", label: "2 · Streife", desc: "Status der zugewiesenen Streife" },
+                { color: "bg-green-500", label: "3 · Funk", desc: "Grün = Funk aktiv, Grau = Funk aus" },
               ].map(l => (
                 <div key={l.label} className="flex items-center gap-2 text-xs">
                   <div className={`w-2 h-2 rounded-full ${l.color} flex-shrink-0`} />
