@@ -32,14 +32,7 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { icon: LayoutDashboard, label: "Dashboard", href: "/dashboard" },
-  {
-    icon: Radio,
-    label: "Leitstelle",
-    href: "/leitstelle",
-    children: [
-      { label: "Streifen", href: "/leitstelle/streifen" },
-    ],
-  },
+  { icon: Radio, label: "Leitstelle", href: "/leitstelle" },
   {
     icon: Briefcase,
     label: "Fallmanagement",
@@ -64,14 +57,14 @@ const navItems: NavItem[] = [
 
 const quickLinks = [
   { icon: Plus, label: "Neuer Fall", href: "/fallmanagement?new=1" },
-  { icon: Car, label: "Neuer Streifen", href: "/leitstelle/streifen" },
+  { icon: Car, label: "Neuer Streifen", href: "/leitstelle" },
   { icon: Package, label: "Neues Beweismittel", href: "/beweismittel?new=1" },
 ];
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
   const { logout, officer } = useAuth();
-  const [expanded, setExpanded] = useState<string[]>(["/leitstelle", "/fallmanagement", "/personal"]);
+  const [expanded, setExpanded] = useState<string[]>(["/fallmanagement", "/personal"]);
 
   const toggleExpand = (href: string) => {
     setExpanded(prev =>

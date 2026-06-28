@@ -8,7 +8,7 @@ import NotFound from "@/pages/not-found";
 
 import Login from "@/pages/login";
 import Dashboard from "@/pages/dashboard";
-import Streifen from "@/pages/streifen";
+import Leitstelle from "@/pages/leitstelle";
 import Fallmanagement from "@/pages/fallmanagement";
 import Beweismittel from "@/pages/beweismittel";
 import Personal from "@/pages/personal";
@@ -60,7 +60,7 @@ function Router() {
       <Route path="/login" component={Login} />
       <Route path="/" component={RootRedirect} />
       <Route path="/dashboard" component={() => <ProtectedRoute component={Dashboard} />} />
-      <Route path="/leitstelle/streifen" component={() => <ProtectedRoute component={Streifen} />} />
+      <Route path="/leitstelle" component={() => <ProtectedRoute component={Leitstelle} />} />
       <Route path="/fallmanagement" component={() => <ProtectedRoute component={Fallmanagement} />} />
       <Route path="/beweismittel" component={() => <ProtectedRoute component={Beweismittel} />} />
       <Route path="/personal" component={() => <ProtectedRoute component={Personal} />} />
