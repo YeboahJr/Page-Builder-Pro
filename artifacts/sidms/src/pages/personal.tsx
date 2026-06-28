@@ -17,9 +17,9 @@ const CHECKBOX_COLS = [
   { key: "freigabeCCU", label: "CCU" },
   { key: "freigabeZivil", label: "Zivil" },
   { key: "freigabeUndercover", label: "Undercover" },
-  { key: "meldeamtSAHP", label: "SAHP" },
-  { key: "meldeamtPD", label: "PD" },
-  { key: "meldeamtLI", label: "LI" },
+  { key: "meldeamtSAHP", label: "Meldeamt San Andreas Highway Patrol" },
+  { key: "meldeamtPD", label: "Meldeamt Los Santos Police Department" },
+  { key: "meldeamtLI", label: "Meldeamt lifeinvader" },
   { key: "idChange", label: "ID Change" },
 ] as const;
 
@@ -266,8 +266,8 @@ export default function Personal() {
               <th className="text-left px-3 py-2.5 text-gray-400 font-medium">Tel.Nr.</th>
               <th className="text-left px-3 py-2.5 text-gray-400 font-medium">Beitritt</th>
               {CHECKBOX_COLS.map(c => (
-                <th key={c.key} className="px-2 py-2.5 text-gray-400 font-medium text-center border-l border-[#1e2d4a] first:border-l-0" title={c.label}>
-                  <span className="block w-16 truncate mx-auto">{c.label}</span>
+                <th key={c.key} className="px-2 py-2.5 text-gray-400 font-medium text-center border-l border-[#1e2d4a] first:border-l-0 align-bottom" title={c.label}>
+                  <span className="block w-20 mx-auto leading-tight whitespace-normal break-words">{c.label}</span>
                 </th>
               ))}
               <th className="px-3 py-2.5 text-gray-400 font-medium text-center border-l border-[#1e2d4a]">Aktionen</th>
