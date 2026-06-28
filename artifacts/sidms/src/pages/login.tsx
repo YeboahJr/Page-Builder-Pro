@@ -36,7 +36,7 @@ export default function Login() {
         <div className="px-10 pt-10 pb-8">
           {/* Logo */}
           <div className="flex justify-center mb-6">
-            <div className="w-44 h-44 flex items-center justify-center drop-shadow-[0_4px_24px_rgba(201,162,39,0.35)]">
+            <div className="w-64 h-64 flex items-center justify-center drop-shadow-[0_4px_24px_rgba(201,162,39,0.35)]">
               <img src="/fib-logo.png" alt="FIB Logo" className="w-full h-full object-contain" />
             </div>
           </div>
