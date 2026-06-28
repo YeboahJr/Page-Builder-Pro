@@ -289,6 +289,24 @@ export interface EvidenceInput {
   caseId: number;
 }
 
+export interface UploadUrlRequest {
+  name: string;
+  size: number;
+  contentType: string;
+}
+
+export type UploadUrlResponseMetadata = {
+  name?: string;
+  size?: number;
+  contentType?: string;
+};
+
+export interface UploadUrlResponse {
+  uploadURL: string;
+  objectPath: string;
+  metadata?: UploadUrlResponseMetadata;
+}
+
 export type GetCasesParams = {
 status?: string;
 priority?: string;

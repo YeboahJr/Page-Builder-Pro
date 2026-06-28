@@ -34,3 +34,6 @@ export * from './reportStats';
 export * from './reportUpdate';
 export * from './statusHistoryEntry';
 export * from './updateOfficerPermissions';
+export * from './uploadUrlRequest';
+export * from './uploadUrlResponse';
+export * from './uploadUrlResponseMetadata';

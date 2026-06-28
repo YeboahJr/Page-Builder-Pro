@@ -33,9 +33,10 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
-const UPLOADS_DIR = path.join(process.cwd(), "uploads");
-if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true });
-app.use("/api/uploads", express.static(UPLOADS_DIR));
+// Serve legacy local uploads as fallback for files uploaded before GCS migration
+const localUploadsDir = path.join(process.cwd(), "uploads");
+if (!fs.existsSync(localUploadsDir)) fs.mkdirSync(localUploadsDir, { recursive: true });
+app.use("/api/uploads", express.static(localUploadsDir));
 
 app.use("/api", router);
 

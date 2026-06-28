@@ -640,6 +640,26 @@ export const UpdateOfficerPermissionsResponse = zod.object({
 
 
 /**
+ * @summary Request a presigned URL for file upload
+ */
+export const RequestUploadUrlBody = zod.object({
+  "name": zod.string(),
+  "size": zod.number(),
+  "contentType": zod.string()
+})
+
+export const RequestUploadUrlResponse = zod.object({
+  "uploadURL": zod.string(),
+  "objectPath": zod.string(),
+  "metadata": zod.object({
+  "name": zod.string().optional(),
+  "size": zod.number().optional(),
+  "contentType": zod.string().optional()
+}).optional()
+})
+
+
+/**
  * @summary List all evidence items (Beweismittel)
  */
 export const GetEvidenceQueryParams = zod.object({
