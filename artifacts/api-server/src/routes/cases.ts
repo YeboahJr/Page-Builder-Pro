@@ -151,6 +151,18 @@ router.patch("/:id", async (req, res) => {
 
 router.delete("/:id", async (req, res) => {
   const id = parseInt(req.params.id);
+  if (!Number.isInteger(id) || id <= 0) {
+    res.status(400).json({ error: "Ungültige ID" });
+    return;
+  }
+
+  // Don't report a successful deletion for a case that never existed — otherwise
+  // the client removes a row that was never there and the failure goes unnoticed.
+  const [existing] = await db.select({ id: casesTable.id }).from(casesTable).where(eq(casesTable.id, id));
+  if (!existing) {
+    res.status(404).json({ error: "Fall nicht gefunden" });
+    return;
+  }
 
   // Delete associated evidence files from object storage before removing the case,
   // so we don't leave orphaned GCS objects under the case-<id>/ prefix.
@@ -174,11 +186,23 @@ router.delete("/:id", async (req, res) => {
     fs.rmSync(localDir, { recursive: true, force: true });
   }
 
-  await db.delete(evidenceFilesTable).where(eq(evidenceFilesTable.caseId, id));
-  await db.delete(casePersonsTable).where(eq(casePersonsTable.caseId, id));
-  await db.delete(caseAgentsTable).where(eq(caseAgentsTable.caseId, id));
-  await db.delete(caseStatusHistoryTable).where(eq(caseStatusHistoryTable.caseId, id));
-  await db.delete(casesTable).where(eq(casesTable.id, id));
+  // Remove the case and all its child rows atomically. If any delete fails the
+  // whole thing rolls back and the error propagates as a 500, so the client
+  // never sees a partially-deleted case reported as success.
+  try {
+    await db.transaction(async (tx) => {
+      await tx.delete(evidenceFilesTable).where(eq(evidenceFilesTable.caseId, id));
+      await tx.delete(casePersonsTable).where(eq(casePersonsTable.caseId, id));
+      await tx.delete(caseAgentsTable).where(eq(caseAgentsTable.caseId, id));
+      await tx.delete(caseStatusHistoryTable).where(eq(caseStatusHistoryTable.caseId, id));
+      await tx.delete(casesTable).where(eq(casesTable.id, id));
+    });
+  } catch (err) {
+    req.log.error({ err }, "Failed to delete case from database");
+    res.status(500).json({ error: "Fall konnte nicht gelöscht werden" });
+    return;
+  }
+
   res.status(204).send();
 });
 
