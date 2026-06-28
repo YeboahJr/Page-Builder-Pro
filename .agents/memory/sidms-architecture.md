@@ -28,3 +28,8 @@ The API server runs `pnpm run build && pnpm run start` in dev mode (not tsx watc
 - Audit-Log (/audit-log) — activity feed
 - Archiv (/archiv) — closed cases
 - Einstellungen (/einstellungen) — profile and system info
+
+## Evidence File Metadata
+Evidence file uploads are tracked in the `evidence_files` table (objectPath, originalName, mimetype, size, caseId, uploadedBy [nullable], uploadedAt). GET /:id/evidence/files reads from this table (source of truth), not GCS listings; it still appends local-disk fallback files. Upload inserts a row per file and resolves uploadedBy from the session token. Both the per-file DELETE and case DELETE remove matching evidence_files rows to avoid orphans.
+
+**Why:** Avoids GCS round-trips and enables audit/search. Files uploaded before this table existed have no row and won't list (needs backfill).

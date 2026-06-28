@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { db, casesTable, casePersonsTable, caseAgentsTable, caseStatusHistoryTable } from "@workspace/db";
+import { db, casesTable, casePersonsTable, caseAgentsTable, caseStatusHistoryTable, evidenceFilesTable, sessionsTable, officersTable } from "@workspace/db";
 import { eq, ilike, and, gte, lte, desc, or } from "drizzle-orm";
 import multer from "multer";
 import path from "path";
@@ -28,6 +28,15 @@ const upload = multer({
     cb(null, allowed.test(file.mimetype));
   },
 });
+
+async function resolveOfficerName(req: { headers: { authorization?: string }; cookies?: { auth_token?: string } }): Promise<string | null> {
+  const token = req.headers.authorization?.replace("Bearer ", "") || req.cookies?.auth_token;
+  if (!token) return null;
+  const [session] = await db.select().from(sessionsTable).where(eq(sessionsTable.token, token));
+  if (!session || session.expiresAt < new Date()) return null;
+  const [officer] = await db.select().from(officersTable).where(eq(officersTable.id, session.officerId));
+  return officer ? officer.name : null;
+}
 
 const router = Router();
 
@@ -165,6 +174,7 @@ router.delete("/:id", async (req, res) => {
     fs.rmSync(localDir, { recursive: true, force: true });
   }
 
+  await db.delete(evidenceFilesTable).where(eq(evidenceFilesTable.caseId, id));
   await db.delete(casePersonsTable).where(eq(casePersonsTable.caseId, id));
   await db.delete(caseAgentsTable).where(eq(caseAgentsTable.caseId, id));
   await db.delete(caseStatusHistoryTable).where(eq(caseStatusHistoryTable.caseId, id));
@@ -204,6 +214,8 @@ router.post("/:id/evidence/upload", upload.array("files", 20), async (req, res) 
 
   const { bucketName, gcsPrefix } = parsePrivateObjectDir(privateObjectDir);
   const bucket = objectStorageClient.bucket(bucketName);
+  const caseId = parseInt(String(req.params.id));
+  const uploadedBy = await resolveOfficerName(req);
 
   const results = await Promise.all(files.map(async (f) => {
     const ext = path.extname(f.originalname);
@@ -215,6 +227,16 @@ router.post("/:id/evidence/upload", upload.array("files", 20), async (req, res) 
     await gcsFile.save(f.buffer, { contentType: f.mimetype, resumable: false });
     // objectPath = /objects/<entityId> where entityId is relative to PRIVATE_OBJECT_DIR
     const objectPath = `/objects/case-${req.params.id}/${unique}`;
+
+    const [row] = await db.insert(evidenceFilesTable).values({
+      caseId,
+      objectPath,
+      originalName: f.originalname,
+      mimetype: f.mimetype,
+      size: f.size,
+      uploadedBy,
+    }).returning();
+
     return {
       name: f.originalname,
       filename: unique,
@@ -222,6 +244,8 @@ router.post("/:id/evidence/upload", upload.array("files", 20), async (req, res) 
       size: f.size,
       url: `/api/storage${objectPath}`,
       objectPath,
+      uploadedBy: row.uploadedBy,
+      uploadedAt: row.uploadedAt.toISOString(),
     };
   }));
 
@@ -251,6 +275,10 @@ router.delete("/:id/evidence/:filename", async (req, res) => {
     return;
   }
 
+  // Remove the DB metadata row so the file no longer shows up in listings.
+  const objectPath = `/objects/case-${id}/${filename}`;
+  await db.delete(evidenceFilesTable).where(eq(evidenceFilesTable.objectPath, objectPath));
+
   // Also clean up local fallback copy if it exists
   const localPath = path.join(LOCAL_UPLOADS_DIR, `case-${id}`, filename);
   if (fs.existsSync(localPath)) {
@@ -267,40 +295,38 @@ router.get("/:id/evidence/files", async (req, res) => {
   const imageExts = new Set([".jpg", ".jpeg", ".png", ".gif", ".webp"]);
   const videoExts = new Set([".mp4", ".webm", ".mov", ".avi", ".mkv"]);
 
-  const gcsFiles: { filename: string; url: string; objectPath: string; type: string; size: number; uploadedAt: string }[] = [];
-
-  // List files from GCS (new persistent storage)
-  if (privateObjectDir) {
-    const { bucketName, gcsPrefix } = parsePrivateObjectDir(privateObjectDir);
-    const bucket = objectStorageClient.bucket(bucketName);
-    const gcsListPrefix = gcsPrefix ? `${gcsPrefix}/case-${caseId}/` : `case-${caseId}/`;
-
-    try {
-      const [objectList] = await bucket.getFiles({ prefix: gcsListPrefix });
-      for (const f of objectList) {
-        // entityId is f.name relative to gcsPrefix — i.e. "case-<id>/<filename>"
-        const entityId = gcsPrefix ? f.name.slice(gcsPrefix.length + 1) : f.name;
-        const filename = entityId.slice(entityId.lastIndexOf("/") + 1);
-        const ext = path.extname(filename).toLowerCase();
-        const [meta] = await f.getMetadata();
-        const objectPath = `/objects/${entityId}`;
-        gcsFiles.push({
-          filename,
-          url: `/api/storage${objectPath}`,
-          objectPath,
-          type: imageExts.has(ext) ? "image" : videoExts.has(ext) ? "video" : "other",
-          size: Number(meta.size ?? 0),
-          uploadedAt: (meta.timeCreated as string | undefined) ?? new Date().toISOString(),
-        });
-      }
-    } catch (err) {
-      req.log.warn({ err }, "Failed to list GCS evidence files");
-    }
+  function classifyType(mimetype: string, filename: string): string {
+    if (mimetype.startsWith("image/")) return "image";
+    if (mimetype.startsWith("video/")) return "video";
+    const ext = path.extname(filename).toLowerCase();
+    if (imageExts.has(ext)) return "image";
+    if (videoExts.has(ext)) return "video";
+    return "other";
   }
+
+  type FileEntry = { filename: string; url: string; objectPath: string; type: string; size: number; uploadedAt: string; uploadedBy: string | null };
+
+  // Read evidence file metadata from the DB (source of truth — avoids GCS round-trips).
+  const rows = await db.select().from(evidenceFilesTable)
+    .where(eq(evidenceFilesTable.caseId, parseInt(caseId)))
+    .orderBy(desc(evidenceFilesTable.uploadedAt));
+
+  const dbFiles: FileEntry[] = rows.map((r) => {
+    const filename = r.objectPath.slice(r.objectPath.lastIndexOf("/") + 1);
+    return {
+      filename,
+      url: `/api/storage${r.objectPath}`,
+      objectPath: r.objectPath,
+      type: classifyType(r.mimetype, r.originalName),
+      size: r.size,
+      uploadedAt: r.uploadedAt.toISOString(),
+      uploadedBy: r.uploadedBy,
+    };
+  });
 
   // Fallback: also include any pre-existing local files (backward compatibility)
   const localDir = path.join(LOCAL_UPLOADS_DIR, `case-${caseId}`);
-  const localFiles: typeof gcsFiles = [];
+  const localFiles: FileEntry[] = [];
   if (fs.existsSync(localDir)) {
     const names = fs.readdirSync(localDir);
     for (const name of names) {
@@ -313,11 +339,12 @@ router.get("/:id/evidence/files", async (req, res) => {
         type: imageExts.has(ext) ? "image" : videoExts.has(ext) ? "video" : "other",
         size: stat.size,
         uploadedAt: stat.mtime.toISOString(),
+        uploadedBy: null,
       });
     }
   }
 
-  res.json({ files: [...gcsFiles, ...localFiles] });
+  res.json({ files: [...dbFiles, ...localFiles] });
 });
 
 export default router;
