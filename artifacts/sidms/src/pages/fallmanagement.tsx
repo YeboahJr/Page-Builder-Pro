@@ -3,6 +3,9 @@ import { useGetCases, useCreateCase, useUpdateCase, useDeleteCase, getGetCasesQu
 import { useQueryClient } from "@tanstack/react-query";
 import { Plus, Trash2, Edit3, X } from "lucide-react";
 import EvidenceUpload, { type UploadFile, uploadEvidenceFiles } from "@/components/EvidenceUpload";
+import DeleteConfirmModal from "@/components/DeleteConfirmModal";
+
+type CaseRow = { id: number; caseNumber: string; title: string };
 
 function priorityBadge(p: string) {
   const map: Record<string, string> = { Hoch: "bg-red-900/60 text-red-400 border border-red-700/50", Mittel: "bg-orange-900/60 text-orange-400 border border-orange-700/50", Niedrig: "bg-green-900/60 text-green-400 border border-green-700/50" };
@@ -28,6 +31,9 @@ export default function Fallmanagement() {
   const [form, setForm] = useState<CaseForm>({ title: "", category: "Drogenkriminalität", priority: "Mittel", status: "Offen", leadAgent: "", description: "" });
   const [submitting, setSubmitting] = useState(false);
   const [uploadFiles, setUploadFiles] = useState<UploadFile[]>([]);
+  const [deleteTarget, setDeleteTarget] = useState<CaseRow | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -44,10 +50,19 @@ export default function Fallmanagement() {
     } finally { setSubmitting(false); }
   };
 
-  const handleDelete = async (id: number) => {
-    if (!confirm("Fall wirklich löschen?")) return;
-    await deleteCase.mutateAsync({ id });
-    qc.invalidateQueries({ queryKey: getGetCasesQueryKey() });
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    setDeleteError(null);
+    try {
+      await deleteCase.mutateAsync({ id: deleteTarget.id });
+      qc.invalidateQueries({ queryKey: getGetCasesQueryKey() });
+      setDeleteTarget(null);
+    } catch {
+      setDeleteError("Löschen fehlgeschlagen — bitte erneut versuchen.");
+    } finally {
+      setDeleting(false);
+    }
   };
 
   return (
@@ -140,7 +155,7 @@ export default function Fallmanagement() {
                 <td className="px-3 py-2.5 text-gray-400 whitespace-nowrap">{c.leadAgent}</td>
                 <td className="px-3 py-2.5 text-gray-500 whitespace-nowrap">{c.lastModified}</td>
                 <td className="px-3 py-2.5">
-                  <button onClick={() => handleDelete(c.id)} className="text-gray-500 hover:text-red-400 transition-colors" data-testid={`button-delete-case-${c.id}`}>
+                  <button onClick={() => { setDeleteError(null); setDeleteTarget(c); }} className="text-gray-500 hover:text-red-400 transition-colors" data-testid={`button-delete-case-${c.id}`}>
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>
                 </td>
@@ -149,6 +164,22 @@ export default function Fallmanagement() {
           </tbody>
         </table>
       </div>
+
+      <DeleteConfirmModal
+        open={!!deleteTarget}
+        title="Fall löschen"
+        description={deleteTarget ? (
+          <>
+            Diese Aktion kann nicht rückgängig gemacht werden. Der Fall{" "}
+            <span className="text-white font-medium">{deleteTarget.caseNumber} – {deleteTarget.title}</span>{" "}
+            wird dauerhaft gelöscht.
+          </>
+        ) : null}
+        busy={deleting}
+        error={deleteError}
+        onConfirm={confirmDelete}
+        onCancel={() => { if (!deleting) setDeleteTarget(null); }}
+      />
     </div>
   );
 }

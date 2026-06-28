@@ -20,6 +20,7 @@ import {
   Plus, ChevronRight, RotateCcw, Download, Search, X, Film, ImageIcon, ZoomIn, Trash2
 } from "lucide-react";
 import EvidenceUpload, { type UploadFile, uploadEvidenceFiles } from "@/components/EvidenceUpload";
+import DeleteConfirmModal from "@/components/DeleteConfirmModal";
 
 const CATEGORIES_NEW = ["Drogenkriminalität", "Waffendelikte", "Korruption", "Finanzkriminalität", "Gewaltdelikte", "Cyberkriminalität"];
 const PRIORITIES_NEW = ["Hoch", "Mittel", "Niedrig"];
@@ -69,7 +70,6 @@ export default function Dashboard() {
   const [addEvidenceUploading, setAddEvidenceUploading] = useState(false);
   const [deletingFile, setDeletingFile] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
-  const [deleteConfirmText, setDeleteConfirmText] = useState("");
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const [filters, setFilters] = useState({
@@ -120,7 +120,6 @@ export default function Dashboard() {
   };
 
   const requestDeleteEvidence = (filename: string) => {
-    setDeleteConfirmText("");
     setDeleteError(null);
     setDeleteTarget(filename);
   };
@@ -148,7 +147,6 @@ export default function Dashboard() {
       }
       setEvidenceFiles(prev => prev.filter(f => f.filename !== filename));
       setDeleteTarget(null);
-      setDeleteConfirmText("");
     } catch {
       setDeleteError("Netzwerkfehler – die Datei konnte nicht gelöscht werden.");
     } finally {
@@ -226,59 +224,21 @@ export default function Dashboard() {
         </div>
       )}
       {/* Delete Evidence Confirmation Modal */}
-      {deleteTarget && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-[110] p-4" onClick={() => { if (!deletingFile) setDeleteTarget(null); }}>
-          <div className="bg-[#0d1526] border border-red-900/50 rounded-lg w-full max-w-md" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between px-5 py-4 border-b border-[#1e2d4a]">
-              <h2 className="text-sm font-semibold text-red-300 flex items-center gap-2">
-                <Trash2 className="w-4 h-4" /> Beweismittel löschen
-              </h2>
-              <button onClick={() => setDeleteTarget(null)} disabled={!!deletingFile} className="text-gray-400 hover:text-white disabled:opacity-50"><X className="w-5 h-5" /></button>
-            </div>
-            <div className="p-5 space-y-4">
-              <p className="text-xs text-gray-300 leading-relaxed">
-                Diese Aktion kann nicht rückgängig gemacht werden. Die Datei
-                {" "}<span className="text-white font-medium break-all">"{deleteTarget}"</span>{" "}
-                wird dauerhaft gelöscht.
-              </p>
-              <div>
-                <label className="text-xs text-gray-400 block mb-1">
-                  Zum Bestätigen <span className="text-red-300 font-semibold">LÖSCHEN</span> eingeben:
-                </label>
-                <input
-                  autoFocus
-                  value={deleteConfirmText}
-                  onChange={e => setDeleteConfirmText(e.target.value)}
-                  placeholder="LÖSCHEN"
-                  className="w-full bg-[#0a0f1a] border border-[#1e2d4a] text-white text-sm px-3 py-2 rounded focus:outline-none focus:border-red-500/50"
-                />
-              </div>
-              {deleteError && (
-                <div className="flex items-start gap-2 bg-red-950/50 border border-red-800/60 rounded px-3 py-2">
-                  <AlertTriangle className="w-4 h-4 text-red-400 mt-0.5 shrink-0" />
-                  <p className="text-xs text-red-200 leading-relaxed">{deleteError}</p>
-                </div>
-              )}
-              <div className="flex justify-end gap-2 pt-1">
-                <button
-                  onClick={() => setDeleteTarget(null)}
-                  disabled={!!deletingFile}
-                  className="text-xs px-4 py-2 rounded border border-[#1e2d4a] text-gray-300 hover:bg-[#1e2d4a]/40 disabled:opacity-50"
-                >
-                  Abbrechen
-                </button>
-                <button
-                  onClick={confirmDeleteEvidence}
-                  disabled={deleteConfirmText !== "LÖSCHEN" || !!deletingFile}
-                  className="text-xs px-4 py-2 rounded bg-red-900/80 hover:bg-red-800 text-red-100 disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                  {deletingFile ? "Löschen..." : "Endgültig löschen"}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      <DeleteConfirmModal
+        open={!!deleteTarget}
+        title="Beweismittel löschen"
+        description={deleteTarget ? (
+          <>
+            Diese Aktion kann nicht rückgängig gemacht werden. Die Datei{" "}
+            <span className="text-white font-medium break-all">"{deleteTarget}"</span>{" "}
+            wird dauerhaft gelöscht.
+          </>
+        ) : null}
+        busy={!!deletingFile}
+        error={deleteError}
+        onConfirm={confirmDeleteEvidence}
+        onCancel={() => { if (!deletingFile) setDeleteTarget(null); }}
+      />
       {/* New Case Modal */}
       {showNewCase && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">

@@ -9,6 +9,7 @@ import {
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Users, Check, Pencil, X, Plus, Trash2 } from "lucide-react";
+import DeleteConfirmModal from "@/components/DeleteConfirmModal";
 
 const CHECKBOX_COLS = [
   { key: "einweisung", label: "Einweisung" },
@@ -114,6 +115,8 @@ export default function Personal() {
   const [editOriginal, setEditOriginal] = useState<Officer | null>(null);
   const [rowError, setRowError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<number | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Officer | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const [showNew, setShowNew] = useState(false);
   const [newForm, setNewForm] = useState({ dienstnummer: "", name: "", rank: RANKS[RANKS.length - 1].name, passwort: "", deckname: "", telNr: "", abmeldungBis: "", beitritt: "" });
@@ -191,12 +194,16 @@ export default function Personal() {
     }
   };
 
-  const handleDelete = async (o: Officer) => {
-    if (!window.confirm(`${o.name} (${o.dienstnummer}) wirklich aus dem Personal entfernen?`)) return;
-    setBusyId(o.id);
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    setBusyId(deleteTarget.id);
+    setDeleteError(null);
     try {
-      await deleteOfficer.mutateAsync({ id: o.id });
+      await deleteOfficer.mutateAsync({ id: deleteTarget.id });
       invalidate();
+      setDeleteTarget(null);
+    } catch {
+      setDeleteError("Löschen fehlgeschlagen — bitte erneut versuchen.");
     } finally {
       setBusyId(null);
     }
@@ -371,7 +378,7 @@ export default function Personal() {
                         <button onClick={() => startEdit(o)} disabled={busy} className="p-1 rounded bg-[#1e3a8a]/40 text-blue-300 hover:bg-[#1e3a8a]/60 disabled:opacity-50" title="Bearbeiten">
                           <Pencil className="w-3.5 h-3.5" />
                         </button>
-                        <button onClick={() => handleDelete(o)} disabled={busy} className="p-1 rounded bg-red-900/30 text-red-400 hover:bg-red-900/50 disabled:opacity-50" title="Löschen">
+                        <button onClick={() => { setDeleteError(null); setDeleteTarget(o); }} disabled={busy} className="p-1 rounded bg-red-900/30 text-red-400 hover:bg-red-900/50 disabled:opacity-50" title="Löschen">
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
                       </div>
@@ -439,6 +446,23 @@ export default function Personal() {
           </div>
         </div>
       )}
+      <DeleteConfirmModal
+        open={!!deleteTarget}
+        title="Mitglied entfernen"
+        description={deleteTarget ? (
+          <>
+            Diese Aktion kann nicht rückgängig gemacht werden.{" "}
+            <span className="text-white font-medium">{deleteTarget.name} ({deleteTarget.dienstnummer})</span>{" "}
+            wird dauerhaft aus dem Personal entfernt.
+          </>
+        ) : null}
+        busy={busyId === deleteTarget?.id}
+        error={deleteError}
+        confirmLabel="Endgültig entfernen"
+        busyLabel="Entfernen..."
+        onConfirm={confirmDelete}
+        onCancel={() => { if (busyId !== deleteTarget?.id) setDeleteTarget(null); }}
+      />
     </div>
   );
 }

@@ -9,6 +9,7 @@ import {
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { CreditCard, Check, Pencil, X, Plus, Trash2 } from "lucide-react";
+import DeleteConfirmModal from "@/components/DeleteConfirmModal";
 
 const RANKS: { level: number; name: string }[] = [
   { level: 30, name: "Director of FIB" },
@@ -108,6 +109,8 @@ export default function IdChangePage() {
   const [editOriginal, setEditOriginal] = useState<IdChange | null>(null);
   const [rowError, setRowError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<number | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<IdChange | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const [showNew, setShowNew] = useState(false);
   const [newForm, setNewForm] = useState<Draft>(emptyForm);
@@ -174,12 +177,16 @@ export default function IdChangePage() {
     }
   };
 
-  const handleDelete = async (r: IdChange) => {
-    if (!window.confirm(`Eintrag von ${r.name} (${r.dienstnummer}) wirklich löschen?`)) return;
-    setBusyId(r.id);
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    setBusyId(deleteTarget.id);
+    setDeleteError(null);
     try {
-      await deleteRow.mutateAsync({ id: r.id });
+      await deleteRow.mutateAsync({ id: deleteTarget.id });
       invalidate();
+      setDeleteTarget(null);
+    } catch {
+      setDeleteError("Löschen fehlgeschlagen — bitte erneut versuchen.");
     } finally {
       setBusyId(null);
     }
@@ -334,7 +341,7 @@ export default function IdChangePage() {
                         <button onClick={() => startEdit(r)} disabled={busy} className="p-1 rounded bg-[#1e3a8a]/40 text-blue-300 hover:bg-[#1e3a8a]/60 disabled:opacity-50" title="Bearbeiten">
                           <Pencil className="w-3.5 h-3.5" />
                         </button>
-                        <button onClick={() => handleDelete(r)} disabled={busy} className="p-1 rounded bg-red-900/30 text-red-400 hover:bg-red-900/50 disabled:opacity-50" title="Löschen">
+                        <button onClick={() => { setDeleteError(null); setDeleteTarget(r); }} disabled={busy} className="p-1 rounded bg-red-900/30 text-red-400 hover:bg-red-900/50 disabled:opacity-50" title="Löschen">
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
                       </div>
@@ -417,6 +424,21 @@ export default function IdChangePage() {
           </div>
         </div>
       )}
+      <DeleteConfirmModal
+        open={!!deleteTarget}
+        title="Eintrag löschen"
+        description={deleteTarget ? (
+          <>
+            Diese Aktion kann nicht rückgängig gemacht werden. Der ID-Change-Eintrag von{" "}
+            <span className="text-white font-medium">{deleteTarget.name} ({deleteTarget.dienstnummer})</span>{" "}
+            wird dauerhaft gelöscht.
+          </>
+        ) : null}
+        busy={busyId === deleteTarget?.id}
+        error={deleteError}
+        onConfirm={confirmDelete}
+        onCancel={() => { if (busyId !== deleteTarget?.id) setDeleteTarget(null); }}
+      />
     </div>
   );
 }
