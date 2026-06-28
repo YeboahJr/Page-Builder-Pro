@@ -44,7 +44,8 @@ import type {
   ReportInput,
   ReportStats,
   ReportUpdate,
-  StatusHistoryEntry
+  StatusHistoryEntry,
+  UpdateOfficerPermissions
 } from './api.schemas';
 
 import { customFetch } from '../custom-fetch';
@@ -1875,6 +1876,77 @@ export function useGetOfficer<TData = Awaited<ReturnType<typeof getOfficer>>, TE
 
 
 
+
+export const getUpdateOfficerPermissionsUrl = (id: number,) => {
+
+
+
+
+  return `/api/officers/${id}`
+}
+
+/**
+ * @summary Update officer permissions and profile fields
+ */
+export const updateOfficerPermissions = async (id: number,
+    updateOfficerPermissions: UpdateOfficerPermissions, options?: RequestInit): Promise<Officer> => {
+
+  return customFetch<Officer>(getUpdateOfficerPermissionsUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(updateOfficerPermissions)
+  }
+);}
+
+
+
+
+export const getUpdateOfficerPermissionsMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateOfficerPermissions>>, TError,{id: number;data: BodyType<UpdateOfficerPermissions>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateOfficerPermissions>>, TError,{id: number;data: BodyType<UpdateOfficerPermissions>}, TContext> => {
+
+const mutationKey = ['updateOfficerPermissions'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateOfficerPermissions>>, {id: number;data: BodyType<UpdateOfficerPermissions>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateOfficerPermissions(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateOfficerPermissionsMutationResult = NonNullable<Awaited<ReturnType<typeof updateOfficerPermissions>>>
+    export type UpdateOfficerPermissionsMutationBody = BodyType<UpdateOfficerPermissions>
+    export type UpdateOfficerPermissionsMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Update officer permissions and profile fields
+ */
+export const useUpdateOfficerPermissions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateOfficerPermissions>>, TError,{id: number;data: BodyType<UpdateOfficerPermissions>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateOfficerPermissions>>,
+        TError,
+        {id: number;data: BodyType<UpdateOfficerPermissions>},
+        TContext
+      > => {
+      return useMutation(getUpdateOfficerPermissionsMutationOptions(options));
+    }
 
 export const getGetEvidenceUrl = (params?: GetEvidenceParams,) => {
   const normalizedParams = new URLSearchParams();

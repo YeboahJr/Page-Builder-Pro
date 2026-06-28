@@ -32,3 +32,4 @@ export * from './reportInput';
 export * from './reportStats';
 export * from './reportUpdate';
 export * from './statusHistoryEntry';
+export * from './updateOfficerPermissions';

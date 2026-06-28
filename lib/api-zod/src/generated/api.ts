@@ -34,7 +34,20 @@ export const LoginResponse = zod.object({
   "status": zod.string().describe('Anwesend | In Einsatz | Pause | Abwesend'),
   "radioStatus": zod.string().optional().describe('Aktiv | Ausgeschaltet'),
   "radioFreq": zod.string(),
-  "avatarUrl": zod.string().nullish()
+  "avatarUrl": zod.string().nullish(),
+  "deckname": zod.string().nullish(),
+  "telNr": zod.string().nullish(),
+  "beitritt": zod.string().nullish(),
+  "einweisung": zod.boolean(),
+  "waffenfreigabeLMG": zod.boolean(),
+  "waffenfreigabeHeavySniper": zod.boolean(),
+  "freigabeCCU": zod.boolean(),
+  "freigabeZivil": zod.boolean(),
+  "freigabeUndercover": zod.boolean(),
+  "meldeamtSAHP": zod.boolean(),
+  "meldeamtPD": zod.boolean(),
+  "meldeamtLI": zod.boolean(),
+  "idChange": zod.boolean()
 }),
   "token": zod.string()
 })
@@ -52,7 +65,20 @@ export const GetMeResponse = zod.object({
   "status": zod.string().describe('Anwesend | In Einsatz | Pause | Abwesend'),
   "radioStatus": zod.string().optional().describe('Aktiv | Ausgeschaltet'),
   "radioFreq": zod.string(),
-  "avatarUrl": zod.string().nullish()
+  "avatarUrl": zod.string().nullish(),
+  "deckname": zod.string().nullish(),
+  "telNr": zod.string().nullish(),
+  "beitritt": zod.string().nullish(),
+  "einweisung": zod.boolean(),
+  "waffenfreigabeLMG": zod.boolean(),
+  "waffenfreigabeHeavySniper": zod.boolean(),
+  "freigabeCCU": zod.boolean(),
+  "freigabeZivil": zod.boolean(),
+  "freigabeUndercover": zod.boolean(),
+  "meldeamtSAHP": zod.boolean(),
+  "meldeamtPD": zod.boolean(),
+  "meldeamtLI": zod.boolean(),
+  "idChange": zod.boolean()
 })
 
 
@@ -471,7 +497,20 @@ export const GetOfficersResponseItem = zod.object({
   "status": zod.string().describe('Anwesend | In Einsatz | Pause | Abwesend'),
   "radioStatus": zod.string().optional().describe('Aktiv | Ausgeschaltet'),
   "radioFreq": zod.string(),
-  "avatarUrl": zod.string().nullish()
+  "avatarUrl": zod.string().nullish(),
+  "deckname": zod.string().nullish(),
+  "telNr": zod.string().nullish(),
+  "beitritt": zod.string().nullish(),
+  "einweisung": zod.boolean(),
+  "waffenfreigabeLMG": zod.boolean(),
+  "waffenfreigabeHeavySniper": zod.boolean(),
+  "freigabeCCU": zod.boolean(),
+  "freigabeZivil": zod.boolean(),
+  "freigabeUndercover": zod.boolean(),
+  "meldeamtSAHP": zod.boolean(),
+  "meldeamtPD": zod.boolean(),
+  "meldeamtLI": zod.boolean(),
+  "idChange": zod.boolean()
 })
 export const GetOfficersResponse = zod.array(GetOfficersResponseItem)
 
@@ -492,7 +531,69 @@ export const GetOfficerResponse = zod.object({
   "status": zod.string().describe('Anwesend | In Einsatz | Pause | Abwesend'),
   "radioStatus": zod.string().optional().describe('Aktiv | Ausgeschaltet'),
   "radioFreq": zod.string(),
-  "avatarUrl": zod.string().nullish()
+  "avatarUrl": zod.string().nullish(),
+  "deckname": zod.string().nullish(),
+  "telNr": zod.string().nullish(),
+  "beitritt": zod.string().nullish(),
+  "einweisung": zod.boolean(),
+  "waffenfreigabeLMG": zod.boolean(),
+  "waffenfreigabeHeavySniper": zod.boolean(),
+  "freigabeCCU": zod.boolean(),
+  "freigabeZivil": zod.boolean(),
+  "freigabeUndercover": zod.boolean(),
+  "meldeamtSAHP": zod.boolean(),
+  "meldeamtPD": zod.boolean(),
+  "meldeamtLI": zod.boolean(),
+  "idChange": zod.boolean()
+})
+
+
+/**
+ * @summary Update officer permissions and profile fields
+ */
+export const UpdateOfficerPermissionsParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateOfficerPermissionsBody = zod.object({
+  "deckname": zod.string().nullish(),
+  "telNr": zod.string().nullish(),
+  "beitritt": zod.string().nullish(),
+  "einweisung": zod.boolean().optional(),
+  "waffenfreigabeLMG": zod.boolean().optional(),
+  "waffenfreigabeHeavySniper": zod.boolean().optional(),
+  "freigabeCCU": zod.boolean().optional(),
+  "freigabeZivil": zod.boolean().optional(),
+  "freigabeUndercover": zod.boolean().optional(),
+  "meldeamtSAHP": zod.boolean().optional(),
+  "meldeamtPD": zod.boolean().optional(),
+  "meldeamtLI": zod.boolean().optional(),
+  "idChange": zod.boolean().optional()
+})
+
+export const UpdateOfficerPermissionsResponse = zod.object({
+  "id": zod.number(),
+  "dienstnummer": zod.string(),
+  "name": zod.string(),
+  "rank": zod.string(),
+  "division": zod.string(),
+  "status": zod.string().describe('Anwesend | In Einsatz | Pause | Abwesend'),
+  "radioStatus": zod.string().optional().describe('Aktiv | Ausgeschaltet'),
+  "radioFreq": zod.string(),
+  "avatarUrl": zod.string().nullish(),
+  "deckname": zod.string().nullish(),
+  "telNr": zod.string().nullish(),
+  "beitritt": zod.string().nullish(),
+  "einweisung": zod.boolean(),
+  "waffenfreigabeLMG": zod.boolean(),
+  "waffenfreigabeHeavySniper": zod.boolean(),
+  "freigabeCCU": zod.boolean(),
+  "freigabeZivil": zod.boolean(),
+  "freigabeUndercover": zod.boolean(),
+  "meldeamtSAHP": zod.boolean(),
+  "meldeamtPD": zod.boolean(),
+  "meldeamtLI": zod.boolean(),
+  "idChange": zod.boolean()
 })
 
 

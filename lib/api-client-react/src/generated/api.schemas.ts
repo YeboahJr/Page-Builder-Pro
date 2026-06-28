@@ -27,11 +27,46 @@ export interface Officer {
   radioFreq: string;
   /** @nullable */
   avatarUrl?: string | null;
+  /** @nullable */
+  deckname?: string | null;
+  /** @nullable */
+  telNr?: string | null;
+  /** @nullable */
+  beitritt?: string | null;
+  einweisung: boolean;
+  waffenfreigabeLMG: boolean;
+  waffenfreigabeHeavySniper: boolean;
+  freigabeCCU: boolean;
+  freigabeZivil: boolean;
+  freigabeUndercover: boolean;
+  meldeamtSAHP: boolean;
+  meldeamtPD: boolean;
+  meldeamtLI: boolean;
+  idChange: boolean;
 }
 
 export interface LoginResult {
   officer: Officer;
   token: string;
+}
+
+export interface UpdateOfficerPermissions {
+  /** @nullable */
+  deckname?: string | null;
+  /** @nullable */
+  telNr?: string | null;
+  /** @nullable */
+  beitritt?: string | null;
+  einweisung?: boolean;
+  waffenfreigabeLMG?: boolean;
+  waffenfreigabeHeavySniper?: boolean;
+  freigabeCCU?: boolean;
+  freigabeZivil?: boolean;
+  freigabeUndercover?: boolean;
+  meldeamtSAHP?: boolean;
+  meldeamtPD?: boolean;
+  meldeamtLI?: boolean;
+  idChange?: boolean;
 }
 
 export interface DashboardStats {
