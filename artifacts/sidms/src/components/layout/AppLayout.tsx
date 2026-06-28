@@ -188,17 +188,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           </div>
         </div>
 
-        {/* Logout */}
-        <div className="p-3 border-t border-primary/20">
-          <button
-            onClick={logout}
-            data-testid="button-logout"
-            className="flex items-center gap-2.5 px-3 py-2 rounded w-full text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors text-sm"
-          >
-            <LogOut className="w-4 h-4" />
-            <span className="font-medium">Abmelden</span>
-          </button>
-        </div>
       </aside>
 
       {/* Main */}
@@ -248,20 +237,20 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator className="bg-primary/20" />
                 <DropdownMenuItem
-                  data-testid="menu-item-einstellungen"
-                  className="text-gray-200 focus:bg-primary/10 focus:text-white cursor-pointer"
-                  onSelect={() => setLocation("/einstellungen")}
-                >
-                  <Settings className="text-primary" />
-                  Einstellungen
-                </DropdownMenuItem>
-                <DropdownMenuItem
                   data-testid="menu-item-profil-bearbeiten"
                   className="text-gray-200 focus:bg-primary/10 focus:text-white cursor-pointer"
                   onSelect={() => setLocation("/einstellungen")}
                 >
                   <UserCog className="text-primary" />
                   Profil bearbeiten
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  data-testid="menu-item-einstellungen"
+                  className="text-gray-200 focus:bg-primary/10 focus:text-white cursor-pointer"
+                  onSelect={() => setLocation("/einstellungen")}
+                >
+                  <Settings className="text-primary" />
+                  Einstellungen
                 </DropdownMenuItem>
                 <DropdownMenuSeparator className="bg-primary/20" />
                 <DropdownMenuItem
