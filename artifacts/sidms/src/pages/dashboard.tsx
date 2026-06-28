@@ -64,6 +64,9 @@ export default function Dashboard() {
   const [evidenceLoading, setEvidenceLoading] = useState(false);
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
+  const [showAddEvidence, setShowAddEvidence] = useState(false);
+  const [addEvidenceFiles, setAddEvidenceFiles] = useState<UploadFile[]>([]);
+  const [addEvidenceUploading, setAddEvidenceUploading] = useState(false);
 
   const [filters, setFilters] = useState({
     caseNumber: "", title: "", category: "", status: "", agentId: "", priority: "",
@@ -100,6 +103,30 @@ export default function Dashboard() {
       .catch(() => setEvidenceFiles([]))
       .finally(() => setEvidenceLoading(false));
   }, [activeTab, selectedId]);
+
+  const fetchEvidenceFiles = (caseId: number) => {
+    setEvidenceLoading(true);
+    fetch(`/api/cases/${caseId}/evidence/files`, {
+      headers: { Authorization: `Bearer ${sessionStorage.getItem("sidms_token") ?? ""}` },
+    })
+      .then(r => r.json())
+      .then(d => setEvidenceFiles(d.files ?? []))
+      .catch(() => setEvidenceFiles([]))
+      .finally(() => setEvidenceLoading(false));
+  };
+
+  const handleAddEvidence = async () => {
+    if (!selectedId || addEvidenceFiles.length === 0) return;
+    setAddEvidenceUploading(true);
+    try {
+      await uploadEvidenceFiles(selectedId, addEvidenceFiles);
+      setAddEvidenceFiles([]);
+      setShowAddEvidence(false);
+      fetchEvidenceFiles(selectedId);
+    } finally {
+      setAddEvidenceUploading(false);
+    }
+  };
 
   const handleNewCase = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -264,7 +291,7 @@ export default function Dashboard() {
                   ) : cases?.map(c => (
                     <tr
                       key={c.id}
-                      onClick={() => { setSelectedId(c.id); setActiveTab("Übersicht"); }}
+                      onClick={() => { setSelectedId(c.id); setActiveTab("Übersicht"); setShowAddEvidence(false); setAddEvidenceFiles([]); }}
                       className={`border-b border-[#1e2d4a]/50 cursor-pointer transition-colors hover:bg-[#1a2744]/50 ${selectedId === c.id ? "bg-[#1a2744]" : ""}`}
                       data-testid={`row-case-${c.id}`}
                     >
@@ -428,14 +455,46 @@ export default function Dashboard() {
                 )}
                 {activeTab === "Beweismittel" && (
                   <div>
-                    <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Hochgeladene Beweismittel</h3>
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Hochgeladene Beweismittel</h3>
+                      <button
+                        onClick={() => { setShowAddEvidence(v => !v); setAddEvidenceFiles([]); }}
+                        className="flex items-center gap-1.5 px-2.5 py-1 text-xs bg-[#1a3d7c]/60 hover:bg-[#1a3d7c] border border-[#2a5bb0]/50 text-blue-300 rounded transition-colors"
+                        data-testid="button-upload-evidence"
+                      >
+                        <Plus className="w-3 h-3" />
+                        Hochladen
+                      </button>
+                    </div>
+                    {showAddEvidence && (
+                      <div className="mb-4 p-3 bg-[#0a0f1a] border border-[#1e2d4a] rounded-lg">
+                        <EvidenceUpload files={addEvidenceFiles} onChange={setAddEvidenceFiles} />
+                        <div className="flex gap-2 mt-3">
+                          <button
+                            type="button"
+                            onClick={() => { setShowAddEvidence(false); setAddEvidenceFiles([]); }}
+                            className="flex-1 py-1.5 bg-[#1e2d4a] text-gray-300 text-xs rounded transition-colors hover:bg-[#253650]"
+                          >
+                            Abbrechen
+                          </button>
+                          <button
+                            type="button"
+                            onClick={handleAddEvidence}
+                            disabled={addEvidenceUploading || addEvidenceFiles.length === 0}
+                            className="flex-1 py-1.5 bg-[#1a3d7c] hover:bg-[#1e4a94] text-white text-xs font-medium rounded transition-colors disabled:opacity-60"
+                          >
+                            {addEvidenceUploading ? "Hochladen..." : `${addEvidenceFiles.length} Datei${addEvidenceFiles.length !== 1 ? "en" : ""} hochladen`}
+                          </button>
+                        </div>
+                      </div>
+                    )}
                     {evidenceLoading ? (
                       <p className="text-xs text-gray-500 py-4 text-center">Laden...</p>
                     ) : evidenceFiles.length === 0 ? (
                       <div className="flex flex-col items-center justify-center py-10 gap-2">
                         <ImageIcon className="w-8 h-8 text-gray-700" />
                         <p className="text-xs text-gray-500">Keine Beweismittel vorhanden.</p>
-                        <p className="text-[10px] text-gray-600">Beim Anlegen eines Falls können Bilder und Videos hochgeladen werden.</p>
+                        <p className="text-[10px] text-gray-600">Klicken Sie auf "Hochladen", um Bilder und Videos hinzuzufügen.</p>
                       </div>
                     ) : (
                       <div className="grid grid-cols-4 gap-3">
