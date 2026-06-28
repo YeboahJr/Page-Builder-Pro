@@ -61,7 +61,7 @@ router.get("/:id", async (req, res) => {
   const id = parseInt(req.params.id);
   const [report] = await db.select().from(reportsTable).where(eq(reportsTable.id, id));
   if (!report) return res.status(404).json({ error: "Meldung nicht gefunden" });
-  res.json({ ...report, reportedAt: report.reportedAt.toISOString(), description: report.description ?? null });
+  return res.json({ ...report, reportedAt: report.reportedAt.toISOString(), description: report.description ?? null });
 });
 
 router.patch("/:id", async (req, res) => {

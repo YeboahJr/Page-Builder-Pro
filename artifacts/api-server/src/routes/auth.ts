@@ -36,7 +36,7 @@ router.post("/login", async (req, res) => {
 
   const { passwortHash: _, ...officerData } = officer;
   res.cookie("auth_token", token, { httpOnly: true, maxAge: 86400000 });
-  res.json({
+  return res.json({
     officer: {
       ...officerData,
       avatarUrl: officerData.avatarUrl ?? null,
@@ -58,7 +58,7 @@ router.get("/me", async (req, res) => {
   if (!officer) return res.status(401).json({ error: "Officer nicht gefunden" });
 
   const { passwortHash: _, ...officerData } = officer;
-  res.json({ ...officerData, avatarUrl: officerData.avatarUrl ?? null });
+  return res.json({ ...officerData, avatarUrl: officerData.avatarUrl ?? null });
 });
 
 router.post("/logout", async (req, res) => {

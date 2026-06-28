@@ -38,7 +38,7 @@ router.get("/:id", async (req, res) => {
   const id = parseInt(req.params.id);
   const [officer] = await db.select().from(officersTable).where(eq(officersTable.id, id));
   if (!officer) return res.status(404).json({ error: "Officer nicht gefunden" });
-  res.json(stripHash(officer));
+  return res.json(stripHash(officer));
 });
 
 router.post("/", async (req, res) => {
@@ -67,9 +67,9 @@ router.post("/", async (req, res) => {
       telNr: typeof body.telNr === "string" ? body.telNr : null,
       beitritt: typeof body.beitritt === "string" ? body.beitritt : null,
     }).returning();
-    res.status(201).json(stripHash(created));
+    return res.status(201).json(stripHash(created));
   } catch {
-    res.status(500).json({ error: "Officer konnte nicht angelegt werden" });
+    return res.status(500).json({ error: "Officer konnte nicht angelegt werden" });
   }
 });
 
