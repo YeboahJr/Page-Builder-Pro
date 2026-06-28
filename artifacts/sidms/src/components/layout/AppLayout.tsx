@@ -5,7 +5,6 @@ import {
   Radio,
   Briefcase,
   Users,
-  History,
   Archive,
   Settings,
   LogOut,
@@ -16,7 +15,6 @@ import {
   Car,
   Package,
   CreditCard,
-  Calendar,
   Plus,
   FileText,
 } from "lucide-react";
@@ -40,10 +38,8 @@ const navItems: NavItem[] = [
     href: "/personal",
     children: [
       { label: "ID Change", href: "/personal/id-change" },
-      { label: "Kalender", href: "/personal/kalender" },
     ],
   },
-  { icon: History, label: "Audit-Log", href: "/audit-log" },
   { icon: Archive, label: "Archiv", href: "/archiv" },
   { icon: Settings, label: "Einstellungen", href: "/einstellungen" },
 ];
