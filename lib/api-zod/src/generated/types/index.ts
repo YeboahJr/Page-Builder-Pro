@@ -14,6 +14,8 @@ export * from './caseDetail';
 export * from './caseInput';
 export * from './casePerson';
 export * from './caseUpdate';
+export * from './changePasswordInput';
+export * from './changePasswordResult';
 export * from './createIdChange';
 export * from './createOfficer';
 export * from './dashboardStats';

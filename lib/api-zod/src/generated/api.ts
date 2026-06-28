@@ -776,6 +776,23 @@ export const DeleteOfficerResponse = zod.void()
 
 
 /**
+ * @summary Change own login password (requires current password verification)
+ */
+export const ChangeOfficerPasswordParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ChangeOfficerPasswordBody = zod.object({
+  "currentPassword": zod.string(),
+  "newPassword": zod.string()
+})
+
+export const ChangeOfficerPasswordResponse = zod.object({
+  "success": zod.boolean()
+})
+
+
+/**
  * @summary List all ID change requests
  */
 export const GetIdChangesResponseItem = zod.object({

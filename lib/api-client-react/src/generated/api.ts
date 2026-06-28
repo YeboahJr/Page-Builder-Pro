@@ -28,6 +28,8 @@ import type {
   CaseInput,
   CasePerson,
   CaseUpdate,
+  ChangePasswordInput,
+  ChangePasswordResult,
   CreateIdChange,
   CreateOfficer,
   DashboardStats,
@@ -2383,6 +2385,77 @@ export const useDeleteOfficer = <TError = ErrorType<void>,
         TContext
       > => {
       return useMutation(getDeleteOfficerMutationOptions(options));
+    }
+
+export const getChangeOfficerPasswordUrl = (id: number,) => {
+
+
+
+
+  return `/api/officers/${id}/password`
+}
+
+/**
+ * @summary Change own login password (requires current password verification)
+ */
+export const changeOfficerPassword = async (id: number,
+    changePasswordInput: ChangePasswordInput, options?: RequestInit): Promise<ChangePasswordResult> => {
+
+  return customFetch<ChangePasswordResult>(getChangeOfficerPasswordUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(changePasswordInput)
+  }
+);}
+
+
+
+
+export const getChangeOfficerPasswordMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof changeOfficerPassword>>, TError,{id: number;data: BodyType<ChangePasswordInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof changeOfficerPassword>>, TError,{id: number;data: BodyType<ChangePasswordInput>}, TContext> => {
+
+const mutationKey = ['changeOfficerPassword'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof changeOfficerPassword>>, {id: number;data: BodyType<ChangePasswordInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  changeOfficerPassword(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ChangeOfficerPasswordMutationResult = NonNullable<Awaited<ReturnType<typeof changeOfficerPassword>>>
+    export type ChangeOfficerPasswordMutationBody = BodyType<ChangePasswordInput>
+    export type ChangeOfficerPasswordMutationError = ErrorType<void>
+
+    /**
+ * @summary Change own login password (requires current password verification)
+ */
+export const useChangeOfficerPassword = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof changeOfficerPassword>>, TError,{id: number;data: BodyType<ChangePasswordInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof changeOfficerPassword>>,
+        TError,
+        {id: number;data: BodyType<ChangePasswordInput>},
+        TContext
+      > => {
+      return useMutation(getChangeOfficerPasswordMutationOptions(options));
     }
 
 export const getGetIdChangesUrl = () => {

@@ -68,6 +68,15 @@ export interface ApproveOfficerInput {
   rank: string;
 }
 
+export interface ChangePasswordInput {
+  currentPassword: string;
+  newPassword: string;
+}
+
+export interface ChangePasswordResult {
+  success: boolean;
+}
+
 export interface CreateOfficer {
   dienstnummer: string;
   name: string;

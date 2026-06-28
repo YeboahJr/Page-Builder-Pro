@@ -88,6 +88,37 @@ router.post("/:id/reject", async (req, res) => {
   return res.status(204).end();
 });
 
+router.post("/:id/password", async (req, res) => {
+  const current = await resolveOfficer(req);
+  if (!current) {
+    return res.status(401).json({ error: "Nicht angemeldet" });
+  }
+  const id = parseInt(req.params.id);
+  if (!Number.isInteger(id)) {
+    return res.status(400).json({ error: "Ungültige ID" });
+  }
+  if (current.id !== id) {
+    return res.status(403).json({ error: "Sie können nur Ihr eigenes Passwort ändern" });
+  }
+  const body = req.body as Record<string, unknown>;
+  const currentPassword = typeof body.currentPassword === "string" ? body.currentPassword : "";
+  const newPassword = typeof body.newPassword === "string" ? body.newPassword : "";
+  if (!currentPassword || !newPassword) {
+    return res.status(400).json({ error: "Aktuelles und neues Passwort sind erforderlich" });
+  }
+  if (newPassword.length < 4) {
+    return res.status(400).json({ error: "Das neue Passwort muss mindestens 4 Zeichen lang sein" });
+  }
+  if (hashPassword(currentPassword) !== current.passwortHash) {
+    return res.status(401).json({ error: "Das aktuelle Passwort ist falsch" });
+  }
+  await db
+    .update(officersTable)
+    .set({ passwortHash: hashPassword(newPassword) })
+    .where(eq(officersTable.id, id));
+  return res.json({ success: true });
+});
+
 router.get("/:id", async (req, res) => {
   const id = parseInt(req.params.id);
   const [officer] = await db.select().from(officersTable).where(eq(officersTable.id, id));
