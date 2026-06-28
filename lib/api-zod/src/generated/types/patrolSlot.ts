@@ -12,12 +12,6 @@ export interface PatrolSlot {
   officerId?: number | null;
   /** @nullable */
   officerName?: string | null;
-  /** Regelstreife | Sonderstreife | Undercover */
-  patrolType: string;
-  /** Frei auf Streife | 10-80 | 10-66 | Nicht verfügbar */
-  status: string;
-  /** @nullable */
-  vehicle?: string | null;
   /** @nullable */
   notes?: string | null;
 }

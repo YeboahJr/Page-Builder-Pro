@@ -418,13 +418,13 @@ export const UpdateReportResponse = zod.object({
 export const GetPatrolsResponseItem = zod.object({
   "id": zod.number(),
   "name": zod.string(),
+  "patrolType": zod.string().describe('Regelstreife | Sonderstreife | Undercover'),
+  "status": zod.string().describe('Frei auf Streife | 10-80 | 10-66 | Nicht verfügbar'),
+  "vehicle": zod.string().nullish(),
   "slots": zod.array(zod.object({
   "position": zod.string(),
   "officerId": zod.number().nullish(),
   "officerName": zod.string().nullish(),
-  "patrolType": zod.string().describe('Regelstreife | Sonderstreife | Undercover'),
-  "status": zod.string().describe('Frei auf Streife | 10-80 | 10-66 | Nicht verfügbar'),
-  "vehicle": zod.string().nullish(),
   "notes": zod.string().nullish()
 }))
 })
@@ -441,13 +441,13 @@ export const CreatePatrolBody = zod.object({
 export const CreatePatrolResponse = zod.object({
   "id": zod.number(),
   "name": zod.string(),
+  "patrolType": zod.string().describe('Regelstreife | Sonderstreife | Undercover'),
+  "status": zod.string().describe('Frei auf Streife | 10-80 | 10-66 | Nicht verfügbar'),
+  "vehicle": zod.string().nullish(),
   "slots": zod.array(zod.object({
   "position": zod.string(),
   "officerId": zod.number().nullish(),
   "officerName": zod.string().nullish(),
-  "patrolType": zod.string().describe('Regelstreife | Sonderstreife | Undercover'),
-  "status": zod.string().describe('Frei auf Streife | 10-80 | 10-66 | Nicht verfügbar'),
-  "vehicle": zod.string().nullish(),
   "notes": zod.string().nullish()
 }))
 })
@@ -461,13 +461,13 @@ export const UpdatePatrolParams = zod.object({
 })
 
 export const UpdatePatrolBody = zod.object({
+  "patrolType": zod.string().optional(),
+  "status": zod.string().optional(),
+  "vehicle": zod.string().nullish(),
   "slots": zod.array(zod.object({
   "position": zod.string(),
   "officerId": zod.number().nullish(),
   "officerName": zod.string().nullish(),
-  "patrolType": zod.string().describe('Regelstreife | Sonderstreife | Undercover'),
-  "status": zod.string().describe('Frei auf Streife | 10-80 | 10-66 | Nicht verfügbar'),
-  "vehicle": zod.string().nullish(),
   "notes": zod.string().nullish()
 })).optional()
 })
@@ -475,13 +475,13 @@ export const UpdatePatrolBody = zod.object({
 export const UpdatePatrolResponse = zod.object({
   "id": zod.number(),
   "name": zod.string(),
+  "patrolType": zod.string().describe('Regelstreife | Sonderstreife | Undercover'),
+  "status": zod.string().describe('Frei auf Streife | 10-80 | 10-66 | Nicht verfügbar'),
+  "vehicle": zod.string().nullish(),
   "slots": zod.array(zod.object({
   "position": zod.string(),
   "officerId": zod.number().nullish(),
   "officerName": zod.string().nullish(),
-  "patrolType": zod.string().describe('Regelstreife | Sonderstreife | Undercover'),
-  "status": zod.string().describe('Frei auf Streife | 10-80 | 10-66 | Nicht verfügbar'),
-  "vehicle": zod.string().nullish(),
   "notes": zod.string().nullish()
 }))
 })

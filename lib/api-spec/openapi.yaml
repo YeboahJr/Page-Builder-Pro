@@ -1164,27 +1164,12 @@ components:
 
     Patrol:
       type: object
-      required: [id, name, slots]
+      required: [id, name, patrolType, status, slots]
       properties:
         id:
           type: integer
         name:
           type: string
-        slots:
-          type: array
-          items:
-            $ref: "#/components/schemas/PatrolSlot"
-
-    PatrolSlot:
-      type: object
-      required: [position, patrolType, status]
-      properties:
-        position:
-          type: string
-        officerId:
-          type: ["integer", "null"]
-        officerName:
-          type: ["string", "null"]
         patrolType:
           type: string
           description: "Regelstreife | Sonderstreife | Undercover"
@@ -1192,6 +1177,21 @@ components:
           type: string
           description: "Frei auf Streife | 10-80 | 10-66 | Nicht verfügbar"
         vehicle:
+          type: ["string", "null"]
+        slots:
+          type: array
+          items:
+            $ref: "#/components/schemas/PatrolSlot"
+
+    PatrolSlot:
+      type: object
+      required: [position]
+      properties:
+        position:
+          type: string
+        officerId:
+          type: ["integer", "null"]
+        officerName:
           type: ["string", "null"]
         notes:
           type: ["string", "null"]
@@ -1206,6 +1206,12 @@ components:
     PatrolUpdate:
       type: object
       properties:
+        patrolType:
+          type: string
+        status:
+          type: string
+        vehicle:
+          type: ["string", "null"]
         slots:
           type: array
           items:

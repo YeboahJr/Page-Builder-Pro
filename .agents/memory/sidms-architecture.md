@@ -22,5 +22,10 @@ A new managed entity (table + CRUD + Personal-style page) touches 5 layers in th
 
 **Why:** Contract-first — openapi.yaml is the source of truth; client hooks and zod schemas are generated, not hand-written.
 
+## Patrol (Streife) data model
+Streifenart/Status/Fahrzeug are patrol-level (one per Streife), stored as `patrols` columns patrolType/status/vehicle — NOT per-slot. The `slots` jsonb holds only position/officerId/officerName/notes. Legacy slot rows may still carry stale patrolType/status/vehicle keys (harmless extra data, ignored by the frontend). PATCH /patrols/:id accepts patrolType/status/vehicle/slots.
+
+**Why:** User wanted these three fields to appear only once per patrol, not repeated on every officer slot row.
+
 ## Evidence files (durable rules)
 Evidence uploads are tracked in `evidence_files` (DB is the source of truth for listing, not GCS). Any deletion path that removes evidence (per-file DELETE, case DELETE, and any future person/report delete) must also delete matching `evidence_files` rows or files orphan. Rows predating the table won't list without a backfill.

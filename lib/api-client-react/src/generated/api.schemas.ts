@@ -302,12 +302,6 @@ export interface PatrolSlot {
   officerId?: number | null;
   /** @nullable */
   officerName?: string | null;
-  /** Regelstreife | Sonderstreife | Undercover */
-  patrolType: string;
-  /** Frei auf Streife | 10-80 | 10-66 | Nicht verfügbar */
-  status: string;
-  /** @nullable */
-  vehicle?: string | null;
   /** @nullable */
   notes?: string | null;
 }
@@ -315,6 +309,12 @@ export interface PatrolSlot {
 export interface Patrol {
   id: number;
   name: string;
+  /** Regelstreife | Sonderstreife | Undercover */
+  patrolType: string;
+  /** Frei auf Streife | 10-80 | 10-66 | Nicht verfügbar */
+  status: string;
+  /** @nullable */
+  vehicle?: string | null;
   slots: PatrolSlot[];
 }
 
@@ -323,6 +323,10 @@ export interface PatrolInput {
 }
 
 export interface PatrolUpdate {
+  patrolType?: string;
+  status?: string;
+  /** @nullable */
+  vehicle?: string | null;
   slots?: PatrolSlot[];
 }
 

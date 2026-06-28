@@ -8,5 +8,9 @@
 import type { PatrolSlot } from './patrolSlot';
 
 export interface PatrolUpdate {
+  patrolType?: string;
+  status?: string;
+  /** @nullable */
+  vehicle?: string | null;
   slots?: PatrolSlot[];
 }

@@ -6,20 +6,37 @@ import {
   getGetPatrolsQueryKey,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Save, Edit3, Circle, Users } from "lucide-react";
+import { Save, Edit3, Users } from "lucide-react";
 
 const PATROL_TYPES = ["Regelstreife", "Sonderstreife", "Undercover"];
 const SLOT_STATUSES = ["Frei auf Streife", "10-80", "10-66", "Nicht verfügbar"];
 const VEHICLES = ["Fahrzeug wählen", "Streifenwagen 1", "Streifenwagen 2", "SUV", "Motorrad", "Zivilfahrzeug"];
 
+const ACCENTS = [
+  "#e0922f", // amber
+  "#3ba776", // green
+  "#2fa6a0", // teal
+  "#3d9b5a", // emerald
+  "#d4b53a", // yellow
+  "#3a78c9", // blue
+  "#8a5cd1", // purple
+  "#3a93c9", // sky
+  "#c94545", // red
+  "#5aa83a", // lime
+];
+
 interface PatrolSlot {
   position: string;
   officerId: number | null;
   officerName: string | null;
+  notes: string | null;
+}
+
+interface PatrolDraft {
   patrolType: string;
   status: string;
   vehicle: string | null;
-  notes: string | null;
+  slots: PatrolSlot[];
 }
 
 function statusDot(s: string) {
@@ -51,30 +68,79 @@ export default function Streifen() {
   const { data: patrols, isLoading } = useGetPatrols();
   const { data: officers } = useGetOfficers();
   const updatePatrol = useUpdatePatrol();
-  const [localSlots, setLocalSlots] = useState<Record<number, PatrolSlot[]>>({});
+  const [drafts, setDrafts] = useState<Record<number, PatrolDraft>>({});
   const [saving, setSaving] = useState(false);
 
-  const getSlots = (patrol: { id: number; slots: unknown }): PatrolSlot[] => {
-    if (localSlots[patrol.id]) return localSlots[patrol.id];
-    return (patrol.slots as PatrolSlot[]) ?? [];
+  const getDraft = (patrol: {
+    id: number;
+    patrolType: string;
+    status: string;
+    vehicle?: string | null;
+    slots: unknown;
+  }): PatrolDraft => {
+    if (drafts[patrol.id]) return drafts[patrol.id];
+    return {
+      patrolType: patrol.patrolType,
+      status: patrol.status,
+      vehicle: patrol.vehicle ?? null,
+      slots: (patrol.slots as PatrolSlot[]) ?? [],
+    };
   };
 
-  const updateSlot = (patrolId: number, slotIdx: number, field: keyof PatrolSlot, value: string | number | null) => {
-    setLocalSlots(prev => {
-      const current = prev[patrolId] ?? (patrols?.find(p => p.id === patrolId)?.slots as PatrolSlot[]) ?? [];
-      const updated = current.map((s, i) => i === slotIdx ? { ...s, [field]: value } : s);
-      return { ...prev, [patrolId]: updated };
+  const patchDraft = (patrolId: number, partial: Partial<PatrolDraft>) => {
+    setDrafts(prev => {
+      const base =
+        prev[patrolId] ??
+        (() => {
+          const p = patrols?.find(x => x.id === patrolId);
+          return {
+            patrolType: p?.patrolType ?? "Regelstreife",
+            status: p?.status ?? "Frei auf Streife",
+            vehicle: p?.vehicle ?? null,
+            slots: (p?.slots as PatrolSlot[]) ?? [],
+          };
+        })();
+      return { ...prev, [patrolId]: { ...base, ...partial } };
     });
+  };
+
+  const updateSlot = (
+    patrolId: number,
+    slotIdx: number,
+    field: keyof PatrolSlot,
+    value: string | number | null,
+  ) => {
+    const base =
+      drafts[patrolId] ??
+      (() => {
+        const p = patrols?.find(x => x.id === patrolId);
+        return {
+          patrolType: p?.patrolType ?? "Regelstreife",
+          status: p?.status ?? "Frei auf Streife",
+          vehicle: p?.vehicle ?? null,
+          slots: (p?.slots as PatrolSlot[]) ?? [],
+        };
+      })();
+    const slots = base.slots.map((s, i) => (i === slotIdx ? { ...s, [field]: value } : s));
+    patchDraft(patrolId, { slots });
   };
 
   const handleSave = async () => {
     setSaving(true);
     try {
-      for (const [id, slots] of Object.entries(localSlots)) {
-        await updatePatrol.mutateAsync({ id: parseInt(id), data: { slots } });
+      for (const [id, draft] of Object.entries(drafts)) {
+        await updatePatrol.mutateAsync({
+          id: parseInt(id),
+          data: {
+            patrolType: draft.patrolType,
+            status: draft.status,
+            vehicle: draft.vehicle,
+            slots: draft.slots,
+          },
+        });
       }
       qc.invalidateQueries({ queryKey: getGetPatrolsQueryKey() });
-      setLocalSlots({});
+      setDrafts({});
     } finally {
       setSaving(false);
     }
@@ -91,7 +157,7 @@ export default function Streifen() {
         </div>
         <button
           onClick={handleSave}
-          disabled={saving || Object.keys(localSlots).length === 0}
+          disabled={saving || Object.keys(drafts).length === 0}
           className="flex items-center gap-2 bg-[#c9a227] hover:bg-[#d4af3a] text-black text-sm font-bold px-4 py-2 rounded transition-colors disabled:opacity-50"
           data-testid="button-save-patrols"
         >
@@ -107,24 +173,83 @@ export default function Streifen() {
             <p className="text-gray-500 text-sm">Laden...</p>
           ) : (
             <div className="grid grid-cols-2 gap-3">
-              {patrols?.map(patrol => {
-                const slots = getSlots(patrol);
+              {patrols?.map((patrol, pIdx) => {
+                const draft = getDraft(patrol);
+                const accent = ACCENTS[pIdx % ACCENTS.length];
                 return (
-                  <div key={patrol.id} className="bg-[#0d1526] border border-[#1e2d4a] rounded" data-testid={`patrol-${patrol.id}`}>
+                  <div
+                    key={patrol.id}
+                    className="bg-[#0d1526] border border-[#1e2d4a] rounded overflow-hidden"
+                    style={{ borderTop: `2px solid ${accent}` }}
+                    data-testid={`patrol-${patrol.id}`}
+                  >
                     <div className="px-3 py-2 border-b border-[#1e2d4a] bg-[#0a0f1a]">
-                      <p className="text-xs font-semibold text-white">{patrol.name}</p>
+                      <p className="text-xs font-semibold" style={{ color: accent }}>
+                        {patrol.name}
+                      </p>
                     </div>
+
+                    {/* Patrol-level controls (once per Streife) */}
+                    <div className="grid grid-cols-3 gap-2 px-3 py-2 border-b border-[#1e2d4a]/60 bg-[#0b1220]">
+                      <label className="flex flex-col gap-1">
+                        <span className="text-[10px] uppercase tracking-wide text-gray-500">Streifenart</span>
+                        <select
+                          value={draft.patrolType}
+                          onChange={e => patchDraft(patrol.id, { patrolType: e.target.value })}
+                          className="bg-[#0a0f1a] border border-[#253650] text-gray-300 text-xs px-1.5 py-1 rounded focus:outline-none"
+                          data-testid={`select-patroltype-${patrol.id}`}
+                        >
+                          {PATROL_TYPES.map(t => (
+                            <option key={t}>{t}</option>
+                          ))}
+                        </select>
+                      </label>
+                      <label className="flex flex-col gap-1">
+                        <span className="text-[10px] uppercase tracking-wide text-gray-500">Status</span>
+                        <select
+                          value={draft.status}
+                          onChange={e => patchDraft(patrol.id, { status: e.target.value })}
+                          className={`bg-[#0a0f1a] border border-[#253650] text-xs px-1.5 py-1 rounded focus:outline-none ${slotStatusColor(draft.status)}`}
+                          data-testid={`select-status-${patrol.id}`}
+                        >
+                          {SLOT_STATUSES.map(s => (
+                            <option key={s}>{s}</option>
+                          ))}
+                        </select>
+                      </label>
+                      <label className="flex flex-col gap-1">
+                        <span className="text-[10px] uppercase tracking-wide text-gray-500">Fahrzeug</span>
+                        <select
+                          value={draft.vehicle ?? ""}
+                          onChange={e => patchDraft(patrol.id, { vehicle: e.target.value || null })}
+                          className="bg-[#0a0f1a] border border-[#253650] text-gray-300 text-xs px-1.5 py-1 rounded focus:outline-none"
+                          data-testid={`select-vehicle-${patrol.id}`}
+                        >
+                          {VEHICLES.map(v => (
+                            <option key={v} value={v === "Fahrzeug wählen" ? "" : v}>
+                              {v}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                    </div>
+
                     <div className="overflow-x-auto">
                       <table className="w-full text-xs">
                         <thead>
                           <tr className="border-b border-[#1e2d4a]/50">
-                            {["Position", "Dienstnummer / Agent", "Streifenart", "Status", "Fahrzeug", "Notizen"].map(h => (
-                              <th key={h} className="text-left px-2 py-1.5 text-gray-500 font-medium whitespace-nowrap">{h}</th>
+                            {["Position", "Dienstnummer / Agent", "Notizen"].map(h => (
+                              <th
+                                key={h}
+                                className="text-left px-2 py-1.5 text-gray-500 font-medium whitespace-nowrap"
+                              >
+                                {h}
+                              </th>
                             ))}
                           </tr>
                         </thead>
                         <tbody>
-                          {slots.map((slot, idx) => (
+                          {draft.slots.map((slot, idx) => (
                             <tr key={idx} className="border-b border-[#1e2d4a]/30">
                               <td className="px-2 py-1.5 text-gray-400 font-mono">{slot.position}</td>
                               <td className="px-2 py-1">
@@ -136,39 +261,14 @@ export default function Streifen() {
                                     updateSlot(patrol.id, idx, "officerName", name || null);
                                     updateSlot(patrol.id, idx, "officerId", officer?.id ?? null);
                                   }}
-                                  className="bg-[#0a0f1a] border border-[#253650] text-gray-300 text-xs px-1 py-0.5 rounded focus:outline-none w-full min-w-[100px]"
+                                  className="bg-[#0a0f1a] border border-[#253650] text-gray-300 text-xs px-1 py-0.5 rounded focus:outline-none w-full min-w-[140px]"
                                 >
                                   <option value="">Dienstnummer wählen</option>
                                   {officers?.map(o => (
-                                    <option key={o.id} value={o.name}>{o.dienstnummer} – {o.name}</option>
+                                    <option key={o.id} value={o.name}>
+                                      {o.dienstnummer} – {o.name}
+                                    </option>
                                   ))}
-                                </select>
-                              </td>
-                              <td className="px-2 py-1">
-                                <select
-                                  value={slot.patrolType}
-                                  onChange={e => updateSlot(patrol.id, idx, "patrolType", e.target.value)}
-                                  className="bg-[#0a0f1a] border border-[#253650] text-gray-300 text-xs px-1 py-0.5 rounded focus:outline-none"
-                                >
-                                  {PATROL_TYPES.map(t => <option key={t}>{t}</option>)}
-                                </select>
-                              </td>
-                              <td className="px-2 py-1">
-                                <select
-                                  value={slot.status}
-                                  onChange={e => updateSlot(patrol.id, idx, "status", e.target.value)}
-                                  className={`bg-[#0a0f1a] border border-[#253650] text-xs px-1 py-0.5 rounded focus:outline-none ${slotStatusColor(slot.status)}`}
-                                >
-                                  {SLOT_STATUSES.map(s => <option key={s}>{s}</option>)}
-                                </select>
-                              </td>
-                              <td className="px-2 py-1">
-                                <select
-                                  value={slot.vehicle ?? ""}
-                                  onChange={e => updateSlot(patrol.id, idx, "vehicle", e.target.value || null)}
-                                  className="bg-[#0a0f1a] border border-[#253650] text-gray-300 text-xs px-1 py-0.5 rounded focus:outline-none"
-                                >
-                                  {VEHICLES.map(v => <option key={v} value={v === "Fahrzeug wählen" ? "" : v}>{v}</option>)}
                                 </select>
                               </td>
                               <td className="px-2 py-1">
@@ -200,20 +300,31 @@ export default function Streifen() {
             </div>
             <div className="divide-y divide-[#1e2d4a]/40 max-h-[500px] overflow-y-auto">
               {onDutyOfficers.map(o => (
-                <div key={o.id} className="px-4 py-2.5 flex items-center gap-3 hover:bg-[#1a2744]/30 transition-colors" data-testid={`officer-row-${o.id}`}>
+                <div
+                  key={o.id}
+                  className="px-4 py-2.5 flex items-center gap-3 hover:bg-[#1a2744]/30 transition-colors"
+                  data-testid={`officer-row-${o.id}`}
+                >
                   <div className="w-7 h-7 rounded-full bg-[#1a2744] border border-[#253650] flex items-center justify-center flex-shrink-0">
-                    <span className="text-xs text-gray-400 font-medium">{o.name.split(" ").map(n => n[0]).join("").slice(0, 2)}</span>
+                    <span className="text-xs text-gray-400 font-medium">
+                      {o.name.split(" ").map(n => n[0]).join("").slice(0, 2)}
+                    </span>
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs font-medium text-white">{o.dienstnummer}</p>
-                    <p className="text-xs text-gray-500">{o.rank}</p>
+                    <p className="text-xs font-medium text-white truncate">{o.name}</p>
+                    <p className="text-xs text-gray-500">
+                      {o.dienstnummer} · {o.rank}
+                    </p>
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
                     <div className="text-right">
                       <p className="text-xs text-gray-400">{o.status}</p>
                     </div>
                     <div className={`w-2 h-2 rounded-full ${statusDot(o.status)}`} title={o.status} />
-                    <div className={`w-2 h-2 rounded-full ${radioStatusDot(o.radioStatus ?? "")}`} title={o.radioStatus ?? ""} />
+                    <div
+                      className={`w-2 h-2 rounded-full ${radioStatusDot(o.radioStatus ?? "")}`}
+                      title={o.radioStatus ?? ""}
+                    />
                   </div>
                 </div>
               ))}

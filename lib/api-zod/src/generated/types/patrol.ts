@@ -10,5 +10,11 @@ import type { PatrolSlot } from './patrolSlot';
 export interface Patrol {
   id: number;
   name: string;
+  /** Regelstreife | Sonderstreife | Undercover */
+  patrolType: string;
+  /** Frei auf Streife | 10-80 | 10-66 | Nicht verfügbar */
+  status: string;
+  /** @nullable */
+  vehicle?: string | null;
   slots: PatrolSlot[];
 }
