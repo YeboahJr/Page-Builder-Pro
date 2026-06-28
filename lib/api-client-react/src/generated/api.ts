@@ -27,6 +27,7 @@ import type {
   CaseInput,
   CasePerson,
   CaseUpdate,
+  CreateOfficer,
   DashboardStats,
   Evidence,
   EvidenceInput,
@@ -1799,6 +1800,76 @@ export function useGetOfficers<TData = Awaited<ReturnType<typeof getOfficers>>, 
 
 
 
+
+export const getCreateOfficerUrl = () => {
+
+
+
+
+  return `/api/officers`
+}
+
+/**
+ * @summary Create a new officer (Beamten anlegen)
+ */
+export const createOfficer = async (createOfficer: CreateOfficer, options?: RequestInit): Promise<Officer> => {
+
+  return customFetch<Officer>(getCreateOfficerUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(createOfficer)
+  }
+);}
+
+
+
+
+export const getCreateOfficerMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createOfficer>>, TError,{data: BodyType<CreateOfficer>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createOfficer>>, TError,{data: BodyType<CreateOfficer>}, TContext> => {
+
+const mutationKey = ['createOfficer'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createOfficer>>, {data: BodyType<CreateOfficer>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createOfficer(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateOfficerMutationResult = NonNullable<Awaited<ReturnType<typeof createOfficer>>>
+    export type CreateOfficerMutationBody = BodyType<CreateOfficer>
+    export type CreateOfficerMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Create a new officer (Beamten anlegen)
+ */
+export const useCreateOfficer = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createOfficer>>, TError,{data: BodyType<CreateOfficer>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createOfficer>>,
+        TError,
+        {data: BodyType<CreateOfficer>},
+        TContext
+      > => {
+      return useMutation(getCreateOfficerMutationOptions(options));
+    }
 
 export const getGetOfficerUrl = (id: number,) => {
 

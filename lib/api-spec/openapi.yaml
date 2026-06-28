@@ -476,6 +476,23 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Officer"
+    post:
+      operationId: createOfficer
+      tags: [officers]
+      summary: Create a new officer (Beamten anlegen)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateOfficer"
+      responses:
+        "201":
+          description: Created officer
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Officer"
 
   /officers/{id}:
     get:
@@ -634,9 +651,34 @@ components:
         idChange:
           type: boolean
 
+    CreateOfficer:
+      type: object
+      required: [dienstnummer, name, rank]
+      properties:
+        dienstnummer:
+          type: string
+        name:
+          type: string
+        rank:
+          type: string
+        passwort:
+          type: string
+        deckname:
+          type: ["string", "null"]
+        telNr:
+          type: ["string", "null"]
+        beitritt:
+          type: ["string", "null"]
+
     UpdateOfficerPermissions:
       type: object
       properties:
+        dienstnummer:
+          type: string
+        name:
+          type: string
+        rank:
+          type: string
         deckname:
           type: ["string", "null"]
         telNr:

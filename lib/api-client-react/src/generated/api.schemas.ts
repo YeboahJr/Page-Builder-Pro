@@ -50,7 +50,23 @@ export interface LoginResult {
   token: string;
 }
 
+export interface CreateOfficer {
+  dienstnummer: string;
+  name: string;
+  rank: string;
+  passwort?: string;
+  /** @nullable */
+  deckname?: string | null;
+  /** @nullable */
+  telNr?: string | null;
+  /** @nullable */
+  beitritt?: string | null;
+}
+
 export interface UpdateOfficerPermissions {
+  dienstnummer?: string;
+  name?: string;
+  rank?: string;
   /** @nullable */
   deckname?: string | null;
   /** @nullable */

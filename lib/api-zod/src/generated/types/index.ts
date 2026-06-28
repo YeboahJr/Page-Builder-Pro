@@ -13,6 +13,7 @@ export * from './caseDetail';
 export * from './caseInput';
 export * from './casePerson';
 export * from './caseUpdate';
+export * from './createOfficer';
 export * from './dashboardStats';
 export * from './evidence';
 export * from './evidenceInput';

@@ -516,6 +516,45 @@ export const GetOfficersResponse = zod.array(GetOfficersResponseItem)
 
 
 /**
+ * @summary Create a new officer (Beamten anlegen)
+ */
+export const CreateOfficerBody = zod.object({
+  "dienstnummer": zod.string(),
+  "name": zod.string(),
+  "rank": zod.string(),
+  "passwort": zod.string().optional(),
+  "deckname": zod.string().nullish(),
+  "telNr": zod.string().nullish(),
+  "beitritt": zod.string().nullish()
+})
+
+export const CreateOfficerResponse = zod.object({
+  "id": zod.number(),
+  "dienstnummer": zod.string(),
+  "name": zod.string(),
+  "rank": zod.string(),
+  "division": zod.string(),
+  "status": zod.string().describe('Anwesend | In Einsatz | Pause | Abwesend'),
+  "radioStatus": zod.string().optional().describe('Aktiv | Ausgeschaltet'),
+  "radioFreq": zod.string(),
+  "avatarUrl": zod.string().nullish(),
+  "deckname": zod.string().nullish(),
+  "telNr": zod.string().nullish(),
+  "beitritt": zod.string().nullish(),
+  "einweisung": zod.boolean(),
+  "waffenfreigabeLMG": zod.boolean(),
+  "waffenfreigabeHeavySniper": zod.boolean(),
+  "freigabeCCU": zod.boolean(),
+  "freigabeZivil": zod.boolean(),
+  "freigabeUndercover": zod.boolean(),
+  "meldeamtSAHP": zod.boolean(),
+  "meldeamtPD": zod.boolean(),
+  "meldeamtLI": zod.boolean(),
+  "idChange": zod.boolean()
+})
+
+
+/**
  * @summary Get officer by ID
  */
 export const GetOfficerParams = zod.object({
@@ -556,6 +595,9 @@ export const UpdateOfficerPermissionsParams = zod.object({
 })
 
 export const UpdateOfficerPermissionsBody = zod.object({
+  "dienstnummer": zod.string().optional(),
+  "name": zod.string().optional(),
+  "rank": zod.string().optional(),
   "deckname": zod.string().nullish(),
   "telNr": zod.string().nullish(),
   "beitritt": zod.string().nullish(),

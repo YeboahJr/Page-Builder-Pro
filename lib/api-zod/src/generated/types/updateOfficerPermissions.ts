@@ -7,6 +7,9 @@
  */
 
 export interface UpdateOfficerPermissions {
+  dienstnummer?: string;
+  name?: string;
+  rank?: string;
   /** @nullable */
   deckname?: string | null;
   /** @nullable */
