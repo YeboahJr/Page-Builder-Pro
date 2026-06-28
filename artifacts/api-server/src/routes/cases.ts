@@ -6,18 +6,14 @@ import path from "path";
 import fs from "fs";
 import { randomUUID } from "crypto";
 import { objectStorageClient } from "../lib/objectStorage";
+import {
+  parsePrivateObjectDir,
+  evidenceObjectName,
+  evidenceCaseListPrefix,
+  evidenceObjectPath,
+} from "@workspace/object-storage";
 
 const LOCAL_UPLOADS_DIR = path.join(process.cwd(), "uploads");
-
-function parsePrivateObjectDir(dir: string): { bucketName: string; gcsPrefix: string } {
-  const normalized = dir.replace(/^\//, "");
-  const slashIdx = normalized.indexOf("/");
-  if (slashIdx === -1) return { bucketName: normalized, gcsPrefix: "" };
-  return {
-    bucketName: normalized.slice(0, slashIdx),
-    gcsPrefix: normalized.slice(slashIdx + 1),
-  };
-}
 
 const memoryStorage = multer.memoryStorage();
 const upload = multer({
@@ -170,7 +166,7 @@ router.delete("/:id", async (req, res) => {
   if (privateObjectDir) {
     const { bucketName, gcsPrefix } = parsePrivateObjectDir(privateObjectDir);
     const bucket = objectStorageClient.bucket(bucketName);
-    const gcsListPrefix = gcsPrefix ? `${gcsPrefix}/case-${id}/` : `case-${id}/`;
+    const gcsListPrefix = evidenceCaseListPrefix(gcsPrefix, id);
     try {
       await bucket.deleteFiles({ prefix: gcsListPrefix, force: true });
     } catch (err) {
@@ -246,11 +242,11 @@ router.post("/:id/evidence/upload", upload.array("files", 20), async (req, res) 
     const unique = `${Date.now()}-${randomUUID()}${ext}`;
     // Object name in GCS: <gcsPrefix>/case-<id>/<unique>  (e.g. ".private/case-1/uuid.jpg")
     // entityId passed to getObjectEntityFile: case-<id>/<unique>  (prefix is stripped by the service)
-    const objectName = gcsPrefix ? `${gcsPrefix}/case-${req.params.id}/${unique}` : `case-${req.params.id}/${unique}`;
+    const objectName = evidenceObjectName(gcsPrefix, caseId, unique);
     const gcsFile = bucket.file(objectName);
     await gcsFile.save(f.buffer, { contentType: f.mimetype, resumable: false });
     // objectPath = /objects/<entityId> where entityId is relative to PRIVATE_OBJECT_DIR
-    const objectPath = `/objects/case-${req.params.id}/${unique}`;
+    const objectPath = evidenceObjectPath(caseId, unique);
 
     const [row] = await db.insert(evidenceFilesTable).values({
       caseId,
@@ -287,9 +283,7 @@ router.delete("/:id/evidence/:filename", async (req, res) => {
 
   const { bucketName, gcsPrefix } = parsePrivateObjectDir(privateObjectDir);
   const bucket = objectStorageClient.bucket(bucketName);
-  const objectName = gcsPrefix
-    ? `${gcsPrefix}/case-${id}/${filename}`
-    : `case-${id}/${filename}`;
+  const objectName = evidenceObjectName(gcsPrefix, id, filename);
 
   try {
     await bucket.file(objectName).delete();
@@ -300,7 +294,7 @@ router.delete("/:id/evidence/:filename", async (req, res) => {
   }
 
   // Remove the DB metadata row so the file no longer shows up in listings.
-  const objectPath = `/objects/case-${id}/${filename}`;
+  const objectPath = evidenceObjectPath(id, filename);
   await db.delete(evidenceFilesTable).where(eq(evidenceFilesTable.objectPath, objectPath));
 
   // Also clean up local fallback copy if it exists

@@ -175,6 +175,9 @@ importers:
       '@workspace/db':
         specifier: workspace:*
         version: link:../../lib/db
+      '@workspace/object-storage':
+        specifier: workspace:*
+        version: link:../../lib/object-storage
       cookie-parser:
         specifier: ^1.4.7
         version: 1.4.7
@@ -646,6 +649,16 @@ importers:
         specifier: ^0.31.10
         version: 0.31.10
 
+  lib/object-storage:
+    dependencies:
+      '@google-cloud/storage':
+        specifier: ^7.21.0
+        version: 7.21.0
+    devDependencies:
+      '@types/node':
+        specifier: 'catalog:'
+        version: 25.9.4
+
   scripts:
     dependencies:
       '@google-cloud/storage':
@@ -654,6 +667,9 @@ importers:
       '@workspace/db':
         specifier: workspace:*
         version: link:../lib/db
+      '@workspace/object-storage':
+        specifier: workspace:*
+        version: link:../lib/object-storage
       drizzle-orm:
         specifier: 'catalog:'
         version: 0.45.2(@types/pg@8.20.0)(pg@8.22.0)

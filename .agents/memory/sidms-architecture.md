@@ -34,6 +34,10 @@ The patrol `status` is a fixed frontend-defined list (STATUS_META in leitstelle.
 ## Evidence files (durable rules)
 Evidence uploads are tracked in `evidence_files` (DB is the source of truth for listing, not GCS). Any deletion path that removes evidence (per-file DELETE, case DELETE, and any future person/report delete) must also delete matching `evidence_files` rows or files orphan. Rows predating the table won't list without a backfill.
 
+The GCS client config + the evidence object-path scheme (`<gcsPrefix>/case-<id>/<filename>` in GCS, `/objects/case-<id>/<filename>` app-side) live in ONE shared lib `@workspace/object-storage` (lib/object-storage). Both the api-server (objectStorage.ts re-exports its client; cases.ts uses the path helpers) and the scripts backfill import from it. Never reconstruct these paths inline again — change the scheme only in lib/object-storage/src/paths.ts so the live upload/delete and the backfill can't drift.
+
+**Why:** Scripts and artifacts can't import from each other (pnpm rule), so the layout was copied into both and could silently diverge, producing evidence_files rows that don't match real objects.
+
 ## Delete handlers must surface failures, not return silent 204
 The generated React-Query hooks call `customFetch` (lib/api-client-react/src/custom-fetch.ts) which **throws `ApiError` on any non-2xx**, so `mutateAsync` rejects and frontend try/catch blocks show the error. This only works if the server returns a real error status. Every DELETE handler must validate the id (400), 404 when the row doesn't exist (don't return 204 for a no-op delete — the client would falsely remove a row), and wrap multi-table deletes in `db.transaction` so a mid-way DB failure rolls back and propagates as 500 instead of leaving a partially-deleted record reported as success. Mirror the officers/idchanges delete pattern.
 

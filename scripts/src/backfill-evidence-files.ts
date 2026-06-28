@@ -1,37 +1,14 @@
-import { Storage } from "@google-cloud/storage";
 import { db, evidenceFilesTable, pool } from "@workspace/db";
+import {
+  objectStorageClient,
+  parsePrivateObjectDir,
+  evidenceListPrefix,
+  evidenceObjectPath,
+  relativeToGcsPrefix,
+  parseEvidenceRelativePath,
+} from "@workspace/object-storage";
 import { inArray } from "drizzle-orm";
 import path from "path";
-
-const REPLIT_SIDECAR_ENDPOINT = "http://127.0.0.1:1106";
-
-const objectStorageClient = new Storage({
-  credentials: {
-    audience: "replit",
-    subject_token_type: "access_token",
-    token_url: `${REPLIT_SIDECAR_ENDPOINT}/token`,
-    type: "external_account",
-    credential_source: {
-      url: `${REPLIT_SIDECAR_ENDPOINT}/credential`,
-      format: {
-        type: "json",
-        subject_token_field_name: "access_token",
-      },
-    },
-    universe_domain: "googleapis.com",
-  },
-  projectId: "",
-});
-
-function parsePrivateObjectDir(dir: string): { bucketName: string; gcsPrefix: string } {
-  const normalized = dir.replace(/^\//, "");
-  const slashIdx = normalized.indexOf("/");
-  if (slashIdx === -1) return { bucketName: normalized, gcsPrefix: "" };
-  return {
-    bucketName: normalized.slice(0, slashIdx),
-    gcsPrefix: normalized.slice(slashIdx + 1),
-  };
-}
 
 const extToMime: Record<string, string> = {
   ".jpg": "image/jpeg",
@@ -62,11 +39,8 @@ async function main() {
   const bucket = objectStorageClient.bucket(bucketName);
 
   // Evidence objects live at: <gcsPrefix>/case-<id>/<filename>
-  const listPrefix = gcsPrefix ? `${gcsPrefix}/` : "";
+  const listPrefix = evidenceListPrefix(gcsPrefix);
   const [files] = await bucket.getFiles({ prefix: listPrefix });
-
-  // case-<id>/<filename> relative to the gcsPrefix
-  const caseObjectRe = /^case-(\d+)\/(.+)$/;
 
   type Candidate = {
     caseId: number;
@@ -79,16 +53,12 @@ async function main() {
   const candidates: Candidate[] = [];
 
   for (const file of files) {
-    const relative = gcsPrefix ? file.name.slice(gcsPrefix.length + 1) : file.name;
-    const match = caseObjectRe.exec(relative);
-    if (!match) continue;
+    const relative = relativeToGcsPrefix(gcsPrefix, file.name);
+    const parsed = parseEvidenceRelativePath(relative);
+    if (!parsed) continue;
 
-    const caseId = parseInt(match[1], 10);
-    const filename = match[2];
-    // Skip "directory placeholder" objects (names ending with a slash).
-    if (!filename || filename.endsWith("/")) continue;
-
-    const objectPath = `/objects/case-${caseId}/${filename}`;
+    const { caseId, filename } = parsed;
+    const objectPath = evidenceObjectPath(caseId, filename);
     const size = file.metadata.size != null ? Number(file.metadata.size) : 0;
     const mimetype = deriveMimetype(file.metadata.contentType, filename);
 
