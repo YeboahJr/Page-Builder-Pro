@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   useGetDashboardStats,
   useGetCases,
@@ -17,7 +17,7 @@ import {
 import { useQueryClient } from "@tanstack/react-query";
 import {
   Activity, FolderOpen, CheckCircle, Eye, Package, AlertTriangle,
-  Plus, ChevronRight, RotateCcw, Download, Search, X
+  Plus, ChevronRight, RotateCcw, Download, Search, X, Film, ImageIcon, ZoomIn
 } from "lucide-react";
 import EvidenceUpload, { type UploadFile, uploadEvidenceFiles } from "@/components/EvidenceUpload";
 
@@ -59,6 +59,12 @@ export default function Dashboard() {
   const [newCaseForm, setNewCaseForm] = useState<NewCaseForm>({ title: "", category: "Drogenkriminalität", priority: "Mittel", status: "Offen", leadAgent: "", description: "" });
   const [newCaseFiles, setNewCaseFiles] = useState<UploadFile[]>([]);
   const [newCaseSubmitting, setNewCaseSubmitting] = useState(false);
+
+  const [evidenceFiles, setEvidenceFiles] = useState<Array<{ filename: string; url: string; type: string; size: number; uploadedAt: string }>>([]);
+  const [evidenceLoading, setEvidenceLoading] = useState(false);
+  const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
+  const [videoUrl, setVideoUrl] = useState<string | null>(null);
+
   const [filters, setFilters] = useState({
     caseNumber: "", title: "", category: "", status: "", agentId: "", priority: "",
     suspectName: "", vehiclePlate: "", missionNumber: "", dateFrom: "", dateTo: "",
@@ -82,6 +88,18 @@ export default function Dashboard() {
   });
 
   const createCase = useCreateCase();
+
+  useEffect(() => {
+    if (activeTab !== "Beweismittel" || !selectedId) return;
+    setEvidenceLoading(true);
+    fetch(`/api/cases/${selectedId}/evidence/files`, {
+      headers: { Authorization: `Bearer ${sessionStorage.getItem("sidms_token") ?? ""}` },
+    })
+      .then(r => r.json())
+      .then(d => setEvidenceFiles(d.files ?? []))
+      .catch(() => setEvidenceFiles([]))
+      .finally(() => setEvidenceLoading(false));
+  }, [activeTab, selectedId]);
 
   const handleNewCase = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -121,6 +139,24 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-4 h-full flex flex-col">
+      {/* Image Lightbox */}
+      {lightboxUrl && (
+        <div className="fixed inset-0 bg-black/90 z-[100] flex items-center justify-center p-4" onClick={() => setLightboxUrl(null)}>
+          <button className="absolute top-4 right-4 text-white hover:text-gray-300 z-10" onClick={() => setLightboxUrl(null)}>
+            <X className="w-7 h-7" />
+          </button>
+          <img src={lightboxUrl} alt="Beweismittel" className="max-w-full max-h-full object-contain rounded shadow-2xl" onClick={e => e.stopPropagation()} />
+        </div>
+      )}
+      {/* Video Player */}
+      {videoUrl && (
+        <div className="fixed inset-0 bg-black/90 z-[100] flex items-center justify-center p-4" onClick={() => setVideoUrl(null)}>
+          <button className="absolute top-4 right-4 text-white hover:text-gray-300 z-10" onClick={() => setVideoUrl(null)}>
+            <X className="w-7 h-7" />
+          </button>
+          <video src={videoUrl} controls autoPlay className="max-w-full max-h-full rounded shadow-2xl" onClick={e => e.stopPropagation()} />
+        </div>
+      )}
       {/* New Case Modal */}
       {showNewCase && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
@@ -390,7 +426,59 @@ export default function Dashboard() {
                     )}
                   </div>
                 )}
-                {!["Übersicht", "Personen", "Agenten"].includes(activeTab) && (
+                {activeTab === "Beweismittel" && (
+                  <div>
+                    <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Hochgeladene Beweismittel</h3>
+                    {evidenceLoading ? (
+                      <p className="text-xs text-gray-500 py-4 text-center">Laden...</p>
+                    ) : evidenceFiles.length === 0 ? (
+                      <div className="flex flex-col items-center justify-center py-10 gap-2">
+                        <ImageIcon className="w-8 h-8 text-gray-700" />
+                        <p className="text-xs text-gray-500">Keine Beweismittel vorhanden.</p>
+                        <p className="text-[10px] text-gray-600">Beim Anlegen eines Falls können Bilder und Videos hochgeladen werden.</p>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-4 gap-3">
+                        {evidenceFiles.map((f, i) => (
+                          <div key={i} className="group relative rounded-lg overflow-hidden bg-[#0a0f1a] border border-[#1e2d4a] hover:border-[#c9a227]/40 transition-colors">
+                            {f.type === "image" ? (
+                              <div className="relative cursor-pointer" onClick={() => setLightboxUrl(f.url)}>
+                                <img src={f.url} alt={f.filename} className="w-full h-24 object-cover" />
+                                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center">
+                                  <ZoomIn className="w-5 h-5 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                                </div>
+                                <div className="absolute bottom-0 left-0 right-0 bg-black/60 px-1.5 py-1">
+                                  <p className="text-[9px] text-gray-300 truncate">{f.filename}</p>
+                                </div>
+                              </div>
+                            ) : f.type === "video" ? (
+                              <div className="relative cursor-pointer" onClick={() => setVideoUrl(f.url)}>
+                                <div className="w-full h-24 flex flex-col items-center justify-center gap-1 bg-[#0a1020]">
+                                  <Film className="w-6 h-6 text-blue-400" />
+                                  <span className="text-[9px] text-gray-500 px-1 truncate w-full text-center">{f.filename}</span>
+                                </div>
+                                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center">
+                                  <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <span className="text-white text-xs ml-0.5">▶</span>
+                                  </div>
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="w-full h-24 flex flex-col items-center justify-center gap-1">
+                                <ImageIcon className="w-5 h-5 text-gray-500" />
+                                <p className="text-[9px] text-gray-500 truncate px-1">{f.filename}</p>
+                              </div>
+                            )}
+                            <div className="px-1.5 py-1 border-t border-[#1e2d4a]">
+                              <p className="text-[9px] text-gray-600">{(f.size / 1024).toFixed(0)} KB</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+                {!["Übersicht", "Personen", "Agenten", "Beweismittel"].includes(activeTab) && (
                   <p className="text-xs text-gray-500 py-4 text-center">Keine Daten für diesen Bereich vorhanden.</p>
                 )}
               </div>

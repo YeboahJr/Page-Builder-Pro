@@ -185,10 +185,19 @@ router.post("/:id/evidence/upload", upload.array("files", 20), (req, res) => {
 router.get("/:id/evidence/files", (req, res) => {
   const dir = path.join(UPLOADS_DIR, `case-${req.params.id}`);
   if (!fs.existsSync(dir)) return res.json({ files: [] });
-  const files = fs.readdirSync(dir).map(name => ({
-    filename: name,
-    url: `/api/uploads/case-${req.params.id}/${name}`,
-  }));
+  const imageExts = new Set([".jpg", ".jpeg", ".png", ".gif", ".webp"]);
+  const videoExts = new Set([".mp4", ".webm", ".mov", ".avi", ".mkv"]);
+  const files = fs.readdirSync(dir).map(name => {
+    const ext = path.extname(name).toLowerCase();
+    const stat = fs.statSync(path.join(dir, name));
+    return {
+      filename: name,
+      url: `/api/uploads/case-${req.params.id}/${name}`,
+      type: imageExts.has(ext) ? "image" : videoExts.has(ext) ? "video" : "other",
+      size: stat.size,
+      uploadedAt: stat.mtime.toISOString(),
+    };
+  });
   res.json({ files });
 });
 
