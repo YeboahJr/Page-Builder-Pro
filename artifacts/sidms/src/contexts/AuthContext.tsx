@@ -20,6 +20,7 @@ interface AuthContextType {
   login: (dienstnummer: string, passwort: string) => Promise<void>;
   register: (dienstnummer: string, name: string, passwort: string) => Promise<string>;
   logout: () => void;
+  updateOfficer: (data: Partial<OfficerData>) => void;
   error: string | null;
 }
 
@@ -76,6 +77,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const updateOfficer = (data: Partial<OfficerData>) => {
+    setOfficer((prev) => {
+      if (!prev) return prev;
+      const next = { ...prev, ...data };
+      sessionStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+      return next;
+    });
+  };
+
   const logout = async () => {
     try {
       const token = sessionStorage.getItem(TOKEN_KEY);
@@ -90,7 +100,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, officer, login, register, logout, error }}>
+    <AuthContext.Provider value={{ isAuthenticated, officer, login, register, logout, updateOfficer, error }}>
       {children}
     </AuthContext.Provider>
   );

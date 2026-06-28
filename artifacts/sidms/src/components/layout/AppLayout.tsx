@@ -238,7 +238,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 <DropdownMenuItem
                   data-testid="menu-item-profil-bearbeiten"
                   className="text-gray-200 focus:bg-primary/10 focus:text-white cursor-pointer"
-                  onSelect={() => setLocation("/einstellungen")}
+                  onSelect={() => setLocation("/profil/bearbeiten")}
                 >
                   <UserCog className="text-primary" />
                   Profil bearbeiten

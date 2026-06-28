@@ -18,6 +18,7 @@ import IdChange from "@/pages/id-change";
 import AuditLog from "@/pages/audit-log";
 import Archiv from "@/pages/archiv";
 import Einstellungen from "@/pages/einstellungen";
+import ProfilBearbeiten from "@/pages/profil-bearbeiten";
 import AppLayout from "@/components/layout/AppLayout";
 
 const queryClient = new QueryClient({
@@ -74,6 +75,7 @@ function Router() {
       <Route path="/audit-log" component={() => <ProtectedRoute component={AuditLog} />} />
       <Route path="/archiv" component={() => <ProtectedRoute component={Archiv} />} />
       <Route path="/einstellungen" component={() => <ProtectedRoute component={Einstellungen} />} />
+      <Route path="/profil/bearbeiten" component={() => <ProtectedRoute component={ProfilBearbeiten} />} />
       <Route component={NotFound} />
     </Switch>
   );

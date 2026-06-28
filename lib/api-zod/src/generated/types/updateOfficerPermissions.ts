@@ -11,6 +11,11 @@ export interface UpdateOfficerPermissions {
   dienstnummer?: string;
   name?: string;
   rank?: string;
+  /** Anwesend | In Einsatz | Pause | Abwesend */
+  status?: string;
+  /** Aktiv | Ausgeschaltet */
+  radioStatus?: string;
+  radioFreq?: string;
   /** @nullable */
   deckname?: string | null;
   /** @nullable */

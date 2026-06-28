@@ -11,10 +11,13 @@ const BOOL_FIELDS = [
   "meldeamtSAHP", "meldeamtPD", "meldeamtLI", "idChange",
 ] as const;
 
-const TEXT_FIELDS = ["deckname", "telNr", "abmeldungBis", "beitritt", "dienstnummer", "name", "rank"] as const;
+const TEXT_FIELDS = ["deckname", "telNr", "abmeldungBis", "beitritt", "dienstnummer", "name", "rank", "status", "radioStatus", "radioFreq"] as const;
+
+const REQUIRED_TEXT_FIELDS = ["dienstnummer", "name", "rank", "status", "radioStatus", "radioFreq"] as const;
 
 type Patchable = Partial<Pick<typeof officersTable.$inferSelect,
   "deckname" | "telNr" | "abmeldungBis" | "beitritt" | "dienstnummer" | "name" | "rank" |
+  "status" | "radioStatus" | "radioFreq" |
   "einweisung" | "waffenfreigabeLMG" | "waffenfreigabeHeavySniper" |
   "freigabeCCU" | "freigabeZivil" | "freigabeUndercover" |
   "meldeamtSAHP" | "meldeamtPD" | "meldeamtLI" | "idChange"
@@ -133,7 +136,7 @@ router.patch("/:id", async (req, res) => {
   for (const f of TEXT_FIELDS) {
     if (f in body) {
       const v = body[f];
-      if ((f === "dienstnummer" || f === "name" || f === "rank")) {
+      if ((REQUIRED_TEXT_FIELDS as readonly string[]).includes(f)) {
         if (typeof v !== "string" || v.trim() === "") {
           return res.status(400).json({ error: `${f} darf nicht leer sein` });
         }

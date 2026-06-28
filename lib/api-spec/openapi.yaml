@@ -916,6 +916,14 @@ components:
           type: string
         rank:
           type: string
+        status:
+          type: string
+          description: "Anwesend | In Einsatz | Pause | Abwesend"
+        radioStatus:
+          type: string
+          description: "Aktiv | Ausgeschaltet"
+        radioFreq:
+          type: string
         deckname:
           type: ["string", "null"]
         telNr:
