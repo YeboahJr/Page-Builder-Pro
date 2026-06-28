@@ -27,7 +27,7 @@ const STATUS_META: Record<string, { text: string; dot: string }> = {
 };
 const SLOT_STATUSES = Object.keys(STATUS_META);
 const DEFAULT_STATUS = "Code 1";
-const VEHICLES = ["Fahrzeug wählen", "Streifenwagen 1", "Streifenwagen 2", "SUV", "Motorrad", "Zivilfahrzeug"];
+const VEHICLES = ["Auswahl", "Streifenwagen 1", "Streifenwagen 2", "SUV", "Motorrad", "Zivilfahrzeug"];
 
 const TEN_CODES: { label: string; code: string }[] = [
   { label: "Verstanden", code: "10-4" },
@@ -306,6 +306,7 @@ export default function Streifen() {
                           className="bg-[#0a0f1a] border border-[#253650] text-gray-300 text-xs px-1.5 py-1 rounded focus:outline-none"
                           data-testid={`select-patroltype-${patrol.id}`}
                         >
+                          <option value="">Auswahl</option>
                           {PATROL_TYPES.map(t => (
                             <option key={t}>{t}</option>
                           ))}
@@ -319,6 +320,7 @@ export default function Streifen() {
                           className={`bg-[#0a0f1a] border border-[#253650] text-xs px-1.5 py-1 rounded focus:outline-none ${slotStatusColor(draft.status)}`}
                           data-testid={`select-status-${patrol.id}`}
                         >
+                          <option value="">Auswahl</option>
                           {SLOT_STATUSES.map(s => (
                             <option key={s}>{s}</option>
                           ))}
@@ -333,7 +335,7 @@ export default function Streifen() {
                           data-testid={`select-vehicle-${patrol.id}`}
                         >
                           {VEHICLES.map(v => (
-                            <option key={v} value={v === "Fahrzeug wählen" ? "" : v}>
+                            <option key={v} value={v === "Auswahl" ? "" : v}>
                               {v}
                             </option>
                           ))}
