@@ -70,6 +70,7 @@ export default function Dashboard() {
   const [deletingFile, setDeletingFile] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const [filters, setFilters] = useState({
     caseNumber: "", title: "", category: "", status: "", agentId: "", priority: "",
@@ -120,6 +121,7 @@ export default function Dashboard() {
 
   const requestDeleteEvidence = (filename: string) => {
     setDeleteConfirmText("");
+    setDeleteError(null);
     setDeleteTarget(filename);
   };
 
@@ -127,14 +129,28 @@ export default function Dashboard() {
     if (!selectedId || !deleteTarget) return;
     const filename = deleteTarget;
     setDeletingFile(filename);
+    setDeleteError(null);
     try {
-      await fetch(`/api/cases/${selectedId}/evidence/${encodeURIComponent(filename)}`, {
+      const res = await fetch(`/api/cases/${selectedId}/evidence/${encodeURIComponent(filename)}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${sessionStorage.getItem("sidms_token") ?? ""}` },
       });
+      if (!res.ok) {
+        let message = `Löschen fehlgeschlagen (Status ${res.status}).`;
+        try {
+          const body = await res.json();
+          if (body?.error) message = body.error;
+        } catch {
+          // response had no JSON body; keep the status-based message
+        }
+        setDeleteError(message);
+        return;
+      }
       setEvidenceFiles(prev => prev.filter(f => f.filename !== filename));
       setDeleteTarget(null);
       setDeleteConfirmText("");
+    } catch {
+      setDeleteError("Netzwerkfehler – die Datei konnte nicht gelöscht werden.");
     } finally {
       setDeletingFile(null);
     }
@@ -237,6 +253,12 @@ export default function Dashboard() {
                   className="w-full bg-[#0a0f1a] border border-[#1e2d4a] text-white text-sm px-3 py-2 rounded focus:outline-none focus:border-red-500/50"
                 />
               </div>
+              {deleteError && (
+                <div className="flex items-start gap-2 bg-red-950/50 border border-red-800/60 rounded px-3 py-2">
+                  <AlertTriangle className="w-4 h-4 text-red-400 mt-0.5 shrink-0" />
+                  <p className="text-xs text-red-200 leading-relaxed">{deleteError}</p>
+                </div>
+              )}
               <div className="flex justify-end gap-2 pt-1">
                 <button
                   onClick={() => setDeleteTarget(null)}
