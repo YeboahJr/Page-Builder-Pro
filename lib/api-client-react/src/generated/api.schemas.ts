@@ -32,6 +32,8 @@ export interface Officer {
   /** @nullable */
   telNr?: string | null;
   /** @nullable */
+  abmeldungBis?: string | null;
+  /** @nullable */
   beitritt?: string | null;
   einweisung: boolean;
   waffenfreigabeLMG: boolean;
@@ -60,6 +62,8 @@ export interface CreateOfficer {
   /** @nullable */
   telNr?: string | null;
   /** @nullable */
+  abmeldungBis?: string | null;
+  /** @nullable */
   beitritt?: string | null;
 }
 
@@ -72,6 +76,8 @@ export interface UpdateOfficerPermissions {
   deckname?: string | null;
   /** @nullable */
   telNr?: string | null;
+  /** @nullable */
+  abmeldungBis?: string | null;
   /** @nullable */
   beitritt?: string | null;
   einweisung?: boolean;

@@ -15,10 +15,10 @@ const BOOL_FIELDS = [
   "meldeamtSAHP", "meldeamtPD", "meldeamtLI", "idChange",
 ] as const;
 
-const TEXT_FIELDS = ["deckname", "telNr", "beitritt", "dienstnummer", "name", "rank"] as const;
+const TEXT_FIELDS = ["deckname", "telNr", "abmeldungBis", "beitritt", "dienstnummer", "name", "rank"] as const;
 
 type Patchable = Partial<Pick<typeof officersTable.$inferSelect,
-  "deckname" | "telNr" | "beitritt" | "dienstnummer" | "name" | "rank" |
+  "deckname" | "telNr" | "abmeldungBis" | "beitritt" | "dienstnummer" | "name" | "rank" |
   "einweisung" | "waffenfreigabeLMG" | "waffenfreigabeHeavySniper" |
   "freigabeCCU" | "freigabeZivil" | "freigabeUndercover" |
   "meldeamtSAHP" | "meldeamtPD" | "meldeamtLI" | "idChange"
@@ -65,6 +65,7 @@ router.post("/", async (req, res) => {
       passwortHash: hashPassword(passwort),
       deckname: typeof body.deckname === "string" ? body.deckname : null,
       telNr: typeof body.telNr === "string" ? body.telNr : null,
+      abmeldungBis: typeof body.abmeldungBis === "string" ? body.abmeldungBis : null,
       beitritt: typeof body.beitritt === "string" ? body.beitritt : null,
     }).returning();
     return res.status(201).json(stripHash(created));

@@ -65,6 +65,7 @@ type Draft = {
   rank: string;
   deckname: string;
   telNr: string;
+  abmeldungBis: string;
   beitritt: string;
 } & Record<CheckboxKey, boolean>;
 
@@ -91,6 +92,7 @@ function draftFromOfficer(o: Officer): Draft {
     rank: o.rank,
     deckname: o.deckname ?? "",
     telNr: o.telNr ?? "",
+    abmeldungBis: o.abmeldungBis ?? "",
     beitritt: toDateInputValue(o.beitritt),
   } as Draft;
   for (const { key } of CHECKBOX_COLS) d[key] = o[key] as boolean;
@@ -114,7 +116,7 @@ export default function Personal() {
   const [busyId, setBusyId] = useState<number | null>(null);
 
   const [showNew, setShowNew] = useState(false);
-  const [newForm, setNewForm] = useState({ dienstnummer: "", name: "", rank: RANKS[RANKS.length - 1].name, passwort: "", deckname: "", telNr: "", beitritt: "" });
+  const [newForm, setNewForm] = useState({ dienstnummer: "", name: "", rank: RANKS[RANKS.length - 1].name, passwort: "", deckname: "", telNr: "", abmeldungBis: "", beitritt: "" });
   const [newError, setNewError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -163,6 +165,7 @@ export default function Personal() {
     if (draft.rank.trim() !== editOriginal.rank) payload.rank = draft.rank.trim();
     if (draft.deckname.trim() !== (editOriginal.deckname ?? "")) payload.deckname = draft.deckname.trim() || null;
     if (draft.telNr.trim() !== (editOriginal.telNr ?? "")) payload.telNr = draft.telNr.trim() || null;
+    if (draft.abmeldungBis.trim() !== (editOriginal.abmeldungBis ?? "")) payload.abmeldungBis = draft.abmeldungBis.trim() || null;
     if (draft.beitritt !== toDateInputValue(editOriginal.beitritt)) payload.beitritt = draft.beitritt || null;
     for (const { key } of CHECKBOX_COLS) {
       if (draft[key] !== (editOriginal[key] as boolean)) payload[key] = draft[key];
@@ -216,12 +219,13 @@ export default function Personal() {
           passwort: newForm.passwort || undefined,
           deckname: newForm.deckname || null,
           telNr: newForm.telNr || null,
+          abmeldungBis: newForm.abmeldungBis || null,
           beitritt: newForm.beitritt || null,
         },
       });
       invalidate();
       setShowNew(false);
-      setNewForm({ dienstnummer: "", name: "", rank: RANKS[RANKS.length - 1].name, passwort: "", deckname: "", telNr: "", beitritt: "" });
+      setNewForm({ dienstnummer: "", name: "", rank: RANKS[RANKS.length - 1].name, passwort: "", deckname: "", telNr: "", abmeldungBis: "", beitritt: "" });
     } catch {
       setNewError("Konnte nicht angelegt werden. Ist die Dienstnummer evtl. schon vergeben?");
     } finally {
@@ -264,6 +268,7 @@ export default function Personal() {
               <th className="text-left px-3 py-2.5 text-gray-400 font-medium">Rang</th>
               <th className="text-left px-3 py-2.5 text-gray-400 font-medium">Deckname</th>
               <th className="text-left px-3 py-2.5 text-gray-400 font-medium">Tel.Nr.</th>
+              <th className="text-left px-3 py-2.5 text-gray-400 font-medium">Abmeldung bis</th>
               <th className="text-left px-3 py-2.5 text-gray-400 font-medium">Beitritt</th>
               {CHECKBOX_COLS.map(c => (
                 <th key={c.key} className="px-2 py-2.5 text-gray-400 font-medium text-center border-l border-[#1e2d4a] first:border-l-0 align-bottom" title={c.label}>
@@ -275,7 +280,7 @@ export default function Personal() {
           </thead>
           <tbody>
             {isLoading ? (
-              <tr><td colSpan={8 + CHECKBOX_COLS.length} className="text-center py-8 text-gray-500">Laden...</td></tr>
+              <tr><td colSpan={9 + CHECKBOX_COLS.length} className="text-center py-8 text-gray-500">Laden...</td></tr>
             ) : sortedOfficers.map(o => {
               const isEditing = editingId === o.id && draft;
               const busy = busyId === o.id;
@@ -323,6 +328,11 @@ export default function Personal() {
                     {isEditing
                       ? <input className={`${inputCls} w-24`} value={draft.telNr} onChange={e => setDraftField("telNr", e.target.value)} />
                       : <span className="text-gray-300">{o.telNr || <span className="text-gray-600">—</span>}</span>}
+                  </td>
+                  <td className="px-3 py-2">
+                    {isEditing
+                      ? <input className={`${inputCls} w-28`} value={draft.abmeldungBis} onChange={e => setDraftField("abmeldungBis", e.target.value)} />
+                      : <span className="text-gray-300">{o.abmeldungBis || <span className="text-gray-600">—</span>}</span>}
                   </td>
                   <td className="px-3 py-2">
                     {isEditing
@@ -406,6 +416,7 @@ export default function Personal() {
                 <Field label="Tel.Nr." value={newForm.telNr} onChange={v => setNewForm({ ...newForm, telNr: v })} />
               </div>
               <div className="grid grid-cols-2 gap-3">
+                <Field label="Abmeldung bis" value={newForm.abmeldungBis} onChange={v => setNewForm({ ...newForm, abmeldungBis: v })} />
                 <div>
                   <label className="block text-[10px] text-gray-400 mb-1 uppercase tracking-wider">Beitritt</label>
                   <input

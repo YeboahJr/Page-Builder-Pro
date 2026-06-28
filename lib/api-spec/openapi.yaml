@@ -668,6 +668,8 @@ components:
           type: ["string", "null"]
         telNr:
           type: ["string", "null"]
+        abmeldungBis:
+          type: ["string", "null"]
         beitritt:
           type: ["string", "null"]
         einweisung:
@@ -707,6 +709,8 @@ components:
           type: ["string", "null"]
         telNr:
           type: ["string", "null"]
+        abmeldungBis:
+          type: ["string", "null"]
         beitritt:
           type: ["string", "null"]
 
@@ -724,6 +728,8 @@ components:
         deckname:
           type: ["string", "null"]
         telNr:
+          type: ["string", "null"]
+        abmeldungBis:
           type: ["string", "null"]
         beitritt:
           type: ["string", "null"]

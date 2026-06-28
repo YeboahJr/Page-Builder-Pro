@@ -16,6 +16,8 @@ export interface UpdateOfficerPermissions {
   /** @nullable */
   telNr?: string | null;
   /** @nullable */
+  abmeldungBis?: string | null;
+  /** @nullable */
   beitritt?: string | null;
   einweisung?: boolean;
   waffenfreigabeLMG?: boolean;

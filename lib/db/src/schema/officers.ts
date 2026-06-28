@@ -15,6 +15,7 @@ export const officersTable = pgTable("officers", {
   avatarUrl: text("avatar_url"),
   deckname: text("deckname"),
   telNr: text("tel_nr"),
+  abmeldungBis: text("abmeldung_bis"),
   beitritt: text("beitritt"),
   einweisung: boolean("einweisung").notNull().default(false),
   waffenfreigabeLMG: boolean("waffenfreigabe_lmg").notNull().default(false),

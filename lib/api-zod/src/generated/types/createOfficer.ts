@@ -16,5 +16,7 @@ export interface CreateOfficer {
   /** @nullable */
   telNr?: string | null;
   /** @nullable */
+  abmeldungBis?: string | null;
+  /** @nullable */
   beitritt?: string | null;
 }
