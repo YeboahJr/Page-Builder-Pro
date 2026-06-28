@@ -5,10 +5,16 @@
   "type": "module",
   "scripts": {
     "hello": "tsx ./src/hello.ts",
+    "backfill-evidence-files": "tsx ./src/backfill-evidence-files.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "devDependencies": {
     "@types/node": "catalog:",
     "tsx": "catalog:"
+  },
+  "dependencies": {
+    "@google-cloud/storage": "^7.21.0",
+    "@workspace/db": "workspace:*",
+    "drizzle-orm": "catalog:"
   }
 }
