@@ -1175,7 +1175,7 @@ components:
           description: "Regelstreife | Sonderstreife | Undercover"
         status:
           type: string
-          description: "Frei auf Streife | 10-80 | 10-66 | Nicht verfügbar"
+          description: "Code 1 | MD-Dienst | Geiselnahme | Event | Zivil Streife | Undercover Streife | Standby | Abwesend | Nicht Stören! | Ghetto-Streife | Korruptionsfall | Anwaltsgespräch | Abteilungsarbeit | Kongress"
         vehicle:
           type: ["string", "null"]
         slots:

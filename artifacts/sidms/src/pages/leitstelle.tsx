@@ -9,7 +9,24 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Save, Users } from "lucide-react";
 
 const PATROL_TYPES = ["Regelstreife", "Sonderstreife", "Undercover"];
-const SLOT_STATUSES = ["Frei auf Streife", "10-80", "10-66", "Nicht verfügbar"];
+const STATUS_META: Record<string, { text: string; dot: string }> = {
+  "Code 1": { text: "text-green-400", dot: "bg-green-500" },
+  "MD-Dienst": { text: "text-blue-400", dot: "bg-blue-500" },
+  "Geiselnahme": { text: "text-red-400", dot: "bg-red-500" },
+  "Event": { text: "text-purple-400", dot: "bg-purple-500" },
+  "Zivil Streife": { text: "text-cyan-400", dot: "bg-cyan-500" },
+  "Undercover Streife": { text: "text-indigo-400", dot: "bg-indigo-500" },
+  "Standby": { text: "text-yellow-400", dot: "bg-yellow-500" },
+  "Abwesend": { text: "text-gray-400", dot: "bg-gray-500" },
+  "Nicht Stören!": { text: "text-rose-400", dot: "bg-rose-500" },
+  "Ghetto-Streife": { text: "text-orange-400", dot: "bg-orange-500" },
+  "Korruptionsfall": { text: "text-pink-400", dot: "bg-pink-500" },
+  "Anwaltsgespräch": { text: "text-teal-400", dot: "bg-teal-500" },
+  "Abteilungsarbeit": { text: "text-slate-400", dot: "bg-slate-500" },
+  "Kongress": { text: "text-amber-400", dot: "bg-amber-500" },
+};
+const SLOT_STATUSES = Object.keys(STATUS_META);
+const DEFAULT_STATUS = "Code 1";
 const VEHICLES = ["Fahrzeug wählen", "Streifenwagen 1", "Streifenwagen 2", "SUV", "Motorrad", "Zivilfahrzeug"];
 
 const ACCENTS = [
@@ -61,23 +78,11 @@ function radioStatusDot(s: string) {
 }
 
 function slotStatusColor(s: string) {
-  const map: Record<string, string> = {
-    "Frei auf Streife": "text-green-400",
-    "10-80": "text-yellow-400",
-    "10-66": "text-blue-400",
-    "Nicht verfügbar": "text-red-400",
-  };
-  return map[s] ?? "text-gray-400";
+  return STATUS_META[s]?.text ?? "text-gray-400";
 }
 
 function patrolStatusDot(s: string | null) {
-  const map: Record<string, string> = {
-    "Frei auf Streife": "bg-green-500",
-    "10-80": "bg-yellow-500",
-    "10-66": "bg-blue-500",
-    "Nicht verfügbar": "bg-red-500",
-  };
-  return (s && map[s]) || "bg-gray-600";
+  return (s && STATUS_META[s]?.dot) || "bg-gray-600";
 }
 
 export default function Streifen() {
@@ -92,7 +97,7 @@ export default function Streifen() {
     const p = patrols?.find(x => x.id === patrolId);
     return {
       patrolType: p?.patrolType ?? "Regelstreife",
-      status: p?.status ?? "Frei auf Streife",
+      status: p?.status ?? DEFAULT_STATUS,
       vehicle: p?.vehicle ?? null,
       slots: (p?.slots as PatrolSlot[]) ?? [],
     };

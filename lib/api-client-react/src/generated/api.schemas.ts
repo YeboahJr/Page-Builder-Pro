@@ -313,7 +313,7 @@ export interface Patrol {
   name: string;
   /** Regelstreife | Sonderstreife | Undercover */
   patrolType: string;
-  /** Frei auf Streife | 10-80 | 10-66 | Nicht verfügbar */
+  /** Code 1 | MD-Dienst | Geiselnahme | Event | Zivil Streife | Undercover Streife | Standby | Abwesend | Nicht Stören! | Ghetto-Streife | Korruptionsfall | Anwaltsgespräch | Abteilungsarbeit | Kongress */
   status: string;
   /** @nullable */
   vehicle?: string | null;

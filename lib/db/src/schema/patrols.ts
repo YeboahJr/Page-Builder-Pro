@@ -6,7 +6,7 @@ export const patrolsTable = pgTable("patrols", {
   id: serial("id").primaryKey(),
   name: text("name").notNull().unique(),
   patrolType: text("patrol_type").notNull().default("Regelstreife"),
-  status: text("status").notNull().default("Frei auf Streife"),
+  status: text("status").notNull().default("Code 1"),
   vehicle: text("vehicle"),
   slots: jsonb("slots").notNull().default([]),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

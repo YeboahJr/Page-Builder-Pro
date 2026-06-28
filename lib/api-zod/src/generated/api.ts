@@ -419,7 +419,7 @@ export const GetPatrolsResponseItem = zod.object({
   "id": zod.number(),
   "name": zod.string(),
   "patrolType": zod.string().describe('Regelstreife | Sonderstreife | Undercover'),
-  "status": zod.string().describe('Frei auf Streife | 10-80 | 10-66 | Nicht verfügbar'),
+  "status": zod.string().describe('Code 1 | MD-Dienst | Geiselnahme | Event | Zivil Streife | Undercover Streife | Standby | Abwesend | Nicht Stören! | Ghetto-Streife | Korruptionsfall | Anwaltsgespräch | Abteilungsarbeit | Kongress'),
   "vehicle": zod.string().nullish(),
   "slots": zod.array(zod.object({
   "position": zod.string(),
@@ -444,7 +444,7 @@ export const CreatePatrolResponse = zod.object({
   "id": zod.number(),
   "name": zod.string(),
   "patrolType": zod.string().describe('Regelstreife | Sonderstreife | Undercover'),
-  "status": zod.string().describe('Frei auf Streife | 10-80 | 10-66 | Nicht verfügbar'),
+  "status": zod.string().describe('Code 1 | MD-Dienst | Geiselnahme | Event | Zivil Streife | Undercover Streife | Standby | Abwesend | Nicht Stören! | Ghetto-Streife | Korruptionsfall | Anwaltsgespräch | Abteilungsarbeit | Kongress'),
   "vehicle": zod.string().nullish(),
   "slots": zod.array(zod.object({
   "position": zod.string(),
@@ -482,7 +482,7 @@ export const UpdatePatrolResponse = zod.object({
   "id": zod.number(),
   "name": zod.string(),
   "patrolType": zod.string().describe('Regelstreife | Sonderstreife | Undercover'),
-  "status": zod.string().describe('Frei auf Streife | 10-80 | 10-66 | Nicht verfügbar'),
+  "status": zod.string().describe('Code 1 | MD-Dienst | Geiselnahme | Event | Zivil Streife | Undercover Streife | Standby | Abwesend | Nicht Stören! | Ghetto-Streife | Korruptionsfall | Anwaltsgespräch | Abteilungsarbeit | Kongress'),
   "vehicle": zod.string().nullish(),
   "slots": zod.array(zod.object({
   "position": zod.string(),
