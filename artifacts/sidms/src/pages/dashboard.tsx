@@ -60,7 +60,7 @@ export default function Dashboard() {
   const [newCaseFiles, setNewCaseFiles] = useState<UploadFile[]>([]);
   const [newCaseSubmitting, setNewCaseSubmitting] = useState(false);
 
-  const [evidenceFiles, setEvidenceFiles] = useState<Array<{ filename: string; url: string; type: string; size: number; uploadedAt: string }>>([]);
+  const [evidenceFiles, setEvidenceFiles] = useState<Array<{ filename: string; url: string; type: string; size: number; uploadedAt: string; uploadedBy: string | null }>>([]);
   const [evidenceLoading, setEvidenceLoading] = useState(false);
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
@@ -632,8 +632,12 @@ export default function Dashboard() {
                                 <p className="text-[9px] text-gray-500 truncate px-1">{f.filename}</p>
                               </div>
                             )}
-                            <div className="px-1.5 py-1 border-t border-[#1e2d4a]">
-                              <p className="text-[9px] text-gray-600">{(f.size / 1024).toFixed(0)} KB</p>
+                            <div className="px-1.5 py-1 border-t border-[#1e2d4a] space-y-0.5">
+                              <p className="text-[9px] text-gray-400 truncate" title={f.uploadedBy ?? "Unbekannt"}>{f.uploadedBy ?? "Unbekannt"}</p>
+                              <div className="flex items-center justify-between gap-1">
+                                <span className="text-[9px] text-gray-600">{new Date(f.uploadedAt).toLocaleDateString("de-DE")}</span>
+                                <span className="text-[9px] text-gray-600">{(f.size / 1024).toFixed(0)} KB</span>
+                              </div>
                             </div>
                           </div>
                         ))}
