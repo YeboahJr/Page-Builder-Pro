@@ -12,6 +12,8 @@ export interface PatrolSlot {
   officerId?: number | null;
   /** @nullable */
   officerName?: string | null;
+  abwesend?: boolean;
+  funkAus?: boolean;
   /** @nullable */
   notes?: string | null;
 }

@@ -6,7 +6,7 @@ import {
   getGetPatrolsQueryKey,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Save, Edit3, Users } from "lucide-react";
+import { Save, Users } from "lucide-react";
 
 const PATROL_TYPES = ["Regelstreife", "Sonderstreife", "Undercover"];
 const SLOT_STATUSES = ["Frei auf Streife", "10-80", "10-66", "Nicht verfügbar"];
@@ -30,6 +30,8 @@ interface PatrolSlot {
   officerId: number | null;
   officerName: string | null;
   notes: string | null;
+  abwesend?: boolean;
+  funkAus?: boolean;
 }
 
 interface PatrolDraft {
@@ -37,6 +39,11 @@ interface PatrolDraft {
   status: string;
   vehicle: string | null;
   slots: PatrolSlot[];
+}
+
+function patrolNum(name: string): number {
+  const m = name.match(/\d+/);
+  return m ? parseInt(m[0], 10) : 0;
 }
 
 function statusDot(s: string) {
@@ -71,58 +78,31 @@ export default function Streifen() {
   const [drafts, setDrafts] = useState<Record<number, PatrolDraft>>({});
   const [saving, setSaving] = useState(false);
 
-  const getDraft = (patrol: {
-    id: number;
-    patrolType: string;
-    status: string;
-    vehicle?: string | null;
-    slots: unknown;
-  }): PatrolDraft => {
-    if (drafts[patrol.id]) return drafts[patrol.id];
+  const deriveDraft = (patrolId: number): PatrolDraft => {
+    const p = patrols?.find(x => x.id === patrolId);
     return {
-      patrolType: patrol.patrolType,
-      status: patrol.status,
-      vehicle: patrol.vehicle ?? null,
-      slots: (patrol.slots as PatrolSlot[]) ?? [],
+      patrolType: p?.patrolType ?? "Regelstreife",
+      status: p?.status ?? "Frei auf Streife",
+      vehicle: p?.vehicle ?? null,
+      slots: (p?.slots as PatrolSlot[]) ?? [],
     };
   };
 
+  const getDraft = (patrolId: number): PatrolDraft => drafts[patrolId] ?? deriveDraft(patrolId);
+
   const patchDraft = (patrolId: number, partial: Partial<PatrolDraft>) => {
     setDrafts(prev => {
-      const base =
-        prev[patrolId] ??
-        (() => {
-          const p = patrols?.find(x => x.id === patrolId);
-          return {
-            patrolType: p?.patrolType ?? "Regelstreife",
-            status: p?.status ?? "Frei auf Streife",
-            vehicle: p?.vehicle ?? null,
-            slots: (p?.slots as PatrolSlot[]) ?? [],
-          };
-        })();
+      const base = prev[patrolId] ?? deriveDraft(patrolId);
       return { ...prev, [patrolId]: { ...base, ...partial } };
     });
   };
 
-  const updateSlot = (
-    patrolId: number,
-    slotIdx: number,
-    field: keyof PatrolSlot,
-    value: string | number | null,
-  ) => {
-    const base =
-      drafts[patrolId] ??
-      (() => {
-        const p = patrols?.find(x => x.id === patrolId);
-        return {
-          patrolType: p?.patrolType ?? "Regelstreife",
-          status: p?.status ?? "Frei auf Streife",
-          vehicle: p?.vehicle ?? null,
-          slots: (p?.slots as PatrolSlot[]) ?? [],
-        };
-      })();
-    const slots = base.slots.map((s, i) => (i === slotIdx ? { ...s, [field]: value } : s));
-    patchDraft(patrolId, { slots });
+  const updateSlot = (patrolId: number, slotIdx: number, partial: Partial<PatrolSlot>) => {
+    setDrafts(prev => {
+      const base = prev[patrolId] ?? deriveDraft(patrolId);
+      const slots = base.slots.map((s, i) => (i === slotIdx ? { ...s, ...partial } : s));
+      return { ...prev, [patrolId]: { ...base, slots } };
+    });
   };
 
   const handleSave = async () => {
@@ -145,6 +125,23 @@ export default function Streifen() {
       setSaving(false);
     }
   };
+
+  const sortedPatrols = [...(patrols ?? [])].sort((a, b) => patrolNum(a.name) - patrolNum(b.name));
+
+  // Derive each officer's duty status from their patrol assignment (live, incl. drafts).
+  const assignedMap = new Map<number, { abwesend: boolean; funkAus: boolean }>();
+  for (const p of sortedPatrols) {
+    const d = getDraft(p.id);
+    for (const s of d.slots) {
+      if (s.officerId != null) {
+        const prev = assignedMap.get(s.officerId);
+        assignedMap.set(s.officerId, {
+          abwesend: (prev?.abwesend ?? false) || !!s.abwesend,
+          funkAus: (prev?.funkAus ?? false) || !!s.funkAus,
+        });
+      }
+    }
+  }
 
   const onDutyOfficers = officers ?? [];
 
@@ -173,8 +170,8 @@ export default function Streifen() {
             <p className="text-gray-500 text-sm">Laden...</p>
           ) : (
             <div className="grid grid-cols-2 gap-3">
-              {patrols?.map((patrol, pIdx) => {
-                const draft = getDraft(patrol);
+              {sortedPatrols.map((patrol, pIdx) => {
+                const draft = getDraft(patrol.id);
                 const accent = ACCENTS[pIdx % ACCENTS.length];
                 return (
                   <div
@@ -250,31 +247,71 @@ export default function Streifen() {
                         </thead>
                         <tbody>
                           {draft.slots.map((slot, idx) => (
-                            <tr key={idx} className="border-b border-[#1e2d4a]/30">
+                            <tr key={idx} className="border-b border-[#1e2d4a]/30 align-top">
                               <td className="px-2 py-1.5 text-gray-400 font-mono">{slot.position}</td>
                               <td className="px-2 py-1">
-                                <select
-                                  value={slot.officerName ?? ""}
-                                  onChange={e => {
-                                    const name = e.target.value;
-                                    const officer = officers?.find(o => o.name != null && o.name === name);
-                                    updateSlot(patrol.id, idx, "officerName", name || null);
-                                    updateSlot(patrol.id, idx, "officerId", officer?.id ?? null);
-                                  }}
-                                  className="bg-[#0a0f1a] border border-[#253650] text-gray-300 text-xs px-1 py-0.5 rounded focus:outline-none w-full min-w-[140px]"
-                                >
-                                  <option value="">Dienstnummer wählen</option>
-                                  {officers?.map(o => (
-                                    <option key={o.id} value={o.name}>
-                                      {o.dienstnummer} – {o.name}
-                                    </option>
-                                  ))}
-                                </select>
+                                <div className="flex flex-col gap-1">
+                                  <select
+                                    value={slot.officerName ?? ""}
+                                    onChange={e => {
+                                      const name = e.target.value;
+                                      const officer = officers?.find(o => o.name != null && o.name === name);
+                                      updateSlot(patrol.id, idx, {
+                                        officerName: name || null,
+                                        officerId: officer?.id ?? null,
+                                        abwesend: false,
+                                        funkAus: false,
+                                      });
+                                    }}
+                                    className="bg-[#0a0f1a] border border-[#253650] text-gray-300 text-xs px-1 py-0.5 rounded focus:outline-none w-full min-w-[150px]"
+                                    data-testid={`select-officer-${patrol.id}-${idx}`}
+                                  >
+                                    <option value="">Dienstnummer wählen</option>
+                                    {officers?.map(o => (
+                                      <option key={o.id} value={o.name}>
+                                        {o.dienstnummer} – {o.name}
+                                      </option>
+                                    ))}
+                                  </select>
+                                  <div className="flex items-center gap-3">
+                                    <label
+                                      className={`flex items-center gap-1 text-[10px] ${slot.officerId ? "text-gray-300" : "text-gray-600"}`}
+                                    >
+                                      <input
+                                        type="checkbox"
+                                        checked={!!slot.abwesend}
+                                        disabled={!slot.officerId}
+                                        onChange={e => updateSlot(patrol.id, idx, { abwesend: e.target.checked })}
+                                        className="accent-[#c9a227] w-3 h-3"
+                                        data-testid={`check-abwesend-${patrol.id}-${idx}`}
+                                      />
+                                      Abwesend
+                                    </label>
+                                    <label
+                                      className={`flex items-center gap-1 text-[10px] ${slot.officerId ? "text-gray-300" : "text-gray-600"}`}
+                                    >
+                                      <input
+                                        type="checkbox"
+                                        checked={!!slot.funkAus}
+                                        disabled={!slot.officerId}
+                                        onChange={e => updateSlot(patrol.id, idx, { funkAus: e.target.checked })}
+                                        className="accent-[#c9a227] w-3 h-3"
+                                        data-testid={`check-funkaus-${patrol.id}-${idx}`}
+                                      />
+                                      Funk aus
+                                    </label>
+                                  </div>
+                                </div>
                               </td>
                               <td className="px-2 py-1">
-                                <button className="text-gray-500 hover:text-gray-300 transition-colors">
-                                  <Edit3 className="w-3.5 h-3.5" />
-                                </button>
+                                <input
+                                  type="text"
+                                  value={slot.notes ?? ""}
+                                  onChange={e => updateSlot(patrol.id, idx, { notes: e.target.value || null })}
+                                  placeholder="—"
+                                  className="bg-[#0a0f1a] border border-[#253650] text-gray-300 text-xs px-1.5 py-0.5 rounded focus:outline-none w-full min-w-[80px]"
+                                  data-testid={`input-notes-${patrol.id}-${idx}`}
+                                />
                               </td>
                             </tr>
                           ))}
@@ -299,35 +336,37 @@ export default function Streifen() {
               </div>
             </div>
             <div className="divide-y divide-[#1e2d4a]/40 max-h-[500px] overflow-y-auto">
-              {onDutyOfficers.map(o => (
-                <div
-                  key={o.id}
-                  className="px-4 py-2.5 flex items-center gap-3 hover:bg-[#1a2744]/30 transition-colors"
-                  data-testid={`officer-row-${o.id}`}
-                >
-                  <div className="w-7 h-7 rounded-full bg-[#1a2744] border border-[#253650] flex items-center justify-center flex-shrink-0">
-                    <span className="text-xs text-gray-400 font-medium">
-                      {o.name.split(" ").map(n => n[0]).join("").slice(0, 2)}
-                    </span>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-medium text-white truncate">{o.name}</p>
-                    <p className="text-xs text-gray-500">
-                      {o.dienstnummer} · {o.rank}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    <div className="text-right">
-                      <p className="text-xs text-gray-400">{o.status}</p>
+              {onDutyOfficers.map(o => {
+                const a = assignedMap.get(o.id);
+                const status = a ? (a.abwesend ? "Abwesend" : "Anwesend") : "Abwesend";
+                const funk = a ? (a.funkAus ? "Aus" : "Aktiv") : "Aus";
+                return (
+                  <div
+                    key={o.id}
+                    className="px-4 py-2.5 flex items-center gap-3 hover:bg-[#1a2744]/30 transition-colors"
+                    data-testid={`officer-row-${o.id}`}
+                  >
+                    <div className="w-7 h-7 rounded-full bg-[#1a2744] border border-[#253650] flex items-center justify-center flex-shrink-0">
+                      <span className="text-xs text-gray-400 font-medium">
+                        {o.name.split(" ").map(n => n[0]).join("").slice(0, 2)}
+                      </span>
                     </div>
-                    <div className={`w-2 h-2 rounded-full ${statusDot(o.status)}`} title={o.status} />
-                    <div
-                      className={`w-2 h-2 rounded-full ${radioStatusDot(o.radioStatus ?? "")}`}
-                      title={o.radioStatus ?? ""}
-                    />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-medium text-white truncate">{o.name}</p>
+                      <p className="text-xs text-gray-500">
+                        {o.dienstnummer} · {o.rank}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <div className="text-right">
+                        <p className="text-xs text-gray-400">{status}</p>
+                      </div>
+                      <div className={`w-2 h-2 rounded-full ${statusDot(status)}`} title={status} />
+                      <div className={`w-2 h-2 rounded-full ${radioStatusDot(funk)}`} title={`Funk ${funk}`} />
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
 
             {/* Legend */}

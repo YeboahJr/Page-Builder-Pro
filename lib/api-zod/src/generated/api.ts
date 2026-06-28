@@ -425,6 +425,8 @@ export const GetPatrolsResponseItem = zod.object({
   "position": zod.string(),
   "officerId": zod.number().nullish(),
   "officerName": zod.string().nullish(),
+  "abwesend": zod.boolean().optional(),
+  "funkAus": zod.boolean().optional(),
   "notes": zod.string().nullish()
 }))
 })
@@ -448,6 +450,8 @@ export const CreatePatrolResponse = zod.object({
   "position": zod.string(),
   "officerId": zod.number().nullish(),
   "officerName": zod.string().nullish(),
+  "abwesend": zod.boolean().optional(),
+  "funkAus": zod.boolean().optional(),
   "notes": zod.string().nullish()
 }))
 })
@@ -468,6 +472,8 @@ export const UpdatePatrolBody = zod.object({
   "position": zod.string(),
   "officerId": zod.number().nullish(),
   "officerName": zod.string().nullish(),
+  "abwesend": zod.boolean().optional(),
+  "funkAus": zod.boolean().optional(),
   "notes": zod.string().nullish()
 })).optional()
 })
@@ -482,6 +488,8 @@ export const UpdatePatrolResponse = zod.object({
   "position": zod.string(),
   "officerId": zod.number().nullish(),
   "officerName": zod.string().nullish(),
+  "abwesend": zod.boolean().optional(),
+  "funkAus": zod.boolean().optional(),
   "notes": zod.string().nullish()
 }))
 })

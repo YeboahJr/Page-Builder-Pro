@@ -23,7 +23,7 @@ A new managed entity (table + CRUD + Personal-style page) touches 5 layers in th
 **Why:** Contract-first — openapi.yaml is the source of truth; client hooks and zod schemas are generated, not hand-written.
 
 ## Patrol (Streife) data model
-Streifenart/Status/Fahrzeug are patrol-level (one per Streife), stored as `patrols` columns patrolType/status/vehicle — NOT per-slot. The `slots` jsonb holds only position/officerId/officerName/notes. Legacy slot rows may still carry stale patrolType/status/vehicle keys (harmless extra data, ignored by the frontend). PATCH /patrols/:id accepts patrolType/status/vehicle/slots.
+Streifenart/Status/Fahrzeug are patrol-level (one per Streife), stored as `patrols` columns patrolType/status/vehicle — NOT per-slot. The `slots` jsonb holds per-position: position/officerId/officerName/notes/abwesend/funkAus (the last two are bool checkboxes per assigned officer). Legacy slot rows may still carry stale patrolType/status/vehicle keys (harmless, ignored). PATCH /patrols/:id accepts patrolType/status/vehicle/slots and passes slots through as jsonb (no schema change needed to add slot fields — just update OpenAPI PatrolSlot + regen). The "Officer im Dienst" panel derives each officer's Anwesend/Abwesend + Funk status from slot assignments, not from the officers table.
 
 **Why:** User wanted these three fields to appear only once per patrol, not repeated on every officer slot row.
 

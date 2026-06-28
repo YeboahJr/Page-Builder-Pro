@@ -1193,6 +1193,10 @@ components:
           type: ["integer", "null"]
         officerName:
           type: ["string", "null"]
+        abwesend:
+          type: boolean
+        funkAus:
+          type: boolean
         notes:
           type: ["string", "null"]
 
