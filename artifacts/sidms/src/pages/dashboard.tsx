@@ -17,8 +17,14 @@ import {
 import { useQueryClient } from "@tanstack/react-query";
 import {
   Activity, FolderOpen, CheckCircle, Eye, Package, AlertTriangle,
-  Plus, ChevronRight, RotateCcw, Download, Search
+  Plus, ChevronRight, RotateCcw, Download, Search, X
 } from "lucide-react";
+import EvidenceUpload, { type UploadFile, uploadEvidenceFiles } from "@/components/EvidenceUpload";
+
+const CATEGORIES_NEW = ["Drogenkriminalität", "Waffendelikte", "Korruption", "Finanzkriminalität", "Gewaltdelikte", "Cyberkriminalität"];
+const PRIORITIES_NEW = ["Hoch", "Mittel", "Niedrig"];
+const STATUSES_NEW = ["Aktiv", "Offen", "Ermittlungen pausiert", "Observation", "An STA übergeben", "Abgeschlossen"];
+interface NewCaseForm { title: string; category: string; priority: string; status: string; leadAgent: string; description: string; }
 
 const PRIORITIES = ["Alle Prioritäten", "Hoch", "Mittel", "Niedrig"];
 const STATUSES = ["Alle Status", "Aktiv", "Offen", "Ermittlungen pausiert", "Observation", "An STA übergeben", "Abgeschlossen"];
@@ -50,6 +56,9 @@ export default function Dashboard() {
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState("Übersicht");
   const [showNewCase, setShowNewCase] = useState(false);
+  const [newCaseForm, setNewCaseForm] = useState<NewCaseForm>({ title: "", category: "Drogenkriminalität", priority: "Mittel", status: "Offen", leadAgent: "", description: "" });
+  const [newCaseFiles, setNewCaseFiles] = useState<UploadFile[]>([]);
+  const [newCaseSubmitting, setNewCaseSubmitting] = useState(false);
   const [filters, setFilters] = useState({
     caseNumber: "", title: "", category: "", status: "", agentId: "", priority: "",
     suspectName: "", vehiclePlate: "", missionNumber: "", dateFrom: "", dateTo: "",
@@ -74,6 +83,21 @@ export default function Dashboard() {
 
   const createCase = useCreateCase();
 
+  const handleNewCase = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setNewCaseSubmitting(true);
+    try {
+      const created = await createCase.mutateAsync({ data: newCaseForm });
+      if (newCaseFiles.length > 0) {
+        await uploadEvidenceFiles((created as { id: number }).id, newCaseFiles);
+      }
+      qc.invalidateQueries({ queryKey: getGetCasesQueryKey() });
+      setShowNewCase(false);
+      setNewCaseForm({ title: "", category: "Drogenkriminalität", priority: "Mittel", status: "Offen", leadAgent: "", description: "" });
+      setNewCaseFiles([]);
+    } finally { setNewCaseSubmitting(false); }
+  };
+
   const statCards = [
     { label: "Aktive Fälle", value: stats?.aktiveFaelle ?? 0, delta: stats?.aktiveFaelleDelta, icon: Activity, color: "text-yellow-400", border: "border-yellow-600/30" },
     { label: "Offene Fälle", value: stats?.offeneFaelle ?? 0, delta: stats?.offeneFaelleDelta, icon: FolderOpen, color: "text-blue-400", border: "border-blue-600/30" },
@@ -97,6 +121,61 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-4 h-full flex flex-col">
+      {/* New Case Modal */}
+      {showNewCase && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+          <div className="bg-[#0d1526] border border-[#1e2d4a] rounded-lg w-full max-w-lg max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-[#1e2d4a] sticky top-0 bg-[#0d1526]">
+              <h2 className="text-sm font-semibold text-white">Neuer Fall anlegen</h2>
+              <button onClick={() => setShowNewCase(false)} className="text-gray-400 hover:text-white"><X className="w-5 h-5" /></button>
+            </div>
+            <form onSubmit={handleNewCase} className="p-5 space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="col-span-2">
+                  <label className="text-xs text-gray-400 block mb-1">Titel *</label>
+                  <input required value={newCaseForm.title} onChange={e => setNewCaseForm(f => ({ ...f, title: e.target.value }))} className="w-full bg-[#0a0f1a] border border-[#1e2d4a] text-white text-sm px-3 py-2 rounded focus:outline-none focus:border-[#c9a227]/50" />
+                </div>
+                <div>
+                  <label className="text-xs text-gray-400 block mb-1">Kategorie</label>
+                  <select value={newCaseForm.category} onChange={e => setNewCaseForm(f => ({ ...f, category: e.target.value }))} className="w-full bg-[#0a0f1a] border border-[#1e2d4a] text-white text-sm px-3 py-2 rounded focus:outline-none">
+                    {CATEGORIES_NEW.map(c => <option key={c}>{c}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs text-gray-400 block mb-1">Priorität</label>
+                  <select value={newCaseForm.priority} onChange={e => setNewCaseForm(f => ({ ...f, priority: e.target.value }))} className="w-full bg-[#0a0f1a] border border-[#1e2d4a] text-white text-sm px-3 py-2 rounded focus:outline-none">
+                    {PRIORITIES_NEW.map(p => <option key={p}>{p}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs text-gray-400 block mb-1">Status</label>
+                  <select value={newCaseForm.status} onChange={e => setNewCaseForm(f => ({ ...f, status: e.target.value }))} className="w-full bg-[#0a0f1a] border border-[#1e2d4a] text-white text-sm px-3 py-2 rounded focus:outline-none">
+                    {STATUSES_NEW.map(s => <option key={s}>{s}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs text-gray-400 block mb-1">Leitender Agent *</label>
+                  <input required value={newCaseForm.leadAgent} onChange={e => setNewCaseForm(f => ({ ...f, leadAgent: e.target.value }))} placeholder="z.B. SA Michael Harper" className="w-full bg-[#0a0f1a] border border-[#1e2d4a] text-white text-sm px-3 py-2 rounded focus:outline-none focus:border-[#c9a227]/50" />
+                </div>
+                <div className="col-span-2">
+                  <label className="text-xs text-gray-400 block mb-1">Beschreibung</label>
+                  <textarea value={newCaseForm.description} onChange={e => setNewCaseForm(f => ({ ...f, description: e.target.value }))} rows={3} className="w-full bg-[#0a0f1a] border border-[#1e2d4a] text-white text-sm px-3 py-2 rounded focus:outline-none focus:border-[#c9a227]/50 resize-none" />
+                </div>
+                <div className="col-span-2">
+                  <EvidenceUpload files={newCaseFiles} onChange={setNewCaseFiles} />
+                </div>
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button type="button" onClick={() => setShowNewCase(false)} className="flex-1 py-2 bg-[#1e2d4a] text-gray-300 text-sm rounded transition-colors hover:bg-[#253650]">Abbrechen</button>
+                <button type="submit" disabled={newCaseSubmitting} className="flex-1 py-2 bg-[#1a3d7c] hover:bg-[#1e4a94] text-white text-sm font-medium rounded transition-colors disabled:opacity-60">
+                  {newCaseSubmitting ? "Anlegen..." : "Fall anlegen"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* Stats row */}
       <div className="grid grid-cols-6 gap-3 flex-shrink-0">
         {statCards.map((s, i) => (

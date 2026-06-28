@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useGetCases, useCreateCase, useUpdateCase, useDeleteCase, getGetCasesQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Plus, Trash2, Edit3, X } from "lucide-react";
+import EvidenceUpload, { type UploadFile, uploadEvidenceFiles } from "@/components/EvidenceUpload";
 
 function priorityBadge(p: string) {
   const map: Record<string, string> = { Hoch: "bg-red-900/60 text-red-400 border border-red-700/50", Mittel: "bg-orange-900/60 text-orange-400 border border-orange-700/50", Niedrig: "bg-green-900/60 text-green-400 border border-green-700/50" };
@@ -26,15 +27,20 @@ export default function Fallmanagement() {
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState<CaseForm>({ title: "", category: "Drogenkriminalität", priority: "Mittel", status: "Offen", leadAgent: "", description: "" });
   const [submitting, setSubmitting] = useState(false);
+  const [uploadFiles, setUploadFiles] = useState<UploadFile[]>([]);
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
     try {
-      await createCase.mutateAsync({ data: form });
+      const newCase = await createCase.mutateAsync({ data: form });
+      if (uploadFiles.length > 0) {
+        await uploadEvidenceFiles((newCase as { id: number }).id, uploadFiles);
+      }
       qc.invalidateQueries({ queryKey: getGetCasesQueryKey() });
       setShowForm(false);
       setForm({ title: "", category: "Drogenkriminalität", priority: "Mittel", status: "Offen", leadAgent: "", description: "" });
+      setUploadFiles([]);
     } finally { setSubmitting(false); }
   };
 
@@ -95,6 +101,9 @@ export default function Fallmanagement() {
                 <div className="col-span-2">
                   <label className="text-xs text-gray-400 block mb-1">Beschreibung</label>
                   <textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} rows={3} className="w-full bg-[#0a0f1a] border border-[#1e2d4a] text-white text-sm px-3 py-2 rounded focus:outline-none focus:border-[#c9a227]/50 resize-none" />
+                </div>
+                <div className="col-span-2">
+                  <EvidenceUpload files={uploadFiles} onChange={setUploadFiles} />
                 </div>
               </div>
               <div className="flex gap-3 pt-2">

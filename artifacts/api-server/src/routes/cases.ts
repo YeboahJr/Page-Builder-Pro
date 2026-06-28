@@ -1,6 +1,33 @@
 import { Router } from "express";
 import { db, casesTable, casePersonsTable, caseAgentsTable, caseStatusHistoryTable } from "@workspace/db";
 import { eq, ilike, and, gte, lte, desc, or } from "drizzle-orm";
+import multer from "multer";
+import path from "path";
+import fs from "fs";
+
+const UPLOADS_DIR = path.join(process.cwd(), "uploads");
+if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+
+const storage = multer.diskStorage({
+  destination: (req, _file, cb) => {
+    const dir = path.join(UPLOADS_DIR, `case-${req.params.id}`);
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    cb(null, dir);
+  },
+  filename: (_req, file, cb) => {
+    const unique = `${Date.now()}-${Math.round(Math.random() * 1e6)}`;
+    cb(null, `${unique}${path.extname(file.originalname)}`);
+  },
+});
+
+const upload = multer({
+  storage,
+  limits: { fileSize: 200 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    const allowed = /image\/(jpeg|png|gif|webp)|video\/(mp4|webm|mov|avi|mkv)/;
+    cb(null, allowed.test(file.mimetype));
+  },
+});
 
 const router = Router();
 
@@ -141,6 +168,28 @@ router.get("/:id/agents", async (req, res) => {
   const id = parseInt(req.params.id);
   const agents = await db.select().from(caseAgentsTable).where(eq(caseAgentsTable.caseId, id));
   res.json(agents);
+});
+
+router.post("/:id/evidence/upload", upload.array("files", 20), (req, res) => {
+  const files = (req.files as Express.Multer.File[]) ?? [];
+  const results = files.map(f => ({
+    name: f.originalname,
+    filename: f.filename,
+    mimetype: f.mimetype,
+    size: f.size,
+    url: `/api/uploads/case-${req.params.id}/${f.filename}`,
+  }));
+  res.json({ uploaded: results.length, files: results });
+});
+
+router.get("/:id/evidence/files", (req, res) => {
+  const dir = path.join(UPLOADS_DIR, `case-${req.params.id}`);
+  if (!fs.existsSync(dir)) return res.json({ files: [] });
+  const files = fs.readdirSync(dir).map(name => ({
+    filename: name,
+    url: `/api/uploads/case-${req.params.id}/${name}`,
+  }));
+  res.json({ files });
 });
 
 export default router;
