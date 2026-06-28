@@ -2021,6 +2021,76 @@ export const useUpdateOfficerPermissions = <TError = ErrorType<unknown>,
       return useMutation(getUpdateOfficerPermissionsMutationOptions(options));
     }
 
+export const getDeleteOfficerUrl = (id: number,) => {
+
+
+
+
+  return `/api/officers/${id}`
+}
+
+/**
+ * @summary Delete an officer (Beamten löschen)
+ */
+export const deleteOfficer = async (id: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteOfficerUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteOfficerMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteOfficer>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteOfficer>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['deleteOfficer'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteOfficer>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteOfficer(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteOfficerMutationResult = NonNullable<Awaited<ReturnType<typeof deleteOfficer>>>
+
+    export type DeleteOfficerMutationError = ErrorType<void>
+
+    /**
+ * @summary Delete an officer (Beamten löschen)
+ */
+export const useDeleteOfficer = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteOfficer>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteOfficer>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getDeleteOfficerMutationOptions(options));
+    }
+
 export const getRequestUploadUrlUrl = () => {
 
 

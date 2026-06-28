@@ -64,6 +64,7 @@ export interface CreateOfficer {
 }
 
 export interface UpdateOfficerPermissions {
+  id?: number;
   dienstnummer?: string;
   name?: string;
   rank?: string;

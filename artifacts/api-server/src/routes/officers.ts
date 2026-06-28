@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { db, officersTable } from "@workspace/db";
+import { db, officersTable, sessionsTable } from "@workspace/db";
 import { eq, asc } from "drizzle-orm";
 import crypto from "crypto";
 
@@ -95,7 +95,16 @@ router.patch("/:id", async (req, res) => {
     if (f in body) (update as Record<string, unknown>)[f] = Boolean(body[f]);
   }
 
-  if (Object.keys(update).length === 0) {
+  let newId: number | undefined;
+  if ("id" in body) {
+    const parsed = typeof body.id === "number" ? body.id : parseInt(String(body.id), 10);
+    if (!Number.isInteger(parsed) || parsed <= 0) {
+      return res.status(400).json({ error: "ID muss eine positive ganze Zahl sein" });
+    }
+    if (parsed !== id) newId = parsed;
+  }
+
+  if (Object.keys(update).length === 0 && newId === undefined) {
     return res.status(400).json({ error: "Keine änderbaren Felder angegeben" });
   }
 
@@ -106,13 +115,49 @@ router.patch("/:id", async (req, res) => {
     }
   }
 
-  const [updated] = await db
-    .update(officersTable)
-    .set(update)
-    .where(eq(officersTable.id, id))
-    .returning();
+  if (newId !== undefined) {
+    const [existing] = await db.select().from(officersTable).where(eq(officersTable.id, newId));
+    if (existing) {
+      return res.status(409).json({ error: "ID bereits vergeben" });
+    }
+    (update as Record<string, unknown>).id = newId;
+  }
+
+  let updated: typeof officersTable.$inferSelect | undefined;
+  if (newId !== undefined) {
+    updated = await db.transaction(async (tx) => {
+      const [u] = await tx
+        .update(officersTable)
+        .set(update)
+        .where(eq(officersTable.id, id))
+        .returning();
+      if (!u) return undefined;
+      await tx.update(sessionsTable).set({ officerId: newId }).where(eq(sessionsTable.officerId, id));
+      return u;
+    });
+  } else {
+    [updated] = await db
+      .update(officersTable)
+      .set(update)
+      .where(eq(officersTable.id, id))
+      .returning();
+  }
+
   if (!updated) return res.status(404).json({ error: "Officer nicht gefunden" });
-  res.json(stripHash(updated));
+  return res.json(stripHash(updated));
+});
+
+router.delete("/:id", async (req, res) => {
+  const id = parseInt(req.params.id);
+  if (!Number.isInteger(id)) {
+    return res.status(400).json({ error: "Ungültige ID" });
+  }
+  await db.delete(sessionsTable).where(eq(sessionsTable.officerId, id));
+  const deleted = await db.delete(officersTable).where(eq(officersTable.id, id)).returning();
+  if (deleted.length === 0) {
+    return res.status(404).json({ error: "Officer nicht gefunden" });
+  }
+  return res.status(204).end();
 });
 
 export default router;

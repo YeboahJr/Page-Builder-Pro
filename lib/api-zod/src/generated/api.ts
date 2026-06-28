@@ -595,6 +595,7 @@ export const UpdateOfficerPermissionsParams = zod.object({
 })
 
 export const UpdateOfficerPermissionsBody = zod.object({
+  "id": zod.number().optional(),
   "dienstnummer": zod.string().optional(),
   "name": zod.string().optional(),
   "rank": zod.string().optional(),
@@ -637,6 +638,16 @@ export const UpdateOfficerPermissionsResponse = zod.object({
   "meldeamtLI": zod.boolean(),
   "idChange": zod.boolean()
 })
+
+
+/**
+ * @summary Delete an officer (Beamten löschen)
+ */
+export const DeleteOfficerParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteOfficerResponse = zod.void()
 
 
 /**

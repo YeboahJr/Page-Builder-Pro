@@ -3,10 +3,12 @@ import {
   useGetOfficers,
   useUpdateOfficerPermissions,
   useCreateOfficer,
+  useDeleteOfficer,
   getGetOfficersQueryKey,
+  type Officer,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Users, Check, Pencil, X, Plus } from "lucide-react";
+import { Users, Check, Pencil, X, Plus, Trash2 } from "lucide-react";
 
 const CHECKBOX_COLS = [
   { key: "einweisung", label: "Einweisung" },
@@ -22,22 +24,101 @@ const CHECKBOX_COLS = [
 ] as const;
 
 type CheckboxKey = (typeof CHECKBOX_COLS)[number]["key"];
-type TextField = "dienstnummer" | "name" | "rank" | "deckname" | "telNr" | "beitritt";
 
-type EditingCell = { officerId: number; field: TextField; value: string };
+const RANKS: { level: number; name: string }[] = [
+  { level: 30, name: "Director of FIB" },
+  { level: 29, name: "Vize Director of FIB" },
+  { level: 28, name: "Assistant Director of FIB" },
+  { level: 27, name: "Secretary of FIB" },
+  { level: 26, name: "Human Resources Director" },
+  { level: 25, name: "Management Chief" },
+  { level: 24, name: "Division Chief" },
+  { level: 23, name: "Deputy Division Chief" },
+  { level: 22, name: "Unit Commander" },
+  { level: 21, name: "Management Division Chief" },
+  { level: 20, name: "Academy Agent" },
+  { level: 19, name: "Commander" },
+  { level: 18, name: "Supervising Head Agent" },
+  { level: 17, name: "Supervising Agent" },
+  { level: 16, name: "007 Agent [Media]" },
+  { level: 15, name: "Head Agent" },
+  { level: 14, name: "Elite Agent" },
+  { level: 13, name: "Senior Special Agent" },
+  { level: 12, name: "Special Agent" },
+  { level: 11, name: "Junior Special Agent" },
+  { level: 10, name: "Senior Field Agent" },
+  { level: 9, name: "Field Agent" },
+  { level: 8, name: "Junior Field Agent" },
+  { level: 7, name: "Senior Agent" },
+  { level: 6, name: "Agent" },
+  { level: 5, name: "Junior Agent" },
+  { level: 4, name: "Agent in Education" },
+  { level: 3, name: "Facility Manager" },
+  { level: 2, name: "Bewerber" },
+  { level: 1, name: "Suspended" },
+];
+
+type Draft = {
+  id: string;
+  dienstnummer: string;
+  name: string;
+  rank: string;
+  deckname: string;
+  telNr: string;
+  beitritt: string;
+} & Record<CheckboxKey, boolean>;
+
+function toDateInputValue(stored: string | null | undefined): string {
+  if (!stored) return "";
+  const de = stored.match(/^(\d{2})\.(\d{2})\.(\d{4})$/);
+  if (de) return `${de[3]}-${de[2]}-${de[1]}`;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(stored)) return stored;
+  return "";
+}
+
+function formatBeitritt(stored: string | null | undefined): string {
+  if (!stored) return "";
+  const iso = stored.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (iso) return `${iso[3]}.${iso[2]}.${iso[1]}`;
+  return stored;
+}
+
+function draftFromOfficer(o: Officer): Draft {
+  const d = {
+    id: String(o.id),
+    dienstnummer: o.dienstnummer,
+    name: o.name,
+    rank: o.rank,
+    deckname: o.deckname ?? "",
+    telNr: o.telNr ?? "",
+    beitritt: toDateInputValue(o.beitritt),
+  } as Draft;
+  for (const { key } of CHECKBOX_COLS) d[key] = o[key] as boolean;
+  return d;
+}
+
+const inputCls =
+  "bg-[#0a0f1a] border border-[#c9a227]/40 rounded px-1.5 py-1 text-white text-xs outline-none focus:border-[#c9a227]";
 
 export default function Personal() {
   const { data: officers, isLoading } = useGetOfficers();
   const updatePermissions = useUpdateOfficerPermissions();
   const createOfficer = useCreateOfficer();
+  const deleteOfficer = useDeleteOfficer();
   const queryClient = useQueryClient();
 
-  const [saving, setSaving] = useState<number | null>(null);
-  const [editing, setEditing] = useState<EditingCell | null>(null);
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [draft, setDraft] = useState<Draft | null>(null);
+  const [editOriginal, setEditOriginal] = useState<Officer | null>(null);
+  const [rowError, setRowError] = useState<string | null>(null);
+  const [busyId, setBusyId] = useState<number | null>(null);
+
   const [showNew, setShowNew] = useState(false);
-  const [newForm, setNewForm] = useState({ dienstnummer: "", name: "", rank: "", passwort: "", deckname: "", telNr: "", beitritt: "" });
+  const [newForm, setNewForm] = useState({ dienstnummer: "", name: "", rank: RANKS[RANKS.length - 1].name, passwort: "", deckname: "", telNr: "", beitritt: "" });
   const [newError, setNewError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  const invalidate = () => queryClient.invalidateQueries({ queryKey: getGetOfficersQueryKey() });
 
   const sortedOfficers = useMemo(() => {
     if (!officers) return [];
@@ -46,26 +127,76 @@ export default function Personal() {
     );
   }, [officers]);
 
-  const patchOfficer = async (id: number, data: Record<string, unknown>) => {
-    setSaving(id);
+  const startEdit = (o: Officer) => {
+    setRowError(null);
+    setEditingId(o.id);
+    setEditOriginal(o);
+    setDraft(draftFromOfficer(o));
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setDraft(null);
+    setEditOriginal(null);
+    setRowError(null);
+  };
+
+  const saveDraft = async () => {
+    if (!draft || editingId === null || !editOriginal) return;
+    if (!draft.dienstnummer.trim() || !draft.name.trim() || !draft.rank.trim()) {
+      setRowError("Dienstnummer, Name und Rang dürfen nicht leer sein.");
+      return;
+    }
+    const idNum = parseInt(draft.id, 10);
+    if (!Number.isInteger(idNum) || idNum <= 0) {
+      setRowError("ID muss eine positive Zahl sein.");
+      return;
+    }
+
+    // Only send fields the user actually changed. This avoids unnecessary
+    // writes and prevents clobbering legacy values (e.g. an unparsable
+    // Beitritt date that maps to an empty date input).
+    const payload: Record<string, unknown> = {};
+    if (idNum !== editOriginal.id) payload.id = idNum;
+    if (draft.dienstnummer.trim() !== editOriginal.dienstnummer) payload.dienstnummer = draft.dienstnummer.trim();
+    if (draft.name.trim() !== editOriginal.name) payload.name = draft.name.trim();
+    if (draft.rank.trim() !== editOriginal.rank) payload.rank = draft.rank.trim();
+    if (draft.deckname.trim() !== (editOriginal.deckname ?? "")) payload.deckname = draft.deckname.trim() || null;
+    if (draft.telNr.trim() !== (editOriginal.telNr ?? "")) payload.telNr = draft.telNr.trim() || null;
+    if (draft.beitritt !== toDateInputValue(editOriginal.beitritt)) payload.beitritt = draft.beitritt || null;
+    for (const { key } of CHECKBOX_COLS) {
+      if (draft[key] !== (editOriginal[key] as boolean)) payload[key] = draft[key];
+    }
+
+    if (Object.keys(payload).length === 0) {
+      cancelEdit();
+      return;
+    }
+
+    setBusyId(editingId);
     try {
-      await updatePermissions.mutateAsync({ id, data: data as Parameters<typeof updatePermissions.mutateAsync>[0]["data"] });
-      queryClient.invalidateQueries({ queryKey: getGetOfficersQueryKey() });
+      await updatePermissions.mutateAsync({
+        id: editingId,
+        data: payload as Parameters<typeof updatePermissions.mutateAsync>[0]["data"],
+      });
+      invalidate();
+      cancelEdit();
+    } catch {
+      setRowError("Speichern fehlgeschlagen — ist die ID oder Dienstnummer evtl. schon vergeben?");
     } finally {
-      setSaving(null);
+      setBusyId(null);
     }
   };
 
-  const toggleBool = (officerId: number, field: CheckboxKey, current: boolean) => {
-    patchOfficer(officerId, { [field]: !current });
-  };
-
-  const commitEdit = () => {
-    if (!editing) return;
-    const required = editing.field === "dienstnummer" || editing.field === "name" || editing.field === "rank";
-    if (required && editing.value.trim() === "") { setEditing(null); return; }
-    patchOfficer(editing.officerId, { [editing.field]: required ? editing.value.trim() : (editing.value || null) });
-    setEditing(null);
+  const handleDelete = async (o: Officer) => {
+    if (!window.confirm(`${o.name} (${o.dienstnummer}) wirklich aus dem Personal entfernen?`)) return;
+    setBusyId(o.id);
+    try {
+      await deleteOfficer.mutateAsync({ id: o.id });
+      invalidate();
+    } finally {
+      setBusyId(null);
+    }
   };
 
   const handleCreate = async (e: React.FormEvent) => {
@@ -88,9 +219,9 @@ export default function Personal() {
           beitritt: newForm.beitritt || null,
         },
       });
-      queryClient.invalidateQueries({ queryKey: getGetOfficersQueryKey() });
+      invalidate();
       setShowNew(false);
-      setNewForm({ dienstnummer: "", name: "", rank: "", passwort: "", deckname: "", telNr: "", beitritt: "" });
+      setNewForm({ dienstnummer: "", name: "", rank: RANKS[RANKS.length - 1].name, passwort: "", deckname: "", telNr: "", beitritt: "" });
     } catch {
       setNewError("Konnte nicht angelegt werden. Ist die Dienstnummer evtl. schon vergeben?");
     } finally {
@@ -98,33 +229,8 @@ export default function Personal() {
     }
   };
 
-  const renderEditableCell = (o: NonNullable<typeof officers>[number], field: TextField, className: string, placeholder = "—") => {
-    const isEditing = editing?.officerId === o.id && editing.field === field;
-    if (isEditing) {
-      return (
-        <div className="flex items-center gap-1">
-          <input
-            autoFocus
-            className="bg-[#0a0f1a] border border-[#c9a227]/50 rounded px-1.5 py-0.5 text-white w-28 text-xs outline-none focus:border-[#c9a227]"
-            value={editing.value}
-            onChange={e => setEditing({ ...editing, value: e.target.value })}
-            onKeyDown={e => { if (e.key === "Enter") commitEdit(); if (e.key === "Escape") setEditing(null); }}
-          />
-          <button onClick={commitEdit} className="text-green-400 hover:text-green-300"><Check className="w-3.5 h-3.5" /></button>
-          <button onClick={() => setEditing(null)} className="text-gray-500 hover:text-gray-300"><X className="w-3.5 h-3.5" /></button>
-        </div>
-      );
-    }
-    return (
-      <div
-        className="flex items-center gap-1 group cursor-pointer min-w-[5rem]"
-        onClick={() => setEditing({ officerId: o.id, field, value: (o[field] ?? "") as string })}
-      >
-        <span className={className}>{(o[field] as string | null) || <span className="text-gray-600 italic">{placeholder}</span>}</span>
-        <Pencil className="w-3 h-3 text-gray-600 opacity-0 group-hover:opacity-100 transition-opacity" />
-      </div>
-    );
-  };
+  const setDraftField = (field: keyof Draft, value: string | boolean) =>
+    setDraft(d => (d ? { ...d, [field]: value } : d));
 
   return (
     <div className="space-y-4">
@@ -140,9 +246,13 @@ export default function Personal() {
           onClick={() => { setShowNew(true); setNewError(null); }}
           className="flex items-center gap-1.5 bg-[#1e3a8a] hover:bg-[#1e40af] text-white px-3 py-1.5 rounded text-xs font-medium transition-colors"
         >
-          <Plus className="w-3.5 h-3.5" /> Neues Personal
+          <Plus className="w-3.5 h-3.5" /> Neuer Eintrag
         </button>
       </div>
+
+      {rowError && (
+        <div className="bg-red-950/40 border border-red-800/50 text-red-300 text-xs rounded px-3 py-2">{rowError}</div>
+      )}
 
       <div className="bg-[#0d1526] border border-[#1e2d4a] rounded overflow-x-auto">
         <table className="text-xs whitespace-nowrap">
@@ -155,69 +265,140 @@ export default function Personal() {
               <th className="text-left px-3 py-2.5 text-gray-400 font-medium">Deckname</th>
               <th className="text-left px-3 py-2.5 text-gray-400 font-medium">Tel.Nr.</th>
               <th className="text-left px-3 py-2.5 text-gray-400 font-medium">Beitritt</th>
-              <th className="px-3 py-2.5 border-l border-[#1e2d4a]" colSpan={CHECKBOX_COLS.length}>
-                <div className="grid text-center text-gray-400 font-medium" style={{ gridTemplateColumns: `repeat(${CHECKBOX_COLS.length}, 4.5rem)` }}>
-                  {CHECKBOX_COLS.map(c => (
-                    <span key={c.key} className="px-1 truncate" title={c.label}>{c.label}</span>
-                  ))}
-                </div>
-              </th>
+              {CHECKBOX_COLS.map(c => (
+                <th key={c.key} className="px-2 py-2.5 text-gray-400 font-medium text-center border-l border-[#1e2d4a] first:border-l-0" title={c.label}>
+                  <span className="block w-16 truncate mx-auto">{c.label}</span>
+                </th>
+              ))}
+              <th className="px-3 py-2.5 text-gray-400 font-medium text-center border-l border-[#1e2d4a]">Aktionen</th>
             </tr>
           </thead>
           <tbody>
             {isLoading ? (
-              <tr><td colSpan={7 + CHECKBOX_COLS.length} className="text-center py-8 text-gray-500">Laden...</td></tr>
-            ) : sortedOfficers.map(o => (
-              <tr
-                key={o.id}
-                className="border-b border-[#1e2d4a]/40 hover:bg-[#1a2744]/30 transition-colors"
-                data-testid={`officer-${o.id}`}
-              >
-                <td className="px-3 py-2 text-gray-500">{o.id}</td>
-                <td className="px-3 py-2">{renderEditableCell(o, "dienstnummer", "text-[#c9a227] font-mono")}</td>
-                <td className="px-3 py-2">{renderEditableCell(o, "name", "text-white font-medium")}</td>
-                <td className="px-3 py-2">{renderEditableCell(o, "rank", "text-gray-400")}</td>
-                <td className="px-3 py-2">{renderEditableCell(o, "deckname", "text-gray-300")}</td>
-                <td className="px-3 py-2">{renderEditableCell(o, "telNr", "text-gray-300")}</td>
-                <td className="px-3 py-2">{renderEditableCell(o, "beitritt", "text-gray-300")}</td>
-
-                {CHECKBOX_COLS.map(({ key }) => (
-                  <td key={key} className="px-3 py-2 border-l border-[#1e2d4a] first:border-l-0 text-center align-middle" style={{ width: "4.5rem" }}>
-                    <button
-                      onClick={() => toggleBool(o.id, key, o[key] as boolean)}
-                      disabled={saving === o.id}
-                      className={`w-4.5 h-4.5 rounded border transition-colors flex items-center justify-center mx-auto ${
-                        o[key]
-                          ? "bg-[#c9a227] border-[#c9a227] text-black"
-                          : "bg-transparent border-gray-600 hover:border-[#c9a227]/50"
-                      } ${saving === o.id ? "opacity-50" : ""}`}
-                    >
-                      {o[key] && <Check className="w-3 h-3" />}
-                    </button>
+              <tr><td colSpan={8 + CHECKBOX_COLS.length} className="text-center py-8 text-gray-500">Laden...</td></tr>
+            ) : sortedOfficers.map(o => {
+              const isEditing = editingId === o.id && draft;
+              const busy = busyId === o.id;
+              return (
+                <tr
+                  key={o.id}
+                  className={`border-b border-[#1e2d4a]/40 transition-colors ${isEditing ? "bg-[#1a2744]/40" : "hover:bg-[#1a2744]/30"}`}
+                  data-testid={`officer-${o.id}`}
+                >
+                  <td className="px-3 py-2">
+                    {isEditing
+                      ? <input className={`${inputCls} w-14`} value={draft.id} onChange={e => setDraftField("id", e.target.value)} inputMode="numeric" />
+                      : <span className="text-gray-500">{o.id}</span>}
                   </td>
-                ))}
-              </tr>
-            ))}
+                  <td className="px-3 py-2">
+                    {isEditing
+                      ? <input className={`${inputCls} w-24`} value={draft.dienstnummer} onChange={e => setDraftField("dienstnummer", e.target.value)} />
+                      : <span className="text-[#c9a227] font-mono">{o.dienstnummer}</span>}
+                  </td>
+                  <td className="px-3 py-2">
+                    {isEditing
+                      ? <input className={`${inputCls} w-36`} value={draft.name} onChange={e => setDraftField("name", e.target.value)} />
+                      : <span className="text-white font-medium">{o.name}</span>}
+                  </td>
+                  <td className="px-3 py-2">
+                    {isEditing ? (
+                      <select className={`${inputCls} w-44`} value={draft.rank} onChange={e => setDraftField("rank", e.target.value)}>
+                        {!RANKS.some(r => r.name === draft.rank) && draft.rank !== "" && (
+                          <option value={draft.rank}>{draft.rank}</option>
+                        )}
+                        {RANKS.map(r => (
+                          <option key={r.level} value={r.name}>{r.level} | {r.name}</option>
+                        ))}
+                      </select>
+                    ) : (
+                      <span className="text-gray-400">{o.rank}</span>
+                    )}
+                  </td>
+                  <td className="px-3 py-2">
+                    {isEditing
+                      ? <input className={`${inputCls} w-28`} value={draft.deckname} onChange={e => setDraftField("deckname", e.target.value)} />
+                      : <span className="text-gray-300">{o.deckname || <span className="text-gray-600">—</span>}</span>}
+                  </td>
+                  <td className="px-3 py-2">
+                    {isEditing
+                      ? <input className={`${inputCls} w-24`} value={draft.telNr} onChange={e => setDraftField("telNr", e.target.value)} />
+                      : <span className="text-gray-300">{o.telNr || <span className="text-gray-600">—</span>}</span>}
+                  </td>
+                  <td className="px-3 py-2">
+                    {isEditing
+                      ? <input type="date" className={`${inputCls} w-36`} value={draft.beitritt} onChange={e => setDraftField("beitritt", e.target.value)} />
+                      : <span className="text-gray-300">{formatBeitritt(o.beitritt) || <span className="text-gray-600">—</span>}</span>}
+                  </td>
+
+                  {CHECKBOX_COLS.map(({ key }) => (
+                    <td key={key} className="px-2 py-2 border-l border-[#1e2d4a] first:border-l-0 text-center align-middle">
+                      <button
+                        onClick={() => isEditing && setDraftField(key, !draft[key])}
+                        disabled={!isEditing}
+                        className={`w-4 h-4 rounded border transition-colors flex items-center justify-center mx-auto ${
+                          (isEditing ? draft[key] : (o[key] as boolean))
+                            ? "bg-[#c9a227] border-[#c9a227] text-black"
+                            : "bg-transparent border-gray-600"
+                        } ${isEditing ? "cursor-pointer hover:border-[#c9a227]" : "cursor-default opacity-90"}`}
+                      >
+                        {(isEditing ? draft[key] : (o[key] as boolean)) && <Check className="w-3 h-3" />}
+                      </button>
+                    </td>
+                  ))}
+
+                  <td className="px-3 py-2 border-l border-[#1e2d4a] text-center">
+                    {isEditing ? (
+                      <div className="flex items-center justify-center gap-1.5">
+                        <button onClick={saveDraft} disabled={busy} className="p-1 rounded bg-green-600/20 text-green-400 hover:bg-green-600/30 disabled:opacity-50" title="Speichern">
+                          <Check className="w-3.5 h-3.5" />
+                        </button>
+                        <button onClick={cancelEdit} disabled={busy} className="p-1 rounded bg-gray-600/20 text-gray-400 hover:bg-gray-600/30 disabled:opacity-50" title="Abbrechen">
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-center gap-1.5">
+                        <button onClick={() => startEdit(o)} disabled={busy} className="p-1 rounded bg-[#1e3a8a]/40 text-blue-300 hover:bg-[#1e3a8a]/60 disabled:opacity-50" title="Bearbeiten">
+                          <Pencil className="w-3.5 h-3.5" />
+                        </button>
+                        <button onClick={() => handleDelete(o)} disabled={busy} className="p-1 rounded bg-red-900/30 text-red-400 hover:bg-red-900/50 disabled:opacity-50" title="Löschen">
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
 
       <div className="text-[10px] text-gray-600 space-y-0.5">
         <p><span className="text-gray-500 font-medium">WF LMG</span> = Waffenfreigabe LMG &nbsp;·&nbsp; <span className="text-gray-500 font-medium">WF H.Sniper</span> = Waffenfreigabe Heavy Sniper</p>
-        <p>Alle Zellen durch Klick bearbeiten · Kästchen direkt anklicken zum Aktivieren/Deaktivieren · Sortiert nach Dienstnummer</p>
+        <p>Zeile über den Bearbeiten-Button (Stift) bearbeiten · Sortiert nach Dienstnummer</p>
       </div>
 
       {showNew && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
           <div className="bg-[#0d1526] border border-[#1e2d4a] rounded-lg w-full max-w-md">
             <div className="flex items-center justify-between px-5 py-4 border-b border-[#1e2d4a]">
-              <h2 className="text-sm font-semibold text-white">Neues Personal anlegen</h2>
+              <h2 className="text-sm font-semibold text-white">Neuer Eintrag</h2>
               <button onClick={() => setShowNew(false)} className="text-gray-500 hover:text-gray-300"><X className="w-4 h-4" /></button>
             </div>
             <form onSubmit={handleCreate} className="p-5 space-y-3">
               <div className="grid grid-cols-2 gap-3">
                 <Field label="Dienstnummer *" value={newForm.dienstnummer} onChange={v => setNewForm({ ...newForm, dienstnummer: v })} placeholder="D-1011" />
-                <Field label="Rang *" value={newForm.rank} onChange={v => setNewForm({ ...newForm, rank: v })} placeholder="Special Agent" />
+                <div>
+                  <label className="block text-[10px] text-gray-400 mb-1 uppercase tracking-wider">Rang *</label>
+                  <select
+                    value={newForm.rank}
+                    onChange={e => setNewForm({ ...newForm, rank: e.target.value })}
+                    className="w-full bg-[#0a0f1a] border border-[#1e2d4a] rounded px-2.5 py-1.5 text-xs text-white outline-none focus:border-[#c9a227]/50"
+                  >
+                    {RANKS.map(r => <option key={r.level} value={r.name}>{r.level} | {r.name}</option>)}
+                  </select>
+                </div>
               </div>
               <Field label="Name *" value={newForm.name} onChange={v => setNewForm({ ...newForm, name: v })} placeholder="Max Mustermann" />
               <div className="grid grid-cols-2 gap-3">
@@ -225,7 +406,15 @@ export default function Personal() {
                 <Field label="Tel.Nr." value={newForm.telNr} onChange={v => setNewForm({ ...newForm, telNr: v })} />
               </div>
               <div className="grid grid-cols-2 gap-3">
-                <Field label="Beitritt" value={newForm.beitritt} onChange={v => setNewForm({ ...newForm, beitritt: v })} placeholder="28.06.2026" />
+                <div>
+                  <label className="block text-[10px] text-gray-400 mb-1 uppercase tracking-wider">Beitritt</label>
+                  <input
+                    type="date"
+                    value={newForm.beitritt}
+                    onChange={e => setNewForm({ ...newForm, beitritt: e.target.value })}
+                    className="w-full bg-[#0a0f1a] border border-[#1e2d4a] rounded px-2.5 py-1.5 text-xs text-white outline-none focus:border-[#c9a227]/50"
+                  />
+                </div>
                 <Field label="Passwort" value={newForm.passwort} onChange={v => setNewForm({ ...newForm, passwort: v })} placeholder="Standard: 1234" />
               </div>
               {newError && <p className="text-xs text-red-400">{newError}</p>}
