@@ -291,10 +291,16 @@ export default function Personal() {
             ) : sortedOfficers.map(o => {
               const isEditing = editingId === o.id && draft;
               const busy = busyId === o.id;
+              const abgemeldet = !!(o.abmeldungBis && o.abmeldungBis.trim());
+              const rowCls = isEditing
+                ? "bg-[#1a2744]/40"
+                : abgemeldet
+                  ? "bg-amber-950/25 hover:bg-amber-950/40"
+                  : "hover:bg-[#1a2744]/30";
               return (
                 <tr
                   key={o.id}
-                  className={`border-b border-[#1e2d4a]/40 transition-colors ${isEditing ? "bg-[#1a2744]/40" : "hover:bg-[#1a2744]/30"}`}
+                  className={`border-b border-[#1e2d4a]/40 transition-colors ${rowCls}`}
                   data-testid={`officer-${o.id}`}
                 >
                   <td className="px-3 py-2">
@@ -339,7 +345,12 @@ export default function Personal() {
                   <td className="px-3 py-2">
                     {isEditing
                       ? <input className={`${inputCls} w-28`} value={draft.abmeldungBis} onChange={e => setDraftField("abmeldungBis", e.target.value)} />
-                      : <span className="text-gray-300">{o.abmeldungBis || <span className="text-gray-600">—</span>}</span>}
+                      : abgemeldet ? (
+                        <span className="inline-flex items-center gap-1.5">
+                          <span className="inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide bg-amber-500/20 text-amber-300 border border-amber-500/40">Abgemeldet</span>
+                          <span className="text-gray-300">{o.abmeldungBis}</span>
+                        </span>
+                      ) : <span className="text-gray-600">—</span>}
                   </td>
                   <td className="px-3 py-2">
                     {isEditing
