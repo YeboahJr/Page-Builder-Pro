@@ -17,9 +17,18 @@ import {
   CreditCard,
   Plus,
   FileText,
+  UserCog,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Input } from "@/components/ui/input";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
 
 interface NavItem {
   icon: React.ComponentType<{ className?: string }>;
@@ -51,7 +60,7 @@ const quickLinks = [
 ];
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
-  const [location] = useLocation();
+  const [location, setLocation] = useLocation();
   const { logout, officer } = useAuth();
   const [expanded, setExpanded] = useState<string[]>(["/fallmanagement", "/personal"]);
 
@@ -193,16 +202,60 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               />
             </div>
 
-            <div className="flex items-center gap-2.5 border-l border-primary/20 pl-4">
-              <div className="w-8 h-8 rounded-full bg-primary/20 border border-primary/50 flex items-center justify-center">
-                <Users className="w-4 h-4 text-primary" />
-              </div>
-              <div>
-                <p className="text-xs font-semibold text-white leading-none">{officer?.name ?? "Agent"}</p>
-                <p className="text-xs text-primary leading-none mt-0.5">{officer?.rank ?? "Special Agent"}</p>
-              </div>
-              <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />
-            </div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  data-testid="button-profile-menu"
+                  className="flex items-center gap-2.5 border-l border-primary/20 pl-4 outline-none focus-visible:ring-2 focus-visible:ring-primary/40 rounded-sm transition-colors data-[state=open]:[&_svg.chevron]:rotate-180"
+                >
+                  <div className="w-8 h-8 rounded-full bg-primary/20 border border-primary/50 flex items-center justify-center">
+                    <Users className="w-4 h-4 text-primary" />
+                  </div>
+                  <div className="text-left">
+                    <p className="text-xs font-semibold text-white leading-none">{officer?.name ?? "Agent"}</p>
+                    <p className="text-xs text-primary leading-none mt-0.5">{officer?.rank ?? "Special Agent"}</p>
+                  </div>
+                  <ChevronDown className="chevron w-3.5 h-3.5 text-muted-foreground transition-transform" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                align="end"
+                className="w-52 bg-[#0d1526] border-primary/20 text-white"
+                data-testid="menu-profile"
+              >
+                <DropdownMenuLabel className="text-muted-foreground font-normal">
+                  <span className="block text-xs font-semibold text-white">{officer?.name ?? "Agent"}</span>
+                  <span className="block text-xs text-primary mt-0.5">{officer?.dienstnummer ?? "–"}</span>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator className="bg-primary/20" />
+                <DropdownMenuItem
+                  data-testid="menu-item-einstellungen"
+                  className="text-gray-200 focus:bg-primary/10 focus:text-white cursor-pointer"
+                  onSelect={() => setLocation("/einstellungen")}
+                >
+                  <Settings className="text-primary" />
+                  Einstellungen
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  data-testid="menu-item-profil-bearbeiten"
+                  className="text-gray-200 focus:bg-primary/10 focus:text-white cursor-pointer"
+                  onSelect={() => setLocation("/einstellungen")}
+                >
+                  <UserCog className="text-primary" />
+                  Profil bearbeiten
+                </DropdownMenuItem>
+                <DropdownMenuSeparator className="bg-primary/20" />
+                <DropdownMenuItem
+                  data-testid="menu-item-abmelden"
+                  className="text-muted-foreground focus:bg-destructive/10 focus:text-destructive cursor-pointer"
+                  onSelect={() => logout()}
+                >
+                  <LogOut />
+                  Abmelden
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </header>
 
