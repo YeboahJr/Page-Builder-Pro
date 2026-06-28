@@ -7,6 +7,7 @@
  */
 
 export * from './activityEntry';
+export * from './approveOfficerInput';
 export * from './case';
 export * from './caseAgent';
 export * from './caseDetail';
@@ -30,6 +31,8 @@ export * from './patrol';
 export * from './patrolInput';
 export * from './patrolSlot';
 export * from './patrolUpdate';
+export * from './registerInput';
+export * from './registerResult';
 export * from './report';
 export * from './reportInput';
 export * from './reportStats';

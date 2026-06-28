@@ -27,6 +27,7 @@ export const officersTable = pgTable("officers", {
   meldeamtPD: boolean("meldeamt_pd").notNull().default(false),
   meldeamtLI: boolean("meldeamt_li").notNull().default(false),
   idChange: boolean("id_change").notNull().default(false),
+  freigegeben: boolean("freigegeben").notNull().default(true),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });

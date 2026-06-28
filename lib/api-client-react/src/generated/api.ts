@@ -21,6 +21,7 @@ import type {
 
 import type {
   ActivityEntry,
+  ApproveOfficerInput,
   Case,
   CaseAgent,
   CaseDetail,
@@ -43,6 +44,8 @@ import type {
   Patrol,
   PatrolInput,
   PatrolUpdate,
+  RegisterInput,
+  RegisterResult,
   Report,
   ReportInput,
   ReportStats,
@@ -226,6 +229,76 @@ export const useLogin = <TError = ErrorType<void>,
         TContext
       > => {
       return useMutation(getLoginMutationOptions(options));
+    }
+
+export const getRegisterUrl = () => {
+
+
+
+
+  return `/api/auth/register`
+}
+
+/**
+ * @summary Register a new officer (pending leadership approval)
+ */
+export const register = async (registerInput: RegisterInput, options?: RequestInit): Promise<RegisterResult> => {
+
+  return customFetch<RegisterResult>(getRegisterUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(registerInput)
+  }
+);}
+
+
+
+
+export const getRegisterMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof register>>, TError,{data: BodyType<RegisterInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof register>>, TError,{data: BodyType<RegisterInput>}, TContext> => {
+
+const mutationKey = ['register'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof register>>, {data: BodyType<RegisterInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  register(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RegisterMutationResult = NonNullable<Awaited<ReturnType<typeof register>>>
+    export type RegisterMutationBody = BodyType<RegisterInput>
+    export type RegisterMutationError = ErrorType<void>
+
+    /**
+ * @summary Register a new officer (pending leadership approval)
+ */
+export const useRegister = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof register>>, TError,{data: BodyType<RegisterInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof register>>,
+        TError,
+        {data: BodyType<RegisterInput>},
+        TContext
+      > => {
+      return useMutation(getRegisterMutationOptions(options));
     }
 
 export const getGetMeUrl = () => {
@@ -1874,6 +1947,224 @@ export const useCreateOfficer = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getCreateOfficerMutationOptions(options));
+    }
+
+export const getGetPendingOfficersUrl = () => {
+
+
+
+
+  return `/api/officers/pending`
+}
+
+/**
+ * @summary List officers awaiting approval (leadership only)
+ */
+export const getPendingOfficers = async ( options?: RequestInit): Promise<Officer[]> => {
+
+  return customFetch<Officer[]>(getGetPendingOfficersUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetPendingOfficersQueryKey = () => {
+    return [
+    `/api/officers/pending`
+    ] as const;
+    }
+
+
+export const getGetPendingOfficersQueryOptions = <TData = Awaited<ReturnType<typeof getPendingOfficers>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPendingOfficers>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetPendingOfficersQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getPendingOfficers>>> = ({ signal }) => getPendingOfficers({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getPendingOfficers>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetPendingOfficersQueryResult = NonNullable<Awaited<ReturnType<typeof getPendingOfficers>>>
+export type GetPendingOfficersQueryError = ErrorType<void>
+
+
+/**
+ * @summary List officers awaiting approval (leadership only)
+ */
+
+export function useGetPendingOfficers<TData = Awaited<ReturnType<typeof getPendingOfficers>>, TError = ErrorType<void>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPendingOfficers>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetPendingOfficersQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getApproveOfficerUrl = (id: number,) => {
+
+
+
+
+  return `/api/officers/${id}/approve`
+}
+
+/**
+ * @summary Approve a pending officer and assign a rank (leadership only)
+ */
+export const approveOfficer = async (id: number,
+    approveOfficerInput: ApproveOfficerInput, options?: RequestInit): Promise<Officer> => {
+
+  return customFetch<Officer>(getApproveOfficerUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(approveOfficerInput)
+  }
+);}
+
+
+
+
+export const getApproveOfficerMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof approveOfficer>>, TError,{id: number;data: BodyType<ApproveOfficerInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof approveOfficer>>, TError,{id: number;data: BodyType<ApproveOfficerInput>}, TContext> => {
+
+const mutationKey = ['approveOfficer'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof approveOfficer>>, {id: number;data: BodyType<ApproveOfficerInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  approveOfficer(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ApproveOfficerMutationResult = NonNullable<Awaited<ReturnType<typeof approveOfficer>>>
+    export type ApproveOfficerMutationBody = BodyType<ApproveOfficerInput>
+    export type ApproveOfficerMutationError = ErrorType<void>
+
+    /**
+ * @summary Approve a pending officer and assign a rank (leadership only)
+ */
+export const useApproveOfficer = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof approveOfficer>>, TError,{id: number;data: BodyType<ApproveOfficerInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof approveOfficer>>,
+        TError,
+        {id: number;data: BodyType<ApproveOfficerInput>},
+        TContext
+      > => {
+      return useMutation(getApproveOfficerMutationOptions(options));
+    }
+
+export const getRejectOfficerUrl = (id: number,) => {
+
+
+
+
+  return `/api/officers/${id}/reject`
+}
+
+/**
+ * @summary Reject and delete a pending officer (leadership only)
+ */
+export const rejectOfficer = async (id: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getRejectOfficerUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getRejectOfficerMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof rejectOfficer>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof rejectOfficer>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['rejectOfficer'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof rejectOfficer>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  rejectOfficer(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RejectOfficerMutationResult = NonNullable<Awaited<ReturnType<typeof rejectOfficer>>>
+
+    export type RejectOfficerMutationError = ErrorType<void>
+
+    /**
+ * @summary Reject and delete a pending officer (leadership only)
+ */
+export const useRejectOfficer = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof rejectOfficer>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof rejectOfficer>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getRejectOfficerMutationOptions(options));
     }
 
 export const getGetOfficerUrl = (id: number,) => {

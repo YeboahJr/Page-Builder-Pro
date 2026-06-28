@@ -48,9 +48,25 @@ export const LoginResponse = zod.object({
   "meldeamtSAHP": zod.boolean(),
   "meldeamtPD": zod.boolean(),
   "meldeamtLI": zod.boolean(),
-  "idChange": zod.boolean()
+  "idChange": zod.boolean(),
+  "freigegeben": zod.boolean()
 }),
   "token": zod.string()
+})
+
+
+/**
+ * @summary Register a new officer (pending leadership approval)
+ */
+export const RegisterBody = zod.object({
+  "dienstnummer": zod.string(),
+  "name": zod.string(),
+  "passwort": zod.string()
+})
+
+export const RegisterResponse = zod.object({
+  "success": zod.boolean(),
+  "message": zod.string()
 })
 
 
@@ -80,7 +96,8 @@ export const GetMeResponse = zod.object({
   "meldeamtSAHP": zod.boolean(),
   "meldeamtPD": zod.boolean(),
   "meldeamtLI": zod.boolean(),
-  "idChange": zod.boolean()
+  "idChange": zod.boolean(),
+  "freigegeben": zod.boolean()
 })
 
 
@@ -521,7 +538,8 @@ export const GetOfficersResponseItem = zod.object({
   "meldeamtSAHP": zod.boolean(),
   "meldeamtPD": zod.boolean(),
   "meldeamtLI": zod.boolean(),
-  "idChange": zod.boolean()
+  "idChange": zod.boolean(),
+  "freigegeben": zod.boolean()
 })
 export const GetOfficersResponse = zod.array(GetOfficersResponseItem)
 
@@ -563,8 +581,90 @@ export const CreateOfficerResponse = zod.object({
   "meldeamtSAHP": zod.boolean(),
   "meldeamtPD": zod.boolean(),
   "meldeamtLI": zod.boolean(),
-  "idChange": zod.boolean()
+  "idChange": zod.boolean(),
+  "freigegeben": zod.boolean()
 })
+
+
+/**
+ * @summary List officers awaiting approval (leadership only)
+ */
+export const GetPendingOfficersResponseItem = zod.object({
+  "id": zod.number(),
+  "dienstnummer": zod.string(),
+  "name": zod.string(),
+  "rank": zod.string(),
+  "division": zod.string(),
+  "status": zod.string().describe('Anwesend | In Einsatz | Pause | Abwesend'),
+  "radioStatus": zod.string().optional().describe('Aktiv | Ausgeschaltet'),
+  "radioFreq": zod.string(),
+  "avatarUrl": zod.string().nullish(),
+  "deckname": zod.string().nullish(),
+  "telNr": zod.string().nullish(),
+  "abmeldungBis": zod.string().nullish(),
+  "beitritt": zod.string().nullish(),
+  "einweisung": zod.boolean(),
+  "waffenfreigabeLMG": zod.boolean(),
+  "waffenfreigabeHeavySniper": zod.boolean(),
+  "freigabeCCU": zod.boolean(),
+  "freigabeZivil": zod.boolean(),
+  "freigabeUndercover": zod.boolean(),
+  "meldeamtSAHP": zod.boolean(),
+  "meldeamtPD": zod.boolean(),
+  "meldeamtLI": zod.boolean(),
+  "idChange": zod.boolean(),
+  "freigegeben": zod.boolean()
+})
+export const GetPendingOfficersResponse = zod.array(GetPendingOfficersResponseItem)
+
+
+/**
+ * @summary Approve a pending officer and assign a rank (leadership only)
+ */
+export const ApproveOfficerParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ApproveOfficerBody = zod.object({
+  "rank": zod.string()
+})
+
+export const ApproveOfficerResponse = zod.object({
+  "id": zod.number(),
+  "dienstnummer": zod.string(),
+  "name": zod.string(),
+  "rank": zod.string(),
+  "division": zod.string(),
+  "status": zod.string().describe('Anwesend | In Einsatz | Pause | Abwesend'),
+  "radioStatus": zod.string().optional().describe('Aktiv | Ausgeschaltet'),
+  "radioFreq": zod.string(),
+  "avatarUrl": zod.string().nullish(),
+  "deckname": zod.string().nullish(),
+  "telNr": zod.string().nullish(),
+  "abmeldungBis": zod.string().nullish(),
+  "beitritt": zod.string().nullish(),
+  "einweisung": zod.boolean(),
+  "waffenfreigabeLMG": zod.boolean(),
+  "waffenfreigabeHeavySniper": zod.boolean(),
+  "freigabeCCU": zod.boolean(),
+  "freigabeZivil": zod.boolean(),
+  "freigabeUndercover": zod.boolean(),
+  "meldeamtSAHP": zod.boolean(),
+  "meldeamtPD": zod.boolean(),
+  "meldeamtLI": zod.boolean(),
+  "idChange": zod.boolean(),
+  "freigegeben": zod.boolean()
+})
+
+
+/**
+ * @summary Reject and delete a pending officer (leadership only)
+ */
+export const RejectOfficerParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const RejectOfficerResponse = zod.void()
 
 
 /**
@@ -597,7 +697,8 @@ export const GetOfficerResponse = zod.object({
   "meldeamtSAHP": zod.boolean(),
   "meldeamtPD": zod.boolean(),
   "meldeamtLI": zod.boolean(),
-  "idChange": zod.boolean()
+  "idChange": zod.boolean(),
+  "freigegeben": zod.boolean()
 })
 
 
@@ -652,7 +753,8 @@ export const UpdateOfficerPermissionsResponse = zod.object({
   "meldeamtSAHP": zod.boolean(),
   "meldeamtPD": zod.boolean(),
   "meldeamtLI": zod.boolean(),
-  "idChange": zod.boolean()
+  "idChange": zod.boolean(),
+  "freigegeben": zod.boolean()
 })
 
 

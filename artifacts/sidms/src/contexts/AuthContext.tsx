@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, ReactNode, useEffect } from "react";
 import { useLocation } from "wouter";
-import { useLogin, useLogout } from "@workspace/api-client-react";
+import { useLogin, useRegister } from "@workspace/api-client-react";
 
 interface OfficerData {
   id: number;
@@ -18,6 +18,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   officer: OfficerData | null;
   login: (dienstnummer: string, passwort: string) => Promise<void>;
+  register: (dienstnummer: string, name: string, passwort: string) => Promise<string>;
   logout: () => void;
   error: string | null;
 }
@@ -42,6 +43,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const isAuthenticated = officer !== null;
 
   const loginMutation = useLogin();
+  const registerMutation = useRegister();
 
   const login = async (dienstnummer: string, passwort: string) => {
     setError(null);
@@ -54,8 +56,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         sessionStorage.setItem(TOKEN_KEY, result.token);
       }
       setLocation("/dashboard");
-    } catch {
-      setError("Ungültige Anmeldedaten. Bitte überprüfen Sie Ihre Dienstnummer und Ihr Passwort.");
+    } catch (err) {
+      const e = err as { status?: number; data?: { error?: string } };
+      if (e?.status === 403) {
+        setError(e.data?.error ?? "Registrierung wartet noch auf Freigabe durch die Leitung.");
+      } else {
+        setError("Ungültige Anmeldedaten. Bitte überprüfen Sie Ihre Dienstnummer und Ihr Passwort.");
+      }
+    }
+  };
+
+  const register = async (dienstnummer: string, name: string, passwort: string): Promise<string> => {
+    try {
+      const result = await registerMutation.mutateAsync({ data: { dienstnummer, name, passwort } });
+      return result.message;
+    } catch (err) {
+      const e = err as { data?: { error?: string } };
+      throw new Error(e?.data?.error ?? "Registrierung fehlgeschlagen. Bitte versuche es erneut.");
     }
   };
 
@@ -73,7 +90,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, officer, login, logout, error }}>
+    <AuthContext.Provider value={{ isAuthenticated, officer, login, register, logout, error }}>
       {children}
     </AuthContext.Provider>
   );

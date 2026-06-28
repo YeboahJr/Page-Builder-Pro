@@ -37,4 +37,5 @@ export interface Officer {
   meldeamtPD: boolean;
   meldeamtLI: boolean;
   idChange: boolean;
+  freigegeben: boolean;
 }

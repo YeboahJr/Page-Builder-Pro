@@ -1,17 +1,42 @@
 import { Router } from "express";
 import { db, officersTable, sessionsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
-import crypto from "crypto";
+import { hashPassword, generateToken } from "../lib/auth";
 
 const router = Router();
 
-function hashPassword(password: string): string {
-  return crypto.createHash("sha256").update(password + "fib_salt_2026").digest("hex");
-}
+router.post("/register", async (req, res) => {
+  const body = req.body as Record<string, unknown>;
+  const dienstnummer = typeof body.dienstnummer === "string" ? body.dienstnummer.trim() : "";
+  const name = typeof body.name === "string" ? body.name.trim() : "";
+  const passwort = typeof body.passwort === "string" ? body.passwort : "";
 
-function generateToken(): string {
-  return crypto.randomBytes(32).toString("hex");
-}
+  if (!dienstnummer || !name || !passwort) {
+    return res.status(400).json({ error: "Dienstnummer, Name und Passwort sind erforderlich" });
+  }
+
+  const [existing] = await db.select().from(officersTable).where(eq(officersTable.dienstnummer, dienstnummer));
+  if (existing) {
+    return res.status(409).json({ error: "Dienstnummer bereits vergeben" });
+  }
+
+  try {
+    await db.insert(officersTable).values({
+      dienstnummer,
+      name,
+      rank: "Bewerber",
+      passwortHash: hashPassword(passwort),
+      status: "Abwesend",
+      freigegeben: false,
+    });
+    return res.status(201).json({
+      success: true,
+      message: "Registrierung eingereicht. Bitte warte auf die Freigabe durch die Leitung.",
+    });
+  } catch {
+    return res.status(500).json({ error: "Registrierung fehlgeschlagen" });
+  }
+});
 
 router.post("/login", async (req, res) => {
   const { dienstnummer, passwort } = req.body;
@@ -27,6 +52,10 @@ router.post("/login", async (req, res) => {
   const hash = hashPassword(passwort);
   if (officer.passwortHash !== hash) {
     return res.status(401).json({ error: "Ungültige Anmeldedaten" });
+  }
+
+  if (!officer.freigegeben) {
+    return res.status(403).json({ error: "Registrierung wartet noch auf Freigabe durch die Leitung." });
   }
 
   const token = generateToken();

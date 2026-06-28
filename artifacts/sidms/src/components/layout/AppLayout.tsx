@@ -18,8 +18,10 @@ import {
   Plus,
   FileText,
   UserCog,
+  UserPlus,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { isLeadership } from "@/lib/ranks";
 import { Input } from "@/components/ui/input";
 import {
   DropdownMenu,
@@ -62,6 +64,7 @@ const quickLinks = [
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [location, setLocation] = useLocation();
   const { logout, officer } = useAuth();
+  const leadership = isLeadership(officer?.rank);
   const [expanded, setExpanded] = useState<string[]>(["/fallmanagement", "/personal"]);
 
   const toggleExpand = (href: string) => {
@@ -152,6 +155,21 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 </div>
               );
             })}
+
+            {leadership && (
+              <Link
+                href="/registrierungen"
+                className={`flex items-center gap-2.5 px-3 py-2 rounded cursor-pointer transition-colors text-sm
+                  ${isActive("/registrierungen")
+                    ? "bg-primary/10 text-primary border-l-2 border-primary"
+                    : "text-muted-foreground hover:bg-white/5 hover:text-foreground"
+                  }`}
+                data-testid="nav-registrierungen"
+              >
+                <UserPlus className="w-4 h-4 flex-shrink-0" />
+                <span className="font-medium">Registrierungen</span>
+              </Link>
+            )}
           </nav>
 
           {/* Schnellzugriff */}

@@ -45,11 +45,27 @@ export interface Officer {
   meldeamtPD: boolean;
   meldeamtLI: boolean;
   idChange: boolean;
+  freigegeben: boolean;
 }
 
 export interface LoginResult {
   officer: Officer;
   token: string;
+}
+
+export interface RegisterInput {
+  dienstnummer: string;
+  name: string;
+  passwort: string;
+}
+
+export interface RegisterResult {
+  success: boolean;
+  message: string;
+}
+
+export interface ApproveOfficerInput {
+  rank: string;
 }
 
 export interface CreateOfficer {

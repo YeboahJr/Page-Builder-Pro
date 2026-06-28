@@ -61,6 +61,29 @@ paths:
                 $ref: "#/components/schemas/LoginResult"
         "401":
           description: Invalid credentials
+        "403":
+          description: Account is registered but not yet approved by leadership
+
+  /auth/register:
+    post:
+      operationId: register
+      tags: [auth]
+      summary: Register a new officer (pending leadership approval)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterInput"
+      responses:
+        "201":
+          description: Registration submitted, awaiting approval
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RegisterResult"
+        "409":
+          description: Dienstnummer already taken
 
   /auth/me:
     get:
@@ -498,6 +521,71 @@ paths:
               schema:
                 $ref: "#/components/schemas/Officer"
 
+  /officers/pending:
+    get:
+      operationId: getPendingOfficers
+      tags: [officers]
+      summary: List officers awaiting approval (leadership only)
+      responses:
+        "200":
+          description: List of pending officers
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Officer"
+        "403":
+          description: Not authorized
+
+  /officers/{id}/approve:
+    post:
+      operationId: approveOfficer
+      tags: [officers]
+      summary: Approve a pending officer and assign a rank (leadership only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ApproveOfficerInput"
+      responses:
+        "200":
+          description: Approved officer
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Officer"
+        "403":
+          description: Not authorized
+        "404":
+          description: Officer not found
+
+  /officers/{id}/reject:
+    post:
+      operationId: rejectOfficer
+      tags: [officers]
+      summary: Reject and delete a pending officer (leadership only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Registration rejected
+        "403":
+          description: Not authorized
+        "404":
+          description: Officer not found
+
   /officers/{id}:
     get:
       operationId: getOfficer
@@ -716,7 +804,7 @@ components:
 
     Officer:
       type: object
-      required: [id, dienstnummer, name, rank, division, status, radioFreq, einweisung, waffenfreigabeLMG, waffenfreigabeHeavySniper, freigabeCCU, freigabeZivil, freigabeUndercover, meldeamtSAHP, meldeamtPD, meldeamtLI, idChange]
+      required: [id, dienstnummer, name, rank, division, status, radioFreq, einweisung, waffenfreigabeLMG, waffenfreigabeHeavySniper, freigabeCCU, freigabeZivil, freigabeUndercover, meldeamtSAHP, meldeamtPD, meldeamtLI, idChange, freigegeben]
       properties:
         id:
           type: integer
@@ -766,6 +854,35 @@ components:
           type: boolean
         idChange:
           type: boolean
+        freigegeben:
+          type: boolean
+
+    RegisterInput:
+      type: object
+      required: [dienstnummer, name, passwort]
+      properties:
+        dienstnummer:
+          type: string
+        name:
+          type: string
+        passwort:
+          type: string
+
+    RegisterResult:
+      type: object
+      required: [success, message]
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+
+    ApproveOfficerInput:
+      type: object
+      required: [rank]
+      properties:
+        rank:
+          type: string
 
     CreateOfficer:
       type: object

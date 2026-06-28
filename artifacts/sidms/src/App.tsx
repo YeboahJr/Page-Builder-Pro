@@ -7,7 +7,9 @@ import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import NotFound from "@/pages/not-found";
 
 import Login from "@/pages/login";
+import Register from "@/pages/register";
 import Dashboard from "@/pages/dashboard";
+import Registrierungen from "@/pages/registrierungen";
 import Leitstelle from "@/pages/leitstelle";
 import Fallmanagement from "@/pages/fallmanagement";
 import Beweismittel from "@/pages/beweismittel";
@@ -59,6 +61,7 @@ function Router() {
   return (
     <Switch>
       <Route path="/login" component={Login} />
+      <Route path="/register" component={Register} />
       <Route path="/" component={RootRedirect} />
       <Route path="/dashboard" component={() => <ProtectedRoute component={Dashboard} />} />
       <Route path="/leitstelle" component={() => <ProtectedRoute component={Leitstelle} />} />
@@ -67,6 +70,7 @@ function Router() {
       <Route path="/personal" component={() => <ProtectedRoute component={Personal} />} />
       <Route path="/personal/id-change" component={() => <ProtectedRoute component={IdChange} />} />
       <Route path="/personal/kalender" component={() => <ProtectedRoute component={Personal} />} />
+      <Route path="/registrierungen" component={() => <ProtectedRoute component={Registrierungen} />} />
       <Route path="/audit-log" component={() => <ProtectedRoute component={AuditLog} />} />
       <Route path="/archiv" component={() => <ProtectedRoute component={Archiv} />} />
       <Route path="/einstellungen" component={() => <ProtectedRoute component={Einstellungen} />} />

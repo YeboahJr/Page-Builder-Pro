@@ -1,13 +1,9 @@
 import { Router } from "express";
 import { db, officersTable, sessionsTable } from "@workspace/db";
-import { eq, asc } from "drizzle-orm";
-import crypto from "crypto";
+import { eq, asc, and } from "drizzle-orm";
+import { hashPassword, resolveOfficer, isLeadership } from "../lib/auth";
 
 const router = Router();
-
-function hashPassword(password: string): string {
-  return crypto.createHash("sha256").update(password + "fib_salt_2026").digest("hex");
-}
 
 const BOOL_FIELDS = [
   "einweisung", "waffenfreigabeLMG", "waffenfreigabeHeavySniper",
@@ -32,6 +28,61 @@ const stripHash = (o: typeof officersTable.$inferSelect) => {
 router.get("/", async (req, res) => {
   const officers = await db.select().from(officersTable).orderBy(asc(officersTable.dienstnummer));
   res.json(officers.map(stripHash));
+});
+
+router.get("/pending", async (req, res) => {
+  const current = await resolveOfficer(req);
+  if (!current || !isLeadership(current.rank)) {
+    return res.status(403).json({ error: "Nur die Leitung darf Registrierungen verwalten" });
+  }
+  const pending = await db
+    .select()
+    .from(officersTable)
+    .where(eq(officersTable.freigegeben, false))
+    .orderBy(asc(officersTable.createdAt));
+  return res.json(pending.map(stripHash));
+});
+
+router.post("/:id/approve", async (req, res) => {
+  const current = await resolveOfficer(req);
+  if (!current || !isLeadership(current.rank)) {
+    return res.status(403).json({ error: "Nur die Leitung darf Registrierungen freigeben" });
+  }
+  const id = parseInt(req.params.id);
+  if (!Number.isInteger(id)) {
+    return res.status(400).json({ error: "Ungültige ID" });
+  }
+  const body = req.body as Record<string, unknown>;
+  const rank = typeof body.rank === "string" ? body.rank.trim() : "";
+  if (!rank) {
+    return res.status(400).json({ error: "Rang ist erforderlich" });
+  }
+  const [updated] = await db
+    .update(officersTable)
+    .set({ rank, freigegeben: true, status: "Anwesend" })
+    .where(and(eq(officersTable.id, id), eq(officersTable.freigegeben, false)))
+    .returning();
+  if (!updated) return res.status(404).json({ error: "Keine offene Registrierung gefunden" });
+  return res.json(stripHash(updated));
+});
+
+router.post("/:id/reject", async (req, res) => {
+  const current = await resolveOfficer(req);
+  if (!current || !isLeadership(current.rank)) {
+    return res.status(403).json({ error: "Nur die Leitung darf Registrierungen ablehnen" });
+  }
+  const id = parseInt(req.params.id);
+  if (!Number.isInteger(id)) {
+    return res.status(400).json({ error: "Ungültige ID" });
+  }
+  const deleted = await db
+    .delete(officersTable)
+    .where(and(eq(officersTable.id, id), eq(officersTable.freigegeben, false)))
+    .returning();
+  if (deleted.length === 0) {
+    return res.status(404).json({ error: "Keine offene Registrierung gefunden" });
+  }
+  return res.status(204).end();
 });
 
 router.get("/:id", async (req, res) => {

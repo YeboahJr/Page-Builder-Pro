@@ -113,6 +113,18 @@ export default function Login() {
               <Lock className="w-4 h-4" />
               {loading ? "Anmelden..." : "Anmelden"}
             </button>
+
+            <p className="text-center text-gray-400 text-sm pt-1">
+              Noch kein Zugang?{" "}
+              <button
+                type="button"
+                onClick={() => setLocation("/register")}
+                className="text-[#c9a227] font-medium hover:underline"
+                data-testid="link-register"
+              >
+                Registrieren
+              </button>
+            </p>
           </form>
         </div>
 

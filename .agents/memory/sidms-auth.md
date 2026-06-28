@@ -1,28 +1,18 @@
 ---
 name: SIDMS Auth
-description: Authentication details for the SIDMS app — password hashing, token storage, seeded credentials.
+description: Authentication, login gate, registration & leadership-approval rules for the SIDMS FIB app.
 ---
 
 # SIDMS Auth
 
-## Password Hashing
-`sha256(password + "fib_salt_2026")` — implemented in `artifacts/api-server/src/routes/auth.ts`.
+- Passwords hashed with `hashPassword` (sha256 + static salt `"fib_salt_2026"`) in `artifacts/api-server/src/lib/auth.ts`. Pre-existing/weak (no per-user salt); reused for new registration too.
+- Seeded officers use plain dienstnummers like `08`, `34`, `39` (NOT `D-1001`). Default seed password is `"1234"`. Leadership example: `39` (Division Chief).
+- Token from `Authorization: Bearer` header or `auth_token` cookie; sessions in `sessionsTable`. `resolveOfficer(req)` resolves current officer; `isLeadership(rank)` checks LEADERSHIP_RANKS.
 
-## Token Storage
-Token stored in `sessionStorage` under key `sidms_token`. Officer data stored in `sessionStorage` under `sidms_officer`.
-
-## Seeded Credentials
-Officers D-1001 through D-1010 all have password "1234".
-- D-1001: Kenny Chamber (Division Chief)
-
-## API Hook Usage
-```ts
-const loginMutation = useLogin();
-await loginMutation.mutateAsync({ data: { dienstnummer, passwort } });
-// Returns: { officer: OfficerData, token: string }
-```
-
-## Query Key Functions
-Each parameterized hook has a matching query key function:
-- `getGetCaseQueryKey(id)`, `getGetCasePersonsQueryKey(id)`, etc.
-- Must be imported from `@workspace/api-client-react` and passed as `queryKey` in query options.
+## Self-registration + approval flow
+- `officers.freigegeben` (boolean, default **true** so existing/admin-created officers stay approved). New self-registrations insert `freigegeben=false`, `rank="Bewerber"`, `status="Abwesend"`.
+- `POST /auth/register` (public) → creates pending officer. `POST /auth/login` returns **403** if `!freigegeben`.
+- Leadership-only: `GET /officers/pending`, `POST /officers/:id/approve` (sets rank + freigegeben=true + status Anwesend), `POST /officers/:id/reject` (deletes).
+- **Rule:** approve/reject WHERE clauses must include `freigegeben=false` so they only ever act on pending officers — never mutate/delete already-approved officers. **Why:** without it, leadership could delete or re-rank active officers via these endpoints.
+- Frontend: `isLeadership` duplicated in `artifacts/sidms/src/lib/ranks.ts` (RANK_NAMES + LEADERSHIP_RANKS) for nav visibility + approval dropdown. AuthContext surfaces login 403 message and exposes `register()`.
+- Known gap (tracked as a follow-up task): `POST /officers` admin-create route has no server-side authz; approval model can still be bypassed there.
