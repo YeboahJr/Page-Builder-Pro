@@ -27,5 +27,9 @@ Streifenart/Status/Fahrzeug are patrol-level (one per Streife), stored as `patro
 
 **Why:** User wanted these three fields to appear only once per patrol, not repeated on every officer slot row.
 
+The patrol `status` is a fixed frontend-defined list (STATUS_META in leitstelle.tsx) with per-status colors; changing the list requires migrating existing DB `patrols.status` rows off removed values (one-off SQL UPDATE) or the dropdown shows blank for stale rows. The Streifenverwaltung page has NO save button — it auto-saves each patrol via a 500ms debounce. The save is serialized per patrol with a monotonic revision token (revisionRef vs savedRevisionRef) so an edit made during an in-flight save is never dropped; on ack the PATCH return is written into the react-query cache via setQueryData and the local draft cleared only when fully synced.
+
+**Why:** A naive "clear draft after save" drops edits typed while the request was in flight; the revision token is what makes debounced auto-save safe.
+
 ## Evidence files (durable rules)
 Evidence uploads are tracked in `evidence_files` (DB is the source of truth for listing, not GCS). Any deletion path that removes evidence (per-file DELETE, case DELETE, and any future person/report delete) must also delete matching `evidence_files` rows or files orphan. Rows predating the table won't list without a backfill.

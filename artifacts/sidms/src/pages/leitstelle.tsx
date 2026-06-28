@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   useGetPatrols,
   useGetOfficers,
@@ -6,7 +6,7 @@ import {
   getGetPatrolsQueryKey,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Save, Users } from "lucide-react";
+import { AlertCircle, Check, Loader2, Users } from "lucide-react";
 
 const PATROL_TYPES = ["Regelstreife", "Sonderstreife", "Undercover"];
 const STATUS_META: Record<string, { text: string; dot: string }> = {
@@ -91,7 +91,26 @@ export default function Streifen() {
   const { data: officers } = useGetOfficers();
   const updatePatrol = useUpdatePatrol();
   const [drafts, setDrafts] = useState<Record<number, PatrolDraft>>({});
-  const [saving, setSaving] = useState(false);
+  const [savingCount, setSavingCount] = useState(0);
+  const [saveError, setSaveError] = useState(false);
+
+  const saveTimers = useRef<Record<number, ReturnType<typeof setTimeout>>>({});
+  // Latest local edit per patrol — kept in a ref so rapid successive edits in the
+  // same tick accumulate correctly and the debounced save always sends the newest snapshot.
+  const latestDraftRef = useRef<Record<number, PatrolDraft>>({});
+  const savingRef = useRef<Record<number, boolean>>({});
+  // Monotonic revision per patrol: bumped on every edit, recorded when a save acks.
+  // The draft is only cleared once the acked revision matches the current one, so an
+  // edit made while a save is in flight can never be silently dropped.
+  const revisionRef = useRef<Record<number, number>>({});
+  const savedRevisionRef = useRef<Record<number, number>>({});
+
+  useEffect(() => {
+    const timers = saveTimers.current;
+    return () => {
+      for (const t of Object.values(timers)) clearTimeout(t);
+    };
+  }, []);
 
   const deriveDraft = (patrolId: number): PatrolDraft => {
     const p = patrols?.find(x => x.id === patrolId);
@@ -105,27 +124,21 @@ export default function Streifen() {
 
   const getDraft = (patrolId: number): PatrolDraft => drafts[patrolId] ?? deriveDraft(patrolId);
 
-  const patchDraft = (patrolId: number, partial: Partial<PatrolDraft>) => {
-    setDrafts(prev => {
-      const base = prev[patrolId] ?? deriveDraft(patrolId);
-      return { ...prev, [patrolId]: { ...base, ...partial } };
-    });
-  };
-
-  const updateSlot = (patrolId: number, slotIdx: number, partial: Partial<PatrolSlot>) => {
-    setDrafts(prev => {
-      const base = prev[patrolId] ?? deriveDraft(patrolId);
-      const slots = base.slots.map((s, i) => (i === slotIdx ? { ...s, ...partial } : s));
-      return { ...prev, [patrolId]: { ...base, slots } };
-    });
-  };
-
-  const handleSave = async () => {
-    setSaving(true);
+  // Serialized per-patrol save: never runs two PATCHes for the same patrol concurrently,
+  // and always sends the latest snapshot, so completions can't arrive out of order.
+  const runSave = async (patrolId: number) => {
+    if (savingRef.current[patrolId]) return;
+    savingRef.current[patrolId] = true;
+    setSavingCount(c => c + 1);
     try {
-      for (const [id, draft] of Object.entries(drafts)) {
-        await updatePatrol.mutateAsync({
-          id: parseInt(id),
+      // Re-save while newer revisions keep arriving during the awaits.
+      while (true) {
+        const rev = revisionRef.current[patrolId] ?? 0;
+        if (savedRevisionRef.current[patrolId] === rev) break;
+        const draft = latestDraftRef.current[patrolId];
+        if (!draft) break;
+        const updated = await updatePatrol.mutateAsync({
+          id: patrolId,
           data: {
             patrolType: draft.patrolType,
             status: draft.status,
@@ -133,13 +146,57 @@ export default function Streifen() {
             slots: draft.slots,
           },
         });
+        savedRevisionRef.current[patrolId] = rev;
+        qc.setQueryData(getGetPatrolsQueryKey(), (old: typeof patrols) =>
+          old ? old.map(p => (p.id === patrolId ? (updated as typeof p) : p)) : old,
+        );
       }
-      qc.invalidateQueries({ queryKey: getGetPatrolsQueryKey() });
-      setDrafts({});
+      setSaveError(false);
+      // Drop the local draft only when fully synced (no newer unsaved revision), so the
+      // reconciled server cache becomes the source of truth again without losing edits.
+      if ((revisionRef.current[patrolId] ?? 0) === (savedRevisionRef.current[patrolId] ?? -1)) {
+        delete latestDraftRef.current[patrolId];
+        setDrafts(prev => {
+          const { [patrolId]: _removed, ...rest } = prev;
+          return rest;
+        });
+      }
+    } catch {
+      setSaveError(true);
     } finally {
-      setSaving(false);
+      savingRef.current[patrolId] = false;
+      setSavingCount(c => c - 1);
     }
   };
+
+  const scheduleSave = (patrolId: number) => {
+    if (saveTimers.current[patrolId]) clearTimeout(saveTimers.current[patrolId]);
+    saveTimers.current[patrolId] = setTimeout(() => {
+      delete saveTimers.current[patrolId];
+      void runSave(patrolId);
+    }, 500);
+  };
+
+  const commitDraft = (patrolId: number, next: PatrolDraft) => {
+    latestDraftRef.current[patrolId] = next;
+    revisionRef.current[patrolId] = (revisionRef.current[patrolId] ?? 0) + 1;
+    setDrafts(prev => ({ ...prev, [patrolId]: next }));
+    scheduleSave(patrolId);
+  };
+
+  const patchDraft = (patrolId: number, partial: Partial<PatrolDraft>) => {
+    const base = latestDraftRef.current[patrolId] ?? deriveDraft(patrolId);
+    commitDraft(patrolId, { ...base, ...partial });
+  };
+
+  const updateSlot = (patrolId: number, slotIdx: number, partial: Partial<PatrolSlot>) => {
+    const base = latestDraftRef.current[patrolId] ?? deriveDraft(patrolId);
+    const slots = base.slots.map((s, i) => (i === slotIdx ? { ...s, ...partial } : s));
+    commitDraft(patrolId, { ...base, slots });
+  };
+
+  const hasUnsaved = Object.keys(drafts).length > 0;
+  const isSaving = savingCount > 0;
 
   const sortedPatrols = [...(patrols ?? [])].sort((a, b) => patrolNum(a.name) - patrolNum(b.name));
 
@@ -171,15 +228,27 @@ export default function Streifen() {
           <h1 className="text-base font-semibold text-white">Streifenverwaltung</h1>
           <p className="text-xs text-gray-400">Verwaltung und Übersicht aller aktiven Streifen.</p>
         </div>
-        <button
-          onClick={handleSave}
-          disabled={saving || Object.keys(drafts).length === 0}
-          className="flex items-center gap-2 bg-[#c9a227] hover:bg-[#d4af3a] text-black text-sm font-bold px-4 py-2 rounded transition-colors disabled:opacity-50"
-          data-testid="button-save-patrols"
+        <div
+          className={`flex items-center gap-1.5 text-xs ${saveError ? "text-red-400" : "text-gray-400"}`}
+          data-testid="autosave-status"
         >
-          <Save className="w-4 h-4" />
-          {saving ? "Speichern..." : "Änderungen speichern"}
-        </button>
+          {saveError ? (
+            <>
+              <AlertCircle className="w-3.5 h-3.5" />
+              Speichern fehlgeschlagen
+            </>
+          ) : isSaving || hasUnsaved ? (
+            <>
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              Speichert…
+            </>
+          ) : (
+            <>
+              <Check className="w-3.5 h-3.5 text-green-500" />
+              Automatisch gespeichert
+            </>
+          )}
+        </div>
       </div>
 
       <div className="grid grid-cols-3 gap-4">
