@@ -52,7 +52,6 @@ const navItems: NavItem[] = [
     ],
   },
   { icon: Archive, label: "Archiv", href: "/archiv" },
-  { icon: Settings, label: "Einstellungen", href: "/einstellungen" },
 ];
 
 const quickLinks = [
