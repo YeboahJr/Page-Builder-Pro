@@ -1,22 +1,34 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: SIDMS – FIB Special Investigation Division Management System API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: auth
+    description: Authentication
+  - name: cases
+    description: Case management (Fallmanagement)
+  - name: reports
+    description: Reports and emergency notifications (Meldungen)
+  - name: patrols
+    description: Patrol management (Streifenverwaltung)
+  - name: officers
+    description: Officers and personnel (Personal)
+  - name: evidence
+    description: Evidence management (Beweismittel)
+  - name: dashboard
+    description: Dashboard summaries and stats
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,6 +36,503 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /auth/login:
+    post:
+      operationId: login
+      tags: [auth]
+      summary: Officer login with Dienstnummer and Passwort
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginInput"
+      responses:
+        "200":
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LoginResult"
+        "401":
+          description: Invalid credentials
+
+  /auth/me:
+    get:
+      operationId: getMe
+      tags: [auth]
+      summary: Get current logged-in officer
+      responses:
+        "200":
+          description: Current officer
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Officer"
+
+  /auth/logout:
+    post:
+      operationId: logout
+      tags: [auth]
+      summary: Logout current session
+      responses:
+        "200":
+          description: Logged out
+
+  /dashboard/stats:
+    get:
+      operationId: getDashboardStats
+      tags: [dashboard]
+      summary: Get dashboard statistics (Aktive Fälle, Offene Fälle, etc.)
+      responses:
+        "200":
+          description: Dashboard stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardStats"
+
+  /dashboard/recent-activity:
+    get:
+      operationId: getDashboardRecentActivity
+      tags: [dashboard]
+      summary: Get recent system activity feed
+      responses:
+        "200":
+          description: Recent activity
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ActivityEntry"
+
+  /cases:
+    get:
+      operationId: getCases
+      tags: [cases]
+      summary: List all cases (Fälle)
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+        - name: priority
+          in: query
+          schema:
+            type: string
+        - name: category
+          in: query
+          schema:
+            type: string
+        - name: agentId
+          in: query
+          schema:
+            type: ["integer", "null"]
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: caseNumber
+          in: query
+          schema:
+            type: string
+        - name: suspectName
+          in: query
+          schema:
+            type: string
+        - name: vehiclePlate
+          in: query
+          schema:
+            type: string
+        - name: missionNumber
+          in: query
+          schema:
+            type: string
+        - name: dateFrom
+          in: query
+          schema:
+            type: string
+        - name: dateTo
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of cases
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Case"
+    post:
+      operationId: createCase
+      tags: [cases]
+      summary: Create a new case
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CaseInput"
+      responses:
+        "201":
+          description: Case created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Case"
+
+  /cases/{id}:
+    get:
+      operationId: getCase
+      tags: [cases]
+      summary: Get a single case by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Case detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CaseDetail"
+        "404":
+          description: Not found
+    patch:
+      operationId: updateCase
+      tags: [cases]
+      summary: Update a case
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CaseUpdate"
+      responses:
+        "200":
+          description: Updated case
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Case"
+    delete:
+      operationId: deleteCase
+      tags: [cases]
+      summary: Delete a case
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /cases/{id}/status-history:
+    get:
+      operationId: getCaseStatusHistory
+      tags: [cases]
+      summary: Get status change history for a case
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Status history
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/StatusHistoryEntry"
+
+  /cases/{id}/persons:
+    get:
+      operationId: getCasePersons
+      tags: [cases]
+      summary: Get persons involved in a case
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Persons
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CasePerson"
+
+  /cases/{id}/agents:
+    get:
+      operationId: getCaseAgents
+      tags: [cases]
+      summary: Get agents assigned to a case
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Agents
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CaseAgent"
+
+  /reports:
+    get:
+      operationId: getReports
+      tags: [reports]
+      summary: List all reports/meldungen
+      parameters:
+        - name: priority
+          in: query
+          schema:
+            type: string
+        - name: status
+          in: query
+          schema:
+            type: string
+        - name: type
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of reports
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Report"
+    post:
+      operationId: createReport
+      tags: [reports]
+      summary: Create new emergency report (Neue Meldung)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReportInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Report"
+
+  /reports/stats:
+    get:
+      operationId: getReportStats
+      tags: [reports]
+      summary: Get Leitstelle statistics (active incidents, hostages, etc.)
+      responses:
+        "200":
+          description: Report stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReportStats"
+
+  /reports/{id}:
+    get:
+      operationId: getReport
+      tags: [reports]
+      summary: Get a report by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Report
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Report"
+    patch:
+      operationId: updateReport
+      tags: [reports]
+      summary: Update a report
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReportUpdate"
+      responses:
+        "200":
+          description: Updated report
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Report"
+
+  /patrols:
+    get:
+      operationId: getPatrols
+      tags: [patrols]
+      summary: List all patrols (Streifen)
+      responses:
+        "200":
+          description: List of patrols
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Patrol"
+    post:
+      operationId: createPatrol
+      tags: [patrols]
+      summary: Create a new patrol
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PatrolInput"
+      responses:
+        "201":
+          description: Created patrol
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Patrol"
+
+  /patrols/{id}:
+    patch:
+      operationId: updatePatrol
+      tags: [patrols]
+      summary: Update a patrol
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PatrolUpdate"
+      responses:
+        "200":
+          description: Updated patrol
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Patrol"
+
+  /officers:
+    get:
+      operationId: getOfficers
+      tags: [officers]
+      summary: List all officers (Beamte)
+      responses:
+        "200":
+          description: List of officers
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Officer"
+
+  /officers/{id}:
+    get:
+      operationId: getOfficer
+      tags: [officers]
+      summary: Get officer by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Officer
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Officer"
+
+  /evidence:
+    get:
+      operationId: getEvidence
+      tags: [evidence]
+      summary: List all evidence items (Beweismittel)
+      parameters:
+        - name: caseId
+          in: query
+          schema:
+            type: ["integer", "null"]
+      responses:
+        "200":
+          description: Evidence list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Evidence"
+    post:
+      operationId: createEvidence
+      tags: [evidence]
+      summary: Add new evidence
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EvidenceInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Evidence"
+
 components:
   schemas:
     HealthStatus:
@@ -31,6 +540,400 @@ components:
       properties:
         status:
           type: string
-      required:
-        - status
+      required: [status]
 
+    LoginInput:
+      type: object
+      required: [dienstnummer, passwort]
+      properties:
+        dienstnummer:
+          type: string
+        passwort:
+          type: string
+
+    LoginResult:
+      type: object
+      required: [officer, token]
+      properties:
+        officer:
+          $ref: "#/components/schemas/Officer"
+        token:
+          type: string
+
+    Officer:
+      type: object
+      required: [id, dienstnummer, name, rank, division, status, radioFreq]
+      properties:
+        id:
+          type: integer
+        dienstnummer:
+          type: string
+        name:
+          type: string
+        rank:
+          type: string
+        division:
+          type: string
+        status:
+          type: string
+          description: "Anwesend | In Einsatz | Pause | Abwesend"
+        radioStatus:
+          type: string
+          description: "Aktiv | Ausgeschaltet"
+        radioFreq:
+          type: string
+        avatarUrl:
+          type: ["string", "null"]
+
+    DashboardStats:
+      type: object
+      required: [aktiveFaelle, offeneFaelle, abgeschlosseneFaelle, observationen, neueBeweismittel, hohePrioritaet]
+      properties:
+        aktiveFaelle:
+          type: integer
+        aktiveFaelleDelta:
+          type: integer
+        offeneFaelle:
+          type: integer
+        offeneFaelleDelta:
+          type: integer
+        abgeschlosseneFaelle:
+          type: integer
+        abgeschlosseneFaelleDelta:
+          type: integer
+        observationen:
+          type: integer
+        observationenDelta:
+          type: integer
+        neueBeweismittel:
+          type: integer
+        neueBeweismittelDelta:
+          type: integer
+        hohePrioritaet:
+          type: integer
+        hohePrioritaetDelta:
+          type: integer
+
+    ActivityEntry:
+      type: object
+      required: [id, timestamp, action, agent]
+      properties:
+        id:
+          type: integer
+        timestamp:
+          type: string
+        action:
+          type: string
+        agent:
+          type: string
+        caseId:
+          type: ["integer", "null"]
+        caseNumber:
+          type: ["string", "null"]
+
+    Case:
+      type: object
+      required: [id, caseNumber, title, category, priority, status, leadAgent, lastModified, createdAt]
+      properties:
+        id:
+          type: integer
+        caseNumber:
+          type: string
+        title:
+          type: string
+        category:
+          type: string
+        priority:
+          type: string
+          description: "Hoch | Mittel | Niedrig"
+        status:
+          type: string
+          description: "Aktiv | Offen | Ermittlungen pausiert | Observation | An STA übergeben | Abgeschlossen"
+        leadAgent:
+          type: string
+        lastModified:
+          type: string
+        createdAt:
+          type: string
+        description:
+          type: ["string", "null"]
+        closedAt:
+          type: ["string", "null"]
+
+    CaseInput:
+      type: object
+      required: [title, category, priority, status, leadAgent]
+      properties:
+        title:
+          type: string
+        category:
+          type: string
+        priority:
+          type: string
+        status:
+          type: string
+        leadAgent:
+          type: string
+        description:
+          type: string
+
+    CaseUpdate:
+      type: object
+      properties:
+        title:
+          type: string
+        category:
+          type: string
+        priority:
+          type: string
+        status:
+          type: string
+        leadAgent:
+          type: string
+        description:
+          type: string
+
+    CaseDetail:
+      type: object
+      required: [id, caseNumber, title, category, priority, status, leadAgent, lastModified, createdAt]
+      properties:
+        id:
+          type: integer
+        caseNumber:
+          type: string
+        title:
+          type: string
+        category:
+          type: string
+        priority:
+          type: string
+        status:
+          type: string
+        leadAgent:
+          type: string
+        supportingAgents:
+          type: array
+          items:
+            type: string
+        supervisor:
+          type: ["string", "null"]
+        lastModified:
+          type: string
+        createdAt:
+          type: string
+        closedAt:
+          type: ["string", "null"]
+        description:
+          type: ["string", "null"]
+
+    StatusHistoryEntry:
+      type: object
+      required: [id, timestamp, fromStatus, toStatus, changedBy]
+      properties:
+        id:
+          type: integer
+        timestamp:
+          type: string
+        fromStatus:
+          type: string
+        toStatus:
+          type: string
+        changedBy:
+          type: string
+
+    CasePerson:
+      type: object
+      required: [id, name, currentId, role]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        currentId:
+          type: string
+        formerIds:
+          type: ["string", "null"]
+        role:
+          type: string
+          description: "Verdächtiger | Zeugin | Geschädigter"
+        lastLocation:
+          type: ["string", "null"]
+
+    CaseAgent:
+      type: object
+      required: [id, name, role]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        role:
+          type: string
+          description: "Leitender Agent | Unterstützender Agent | Supervisor"
+
+    Report:
+      type: object
+      required: [id, type, title, location, priority, status, reportedAt, units]
+      properties:
+        id:
+          type: integer
+        type:
+          type: string
+          description: "GEISELNAHME | SCHUSSWAFFEN EINSATZ | VERDÄCHTIGE PERSON | VERKEHRSUNFALL | EINBRUCH / ALARM | TÄTLICHER ANGRIFF"
+        title:
+          type: string
+        location:
+          type: string
+        description:
+          type: ["string", "null"]
+        priority:
+          type: string
+          description: "Kritisch | Hoch | Mittel | Niedrig"
+        status:
+          type: string
+          description: "In Bearbeitung | Unterwegs | Überprüfung | Abgeschlossen"
+        reportedAt:
+          type: string
+        units:
+          type: integer
+
+    ReportInput:
+      type: object
+      required: [type, title, location, priority]
+      properties:
+        type:
+          type: string
+        title:
+          type: string
+        location:
+          type: string
+        description:
+          type: string
+        priority:
+          type: string
+
+    ReportUpdate:
+      type: object
+      properties:
+        status:
+          type: string
+        units:
+          type: integer
+        description:
+          type: string
+
+    ReportStats:
+      type: object
+      required: [aktiveNotfaelle, geiselnahmen, hohePrioritaet, offeneMeldungen, abgeschlossene]
+      properties:
+        aktiveNotfaelle:
+          type: integer
+        aktiveNotfaelleDelta:
+          type: string
+        geiselnahmen:
+          type: integer
+        geiselnahmenStatus:
+          type: string
+        hohePrioritaet:
+          type: integer
+        hohePrioritaetDelta:
+          type: string
+        offeneMeldungen:
+          type: integer
+        offeneMeldungenDelta:
+          type: string
+        abgeschlossene:
+          type: integer
+        abgeschlosseneDelta:
+          type: string
+        leitstelleStatus:
+          type: string
+        funkverbindung:
+          type: string
+        cadSystem:
+          type: string
+        letzteAktualisierung:
+          type: string
+
+    Patrol:
+      type: object
+      required: [id, name, slots]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        slots:
+          type: array
+          items:
+            $ref: "#/components/schemas/PatrolSlot"
+
+    PatrolSlot:
+      type: object
+      required: [position, patrolType, status]
+      properties:
+        position:
+          type: string
+        officerId:
+          type: ["integer", "null"]
+        officerName:
+          type: ["string", "null"]
+        patrolType:
+          type: string
+          description: "Regelstreife | Sonderstreife | Undercover"
+        status:
+          type: string
+          description: "Frei auf Streife | 10-80 | 10-66 | Nicht verfügbar"
+        vehicle:
+          type: ["string", "null"]
+        notes:
+          type: ["string", "null"]
+
+    PatrolInput:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+
+    PatrolUpdate:
+      type: object
+      properties:
+        slots:
+          type: array
+          items:
+            $ref: "#/components/schemas/PatrolSlot"
+
+    Evidence:
+      type: object
+      required: [id, title, type, caseId, caseNumber, addedAt, addedBy]
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        type:
+          type: string
+        description:
+          type: ["string", "null"]
+        caseId:
+          type: integer
+        caseNumber:
+          type: string
+        addedAt:
+          type: string
+        addedBy:
+          type: string
+
+    EvidenceInput:
+      type: object
+      required: [title, type, caseId]
+      properties:
+        title:
+          type: string
+        type:
+          type: string
+        description:
+          type: string
+        caseId:
+          type: integer

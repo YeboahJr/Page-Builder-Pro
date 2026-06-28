@@ -1,0 +1,2 @@
+- [SIDMS Architecture](sidms-architecture.md) — Key decisions: API server builds before starting (pnpm run build && start), not hot-reloaded; must restart workflow to pick up route changes.
+- [SIDMS Auth](sidms-auth.md) — Login uses sha256 + "fib_salt_2026" salt; token stored in sessionStorage; officers D-1001 to D-1010, password "1234"; API hook useLogin takes {data: {dienstnummer, passwort}}.
