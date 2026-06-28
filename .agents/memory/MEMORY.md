@@ -1,2 +1,2 @@
 - [SIDMS Architecture](sidms-architecture.md) — Key decisions: API server builds before starting (pnpm run build && start), not hot-reloaded; must restart workflow to pick up route changes.
-- [SIDMS Auth](sidms-auth.md) — sha256+"fib_salt_2026"; seeded officers use plain dienstnummers (08/34/39), pw "1234"; self-registration → freigegeben gate (403 login) + leadership approve/reject only on pending.
+- [SIDMS Auth](sidms-auth.md) — seeded officers use plain dienstnummers (e.g. 08/34/39), not D-1xxx; self-registration → freigegeben gate (403 login) + leadership approve/reject only on pending.
