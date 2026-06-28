@@ -205,6 +205,38 @@ router.post("/:id/evidence/upload", upload.array("files", 20), async (req, res) 
   res.json({ uploaded: results.length, files: results });
 });
 
+router.delete("/:id/evidence/:filename", async (req, res) => {
+  const { id, filename } = req.params;
+  const privateObjectDir = process.env.PRIVATE_OBJECT_DIR;
+
+  if (!privateObjectDir) {
+    res.status(500).json({ error: "Object storage nicht konfiguriert" });
+    return;
+  }
+
+  const { bucketName, gcsPrefix } = parsePrivateObjectDir(privateObjectDir);
+  const bucket = objectStorageClient.bucket(bucketName);
+  const objectName = gcsPrefix
+    ? `${gcsPrefix}/case-${id}/${filename}`
+    : `case-${id}/${filename}`;
+
+  try {
+    await bucket.file(objectName).delete();
+  } catch (err) {
+    req.log.warn({ err }, "Failed to delete GCS evidence file");
+    res.status(404).json({ error: "Datei nicht gefunden" });
+    return;
+  }
+
+  // Also clean up local fallback copy if it exists
+  const localPath = path.join(LOCAL_UPLOADS_DIR, `case-${id}`, filename);
+  if (fs.existsSync(localPath)) {
+    fs.unlinkSync(localPath);
+  }
+
+  res.status(204).send();
+});
+
 router.get("/:id/evidence/files", async (req, res) => {
   const privateObjectDir = process.env.PRIVATE_OBJECT_DIR;
   const caseId = req.params.id;

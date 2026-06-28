@@ -17,7 +17,7 @@ import {
 import { useQueryClient } from "@tanstack/react-query";
 import {
   Activity, FolderOpen, CheckCircle, Eye, Package, AlertTriangle,
-  Plus, ChevronRight, RotateCcw, Download, Search, X, Film, ImageIcon, ZoomIn
+  Plus, ChevronRight, RotateCcw, Download, Search, X, Film, ImageIcon, ZoomIn, Trash2
 } from "lucide-react";
 import EvidenceUpload, { type UploadFile, uploadEvidenceFiles } from "@/components/EvidenceUpload";
 
@@ -67,6 +67,7 @@ export default function Dashboard() {
   const [showAddEvidence, setShowAddEvidence] = useState(false);
   const [addEvidenceFiles, setAddEvidenceFiles] = useState<UploadFile[]>([]);
   const [addEvidenceUploading, setAddEvidenceUploading] = useState(false);
+  const [deletingFile, setDeletingFile] = useState<string | null>(null);
 
   const [filters, setFilters] = useState({
     caseNumber: "", title: "", category: "", status: "", agentId: "", priority: "",
@@ -113,6 +114,21 @@ export default function Dashboard() {
       .then(d => setEvidenceFiles(d.files ?? []))
       .catch(() => setEvidenceFiles([]))
       .finally(() => setEvidenceLoading(false));
+  };
+
+  const handleDeleteEvidence = async (filename: string) => {
+    if (!selectedId) return;
+    if (!window.confirm(`Beweismittel "${filename}" wirklich löschen?`)) return;
+    setDeletingFile(filename);
+    try {
+      await fetch(`/api/cases/${selectedId}/evidence/${encodeURIComponent(filename)}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${sessionStorage.getItem("sidms_token") ?? ""}` },
+      });
+      setEvidenceFiles(prev => prev.filter(f => f.filename !== filename));
+    } finally {
+      setDeletingFile(null);
+    }
   };
 
   const handleAddEvidence = async () => {
@@ -500,6 +516,15 @@ export default function Dashboard() {
                       <div className="grid grid-cols-4 gap-3">
                         {evidenceFiles.map((f, i) => (
                           <div key={i} className="group relative rounded-lg overflow-hidden bg-[#0a0f1a] border border-[#1e2d4a] hover:border-[#c9a227]/40 transition-colors">
+                            {/* Delete button — appears on hover */}
+                            <button
+                              onClick={e => { e.stopPropagation(); handleDeleteEvidence(f.filename); }}
+                              disabled={deletingFile === f.filename}
+                              className="absolute top-1 right-1 z-10 opacity-0 group-hover:opacity-100 transition-opacity bg-black/70 hover:bg-red-900/80 text-red-400 hover:text-red-300 rounded p-0.5 disabled:opacity-50"
+                              title="Beweismittel löschen"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
                             {f.type === "image" ? (
                               <div className="relative cursor-pointer" onClick={() => setLightboxUrl(f.url)}>
                                 <img src={f.url} alt={f.filename} className="w-full h-24 object-cover" />
