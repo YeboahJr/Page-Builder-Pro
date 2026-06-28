@@ -17,19 +17,10 @@ The API server runs `pnpm run build && pnpm run start` in dev mode (not tsx watc
 - Frontend on port 19424, path `/`
 - Requests go through shared proxy at localhost:80
 
-## Pages Implemented
-- Login (/login) — real auth via POST /api/auth/login
-- Dashboard (/dashboard) — stats cards, case table, case detail panel with tabs, search & filter
-- Meldungen (/leitstelle/meldungen) — emergency reports list, critical incident panel, system info
-- Streifen (/leitstelle/streifen) — patrol slot editor, officer-on-duty panel
-- Fallmanagement (/fallmanagement) — case CRUD table with create/delete modal
-- Beweismittel (/beweismittel) — evidence table with add modal
-- Personal (/personal) — officer list
-- Audit-Log (/audit-log) — activity feed
-- Archiv (/archiv) — closed cases
-- Einstellungen (/einstellungen) — profile and system info
+## Adding a new entity (full-stack pattern)
+A new managed entity (table + CRUD + Personal-style page) touches 5 layers in this order: (1) `lib/db/src/schema/<name>.ts` drizzle table + `export *` in schema/index.ts; (2) `lib/api-spec/openapi.yaml` — tag, `/<name>` + `/<name>/{id}` paths, and `<Name>/Create<Name>/Update<Name>` schemas (use `type: ["string","null"]` for nullable text); (3) `pnpm --filter @workspace/api-spec run codegen` (generates hooks `useGet/Create/Update/Delete<Name>` + type); (4) Express route in api-server registered in routes/index.ts (plain-JS validation, NO zod import); (5) frontend page + route in App.tsx. Then `pnpm --filter @workspace/db run push`, restart api-server workflow, typecheck both. The `/personal/id-change` route renders a dedicated page modeled on personal.tsx.
 
-## Evidence File Metadata
-Evidence file uploads are tracked in the `evidence_files` table (objectPath, originalName, mimetype, size, caseId, uploadedBy [nullable], uploadedAt). GET /:id/evidence/files reads from this table (source of truth), not GCS listings; it still appends local-disk fallback files. Upload inserts a row per file and resolves uploadedBy from the session token. Both the per-file DELETE and case DELETE remove matching evidence_files rows to avoid orphans.
+**Why:** Contract-first — openapi.yaml is the source of truth; client hooks and zod schemas are generated, not hand-written.
 
-**Why:** Avoids GCS round-trips and enables audit/search. Files uploaded before this table existed have no row and won't list (needs backfill).
+## Evidence files (durable rules)
+Evidence uploads are tracked in `evidence_files` (DB is the source of truth for listing, not GCS). Any deletion path that removes evidence (per-file DELETE, case DELETE, and any future person/report delete) must also delete matching `evidence_files` rows or files orphan. Rows predating the table won't list without a backfill.

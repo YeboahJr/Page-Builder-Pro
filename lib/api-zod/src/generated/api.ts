@@ -659,6 +659,91 @@ export const DeleteOfficerResponse = zod.void()
 
 
 /**
+ * @summary List all ID change requests
+ */
+export const GetIdChangesResponseItem = zod.object({
+  "id": zod.number(),
+  "dienstnummer": zod.string(),
+  "name": zod.string(),
+  "rank": zod.string(),
+  "eigeneId": zod.string().nullish(),
+  "neueId": zod.string().nullish(),
+  "datum": zod.string().nullish(),
+  "uhrzeitAnfang": zod.string().nullish(),
+  "uhrzeitEnde": zod.string().nullish()
+})
+export const GetIdChangesResponse = zod.array(GetIdChangesResponseItem)
+
+
+/**
+ * @summary Create a new ID change request
+ */
+export const CreateIdChangeBody = zod.object({
+  "dienstnummer": zod.string(),
+  "name": zod.string(),
+  "rank": zod.string(),
+  "eigeneId": zod.string().nullish(),
+  "neueId": zod.string().nullish(),
+  "datum": zod.string().nullish(),
+  "uhrzeitAnfang": zod.string().nullish(),
+  "uhrzeitEnde": zod.string().nullish()
+})
+
+export const CreateIdChangeResponse = zod.object({
+  "id": zod.number(),
+  "dienstnummer": zod.string(),
+  "name": zod.string(),
+  "rank": zod.string(),
+  "eigeneId": zod.string().nullish(),
+  "neueId": zod.string().nullish(),
+  "datum": zod.string().nullish(),
+  "uhrzeitAnfang": zod.string().nullish(),
+  "uhrzeitEnde": zod.string().nullish()
+})
+
+
+/**
+ * @summary Update an ID change request
+ */
+export const UpdateIdChangeParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateIdChangeBody = zod.object({
+  "dienstnummer": zod.string().optional(),
+  "name": zod.string().optional(),
+  "rank": zod.string().optional(),
+  "eigeneId": zod.string().nullish(),
+  "neueId": zod.string().nullish(),
+  "datum": zod.string().nullish(),
+  "uhrzeitAnfang": zod.string().nullish(),
+  "uhrzeitEnde": zod.string().nullish()
+})
+
+export const UpdateIdChangeResponse = zod.object({
+  "id": zod.number(),
+  "dienstnummer": zod.string(),
+  "name": zod.string(),
+  "rank": zod.string(),
+  "eigeneId": zod.string().nullish(),
+  "neueId": zod.string().nullish(),
+  "datum": zod.string().nullish(),
+  "uhrzeitAnfang": zod.string().nullish(),
+  "uhrzeitEnde": zod.string().nullish()
+})
+
+
+/**
+ * @summary Delete an ID change request
+ */
+export const DeleteIdChangeParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteIdChangeResponse = zod.void()
+
+
+/**
  * @summary Request a presigned URL for file upload
  */
 export const RequestUploadUrlBody = zod.object({

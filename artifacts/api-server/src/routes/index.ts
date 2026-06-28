@@ -6,6 +6,7 @@ import casesRouter from "./cases";
 import reportsRouter from "./reports";
 import patrolsRouter from "./patrols";
 import officersRouter from "./officers";
+import idChangesRouter from "./idchanges";
 import evidenceRouter from "./evidence";
 import storageRouter from "./storage";
 
@@ -18,6 +19,7 @@ router.use("/cases", casesRouter);
 router.use("/reports", reportsRouter);
 router.use("/patrols", patrolsRouter);
 router.use("/officers", officersRouter);
+router.use("/idchanges", idChangesRouter);
 router.use("/evidence", evidenceRouter);
 router.use(storageRouter);
 

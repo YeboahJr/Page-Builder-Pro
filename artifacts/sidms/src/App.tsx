@@ -12,6 +12,7 @@ import Leitstelle from "@/pages/leitstelle";
 import Fallmanagement from "@/pages/fallmanagement";
 import Beweismittel from "@/pages/beweismittel";
 import Personal from "@/pages/personal";
+import IdChange from "@/pages/id-change";
 import AuditLog from "@/pages/audit-log";
 import Archiv from "@/pages/archiv";
 import Einstellungen from "@/pages/einstellungen";
@@ -64,7 +65,7 @@ function Router() {
       <Route path="/fallmanagement" component={() => <ProtectedRoute component={Fallmanagement} />} />
       <Route path="/beweismittel" component={() => <ProtectedRoute component={Beweismittel} />} />
       <Route path="/personal" component={() => <ProtectedRoute component={Personal} />} />
-      <Route path="/personal/id-change" component={() => <ProtectedRoute component={Personal} />} />
+      <Route path="/personal/id-change" component={() => <ProtectedRoute component={IdChange} />} />
       <Route path="/personal/kalender" component={() => <ProtectedRoute component={Personal} />} />
       <Route path="/audit-log" component={() => <ProtectedRoute component={AuditLog} />} />
       <Route path="/archiv" component={() => <ProtectedRoute component={Archiv} />} />

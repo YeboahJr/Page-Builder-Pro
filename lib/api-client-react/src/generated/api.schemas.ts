@@ -92,6 +92,55 @@ export interface UpdateOfficerPermissions {
   idChange?: boolean;
 }
 
+export interface IdChange {
+  id: number;
+  dienstnummer: string;
+  name: string;
+  rank: string;
+  /** @nullable */
+  eigeneId?: string | null;
+  /** @nullable */
+  neueId?: string | null;
+  /** @nullable */
+  datum?: string | null;
+  /** @nullable */
+  uhrzeitAnfang?: string | null;
+  /** @nullable */
+  uhrzeitEnde?: string | null;
+}
+
+export interface CreateIdChange {
+  dienstnummer: string;
+  name: string;
+  rank: string;
+  /** @nullable */
+  eigeneId?: string | null;
+  /** @nullable */
+  neueId?: string | null;
+  /** @nullable */
+  datum?: string | null;
+  /** @nullable */
+  uhrzeitAnfang?: string | null;
+  /** @nullable */
+  uhrzeitEnde?: string | null;
+}
+
+export interface UpdateIdChange {
+  dienstnummer?: string;
+  name?: string;
+  rank?: string;
+  /** @nullable */
+  eigeneId?: string | null;
+  /** @nullable */
+  neueId?: string | null;
+  /** @nullable */
+  datum?: string | null;
+  /** @nullable */
+  uhrzeitAnfang?: string | null;
+  /** @nullable */
+  uhrzeitEnde?: string | null;
+}
+
 export interface DashboardStats {
   aktiveFaelle: number;
   aktiveFaelleDelta?: number;

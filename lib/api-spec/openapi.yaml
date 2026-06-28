@@ -19,6 +19,8 @@ tags:
     description: Patrol management (Streifenverwaltung)
   - name: officers
     description: Officers and personnel (Personal)
+  - name: idchanges
+    description: ID change requests (ID Change)
   - name: evidence
     description: Evidence management (Beweismittel)
   - name: dashboard
@@ -553,6 +555,78 @@ paths:
         "404":
           description: Officer not found
 
+  /idchanges:
+    get:
+      operationId: getIdChanges
+      tags: [idchanges]
+      summary: List all ID change requests
+      responses:
+        "200":
+          description: List of ID change requests
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/IdChange"
+    post:
+      operationId: createIdChange
+      tags: [idchanges]
+      summary: Create a new ID change request
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateIdChange"
+      responses:
+        "201":
+          description: Created ID change request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IdChange"
+
+  /idchanges/{id}:
+    patch:
+      operationId: updateIdChange
+      tags: [idchanges]
+      summary: Update an ID change request
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateIdChange"
+      responses:
+        "200":
+          description: Updated ID change request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IdChange"
+    delete:
+      operationId: deleteIdChange
+      tags: [idchanges]
+      summary: Delete an ID change request
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: ID change request deleted
+        "404":
+          description: ID change request not found
+
   /storage/uploads/request-url:
     post:
       tags: [storage]
@@ -753,6 +827,70 @@ components:
           type: boolean
         idChange:
           type: boolean
+
+    IdChange:
+      type: object
+      required: [id, dienstnummer, name, rank]
+      properties:
+        id:
+          type: integer
+        dienstnummer:
+          type: string
+        name:
+          type: string
+        rank:
+          type: string
+        eigeneId:
+          type: ["string", "null"]
+        neueId:
+          type: ["string", "null"]
+        datum:
+          type: ["string", "null"]
+        uhrzeitAnfang:
+          type: ["string", "null"]
+        uhrzeitEnde:
+          type: ["string", "null"]
+
+    CreateIdChange:
+      type: object
+      required: [dienstnummer, name, rank]
+      properties:
+        dienstnummer:
+          type: string
+        name:
+          type: string
+        rank:
+          type: string
+        eigeneId:
+          type: ["string", "null"]
+        neueId:
+          type: ["string", "null"]
+        datum:
+          type: ["string", "null"]
+        uhrzeitAnfang:
+          type: ["string", "null"]
+        uhrzeitEnde:
+          type: ["string", "null"]
+
+    UpdateIdChange:
+      type: object
+      properties:
+        dienstnummer:
+          type: string
+        name:
+          type: string
+        rank:
+          type: string
+        eigeneId:
+          type: ["string", "null"]
+        neueId:
+          type: ["string", "null"]
+        datum:
+          type: ["string", "null"]
+        uhrzeitAnfang:
+          type: ["string", "null"]
+        uhrzeitEnde:
+          type: ["string", "null"]
 
     DashboardStats:
       type: object

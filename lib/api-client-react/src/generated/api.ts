@@ -27,6 +27,7 @@ import type {
   CaseInput,
   CasePerson,
   CaseUpdate,
+  CreateIdChange,
   CreateOfficer,
   DashboardStats,
   Evidence,
@@ -35,6 +36,7 @@ import type {
   GetEvidenceParams,
   GetReportsParams,
   HealthStatus,
+  IdChange,
   LoginInput,
   LoginResult,
   Officer,
@@ -46,6 +48,7 @@ import type {
   ReportStats,
   ReportUpdate,
   StatusHistoryEntry,
+  UpdateIdChange,
   UpdateOfficerPermissions,
   UploadUrlRequest,
   UploadUrlResponse
@@ -2089,6 +2092,294 @@ export const useDeleteOfficer = <TError = ErrorType<void>,
         TContext
       > => {
       return useMutation(getDeleteOfficerMutationOptions(options));
+    }
+
+export const getGetIdChangesUrl = () => {
+
+
+
+
+  return `/api/idchanges`
+}
+
+/**
+ * @summary List all ID change requests
+ */
+export const getIdChanges = async ( options?: RequestInit): Promise<IdChange[]> => {
+
+  return customFetch<IdChange[]>(getGetIdChangesUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetIdChangesQueryKey = () => {
+    return [
+    `/api/idchanges`
+    ] as const;
+    }
+
+
+export const getGetIdChangesQueryOptions = <TData = Awaited<ReturnType<typeof getIdChanges>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getIdChanges>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetIdChangesQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getIdChanges>>> = ({ signal }) => getIdChanges({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getIdChanges>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetIdChangesQueryResult = NonNullable<Awaited<ReturnType<typeof getIdChanges>>>
+export type GetIdChangesQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List all ID change requests
+ */
+
+export function useGetIdChanges<TData = Awaited<ReturnType<typeof getIdChanges>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getIdChanges>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetIdChangesQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateIdChangeUrl = () => {
+
+
+
+
+  return `/api/idchanges`
+}
+
+/**
+ * @summary Create a new ID change request
+ */
+export const createIdChange = async (createIdChange: CreateIdChange, options?: RequestInit): Promise<IdChange> => {
+
+  return customFetch<IdChange>(getCreateIdChangeUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(createIdChange)
+  }
+);}
+
+
+
+
+export const getCreateIdChangeMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createIdChange>>, TError,{data: BodyType<CreateIdChange>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createIdChange>>, TError,{data: BodyType<CreateIdChange>}, TContext> => {
+
+const mutationKey = ['createIdChange'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createIdChange>>, {data: BodyType<CreateIdChange>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createIdChange(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateIdChangeMutationResult = NonNullable<Awaited<ReturnType<typeof createIdChange>>>
+    export type CreateIdChangeMutationBody = BodyType<CreateIdChange>
+    export type CreateIdChangeMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Create a new ID change request
+ */
+export const useCreateIdChange = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createIdChange>>, TError,{data: BodyType<CreateIdChange>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createIdChange>>,
+        TError,
+        {data: BodyType<CreateIdChange>},
+        TContext
+      > => {
+      return useMutation(getCreateIdChangeMutationOptions(options));
+    }
+
+export const getUpdateIdChangeUrl = (id: number,) => {
+
+
+
+
+  return `/api/idchanges/${id}`
+}
+
+/**
+ * @summary Update an ID change request
+ */
+export const updateIdChange = async (id: number,
+    updateIdChange: UpdateIdChange, options?: RequestInit): Promise<IdChange> => {
+
+  return customFetch<IdChange>(getUpdateIdChangeUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(updateIdChange)
+  }
+);}
+
+
+
+
+export const getUpdateIdChangeMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateIdChange>>, TError,{id: number;data: BodyType<UpdateIdChange>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateIdChange>>, TError,{id: number;data: BodyType<UpdateIdChange>}, TContext> => {
+
+const mutationKey = ['updateIdChange'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateIdChange>>, {id: number;data: BodyType<UpdateIdChange>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateIdChange(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateIdChangeMutationResult = NonNullable<Awaited<ReturnType<typeof updateIdChange>>>
+    export type UpdateIdChangeMutationBody = BodyType<UpdateIdChange>
+    export type UpdateIdChangeMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Update an ID change request
+ */
+export const useUpdateIdChange = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateIdChange>>, TError,{id: number;data: BodyType<UpdateIdChange>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateIdChange>>,
+        TError,
+        {id: number;data: BodyType<UpdateIdChange>},
+        TContext
+      > => {
+      return useMutation(getUpdateIdChangeMutationOptions(options));
+    }
+
+export const getDeleteIdChangeUrl = (id: number,) => {
+
+
+
+
+  return `/api/idchanges/${id}`
+}
+
+/**
+ * @summary Delete an ID change request
+ */
+export const deleteIdChange = async (id: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteIdChangeUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteIdChangeMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteIdChange>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteIdChange>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['deleteIdChange'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteIdChange>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteIdChange(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteIdChangeMutationResult = NonNullable<Awaited<ReturnType<typeof deleteIdChange>>>
+
+    export type DeleteIdChangeMutationError = ErrorType<void>
+
+    /**
+ * @summary Delete an ID change request
+ */
+export const useDeleteIdChange = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteIdChange>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteIdChange>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getDeleteIdChangeMutationOptions(options));
     }
 
 export const getRequestUploadUrlUrl = () => {
