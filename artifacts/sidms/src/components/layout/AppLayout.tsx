@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import { Link, useLocation } from "wouter";
 import {
-  Shield,
   LayoutDashboard,
   Radio,
   Briefcase,
