@@ -33,14 +33,7 @@ interface NavItem {
 const navItems: NavItem[] = [
   { icon: LayoutDashboard, label: "Dashboard", href: "/dashboard" },
   { icon: Radio, label: "Leitstelle", href: "/leitstelle" },
-  {
-    icon: Briefcase,
-    label: "Fallmanagement",
-    href: "/fallmanagement",
-    children: [
-      { label: "Beweismittel", href: "/beweismittel" },
-    ],
-  },
+  { icon: Briefcase, label: "Fallmanagement", href: "/fallmanagement" },
   {
     icon: Users,
     label: "Personal",
