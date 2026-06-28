@@ -90,9 +90,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       {/* Sidebar */}
       <aside className="w-[220px] flex-shrink-0 border-r border-primary/30 flex flex-col bg-[#0a0f1a]">
         {/* Logo */}
-        <div className="px-4 py-5 flex flex-col items-center border-b border-primary/20">
-          <div className="w-14 h-14 rounded-full bg-primary/10 border-2 border-primary flex items-center justify-center mb-2">
-            <Shield className="w-7 h-7 text-primary" />
+        <div className="px-4 py-4 flex flex-col items-center border-b border-primary/20">
+          <div className="w-16 h-16 flex items-center justify-center mb-2 drop-shadow-[0_0_12px_rgba(201,162,39,0.3)]">
+            <img src="/fib-logo.png" alt="FIB Logo" className="w-full h-full object-contain" />
           </div>
           <p className="font-bold tracking-widest text-sm text-white">SIDMS</p>
           <p className="text-xs text-muted-foreground">Version 1.0</p>

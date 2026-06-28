@@ -26,11 +26,8 @@ export default function Login() {
       <div className="w-full max-w-sm px-6">
         {/* Badge */}
         <div className="flex flex-col items-center mb-8">
-          <div className="w-28 h-28 rounded-full bg-[#0d1526] border-2 border-[#c9a227] flex items-center justify-center mb-5 shadow-lg shadow-[#c9a227]/10">
-            <div className="w-20 h-20 rounded-full bg-[#0f1e3d] border-2 border-[#1a3170] flex items-center justify-center relative">
-              <span className="text-2xl font-black text-white tracking-tight">FIB</span>
-              <div className="absolute inset-0 rounded-full border border-[#c9a227]/40" />
-            </div>
+          <div className="w-36 h-36 flex items-center justify-center mb-5 drop-shadow-[0_0_24px_rgba(201,162,39,0.25)]">
+            <img src="/fib-logo.png" alt="FIB Logo" className="w-full h-full object-contain" />
           </div>
           <h1 className="text-xl font-bold tracking-wider text-white uppercase">Federal Investigation Bureau</h1>
           <p className="text-sm text-[#c9a227] tracking-widest uppercase mt-1">Special Investigation Division</p>
