@@ -142,6 +142,29 @@ router.patch("/:id", async (req, res) => {
 
 router.delete("/:id", async (req, res) => {
   const id = parseInt(req.params.id);
+
+  // Delete associated evidence files from object storage before removing the case,
+  // so we don't leave orphaned GCS objects under the case-<id>/ prefix.
+  const privateObjectDir = process.env.PRIVATE_OBJECT_DIR;
+  if (privateObjectDir) {
+    const { bucketName, gcsPrefix } = parsePrivateObjectDir(privateObjectDir);
+    const bucket = objectStorageClient.bucket(bucketName);
+    const gcsListPrefix = gcsPrefix ? `${gcsPrefix}/case-${id}/` : `case-${id}/`;
+    try {
+      await bucket.deleteFiles({ prefix: gcsListPrefix, force: true });
+    } catch (err) {
+      req.log.error({ err }, "Failed to delete GCS evidence files during case deletion");
+      res.status(500).json({ error: "Beweismittel konnten nicht gelöscht werden" });
+      return;
+    }
+  }
+
+  // Also clean up any local fallback copies for this case.
+  const localDir = path.join(LOCAL_UPLOADS_DIR, `case-${id}`);
+  if (fs.existsSync(localDir)) {
+    fs.rmSync(localDir, { recursive: true, force: true });
+  }
+
   await db.delete(casePersonsTable).where(eq(casePersonsTable.caseId, id));
   await db.delete(caseAgentsTable).where(eq(caseAgentsTable.caseId, id));
   await db.delete(caseStatusHistoryTable).where(eq(caseStatusHistoryTable.caseId, id));
