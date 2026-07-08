@@ -187,13 +187,15 @@ paths:
             type: string
       responses:
         "200":
-          description: List of cases
+          description: List of cases (non-leadership officers only see cases they are involved in)
           content:
             application/json:
               schema:
                 type: array
                 items:
                   $ref: "#/components/schemas/Case"
+        "401":
+          description: Not authenticated
     post:
       operationId: createCase
       tags: [cases]
@@ -211,6 +213,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Case"
+        "401":
+          description: Not authenticated
 
   /cases/{id}:
     get:
@@ -230,6 +234,10 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/CaseDetail"
+        "401":
+          description: Not authenticated
+        "403":
+          description: Not involved in this case
         "404":
           description: Not found
     patch:
@@ -255,6 +263,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Case"
+        "401":
+          description: Not authenticated
+        "403":
+          description: Not involved in this case
+        "404":
+          description: Not found
     delete:
       operationId: deleteCase
       tags: [cases]
@@ -268,6 +282,12 @@ paths:
       responses:
         "204":
           description: Deleted
+        "401":
+          description: Not authenticated
+        "403":
+          description: Not involved in this case
+        "404":
+          description: Not found
 
   /cases/{id}/status-history:
     get:

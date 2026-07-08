@@ -1,6 +1,7 @@
 import { Router } from "express";
-import { db, casesTable, casePersonsTable, caseAgentsTable, caseStatusHistoryTable, evidenceFilesTable, sessionsTable, officersTable } from "@workspace/db";
-import { eq, ilike, and, gte, lte, desc, or } from "drizzle-orm";
+import { db, casesTable, casePersonsTable, caseAgentsTable, caseStatusHistoryTable, evidenceFilesTable, officersTable } from "@workspace/db";
+import { eq, ilike, and, gte, lte, desc, or, inArray } from "drizzle-orm";
+import { resolveOfficer, isLeadership } from "../lib/auth";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
@@ -25,21 +26,68 @@ const upload = multer({
   },
 });
 
-async function resolveOfficerName(req: { headers: { authorization?: string }; cookies?: { auth_token?: string } }): Promise<string | null> {
-  const token = req.headers.authorization?.replace("Bearer ", "") || req.cookies?.auth_token;
-  if (!token) return null;
-  const [session] = await db.select().from(sessionsTable).where(eq(sessionsTable.token, token));
-  if (!session || session.expiresAt < new Date()) return null;
-  const [officer] = await db.select().from(officersTable).where(eq(officersTable.id, session.officerId));
-  return officer ? officer.name : null;
+type Officer = typeof officersTable.$inferSelect;
+
+// A non-leadership officer may only access cases where they are the lead agent
+// or listed among the case agents. Leadership sees everything.
+async function canAccessCase(officer: Officer, caseId: number, leadAgent: string): Promise<boolean> {
+  if (isLeadership(officer.rank)) return true;
+  if (leadAgent === officer.name) return true;
+  const [row] = await db
+    .select({ id: caseAgentsTable.id })
+    .from(caseAgentsTable)
+    .where(and(eq(caseAgentsTable.caseId, caseId), eq(caseAgentsTable.name, officer.name)));
+  return !!row;
+}
+
+// Loads the case and enforces involvement. Sends the appropriate error response
+// and returns null when access is denied or the case doesn't exist.
+async function loadAccessibleCase(
+  req: Parameters<typeof resolveOfficer>[0],
+  res: { status: (code: number) => { json: (body: unknown) => unknown } },
+  id: number,
+): Promise<{ officer: Officer; case: typeof casesTable.$inferSelect } | null> {
+  const officer = await resolveOfficer(req);
+  if (!officer) {
+    res.status(401).json({ error: "Nicht angemeldet" });
+    return null;
+  }
+  const [c] = await db.select().from(casesTable).where(eq(casesTable.id, id));
+  if (!c) {
+    res.status(404).json({ error: "Fall nicht gefunden" });
+    return null;
+  }
+  if (!(await canAccessCase(officer, c.id, c.leadAgent))) {
+    res.status(403).json({ error: "Kein Zugriff auf diesen Fall" });
+    return null;
+  }
+  return { officer, case: c };
 }
 
 const router = Router();
 
 router.get("/", async (req, res) => {
+  const officer = await resolveOfficer(req);
+  if (!officer) {
+    res.status(401).json({ error: "Nicht angemeldet" });
+    return;
+  }
+
   const { status, priority, category, search, caseNumber, suspectName, vehiclePlate, missionNumber, dateFrom, dateTo } = req.query;
 
   const conditions = [];
+
+  if (!isLeadership(officer.rank)) {
+    conditions.push(
+      or(
+        eq(casesTable.leadAgent, officer.name),
+        inArray(
+          casesTable.id,
+          db.select({ caseId: caseAgentsTable.caseId }).from(caseAgentsTable).where(eq(caseAgentsTable.name, officer.name)),
+        ),
+      ),
+    );
+  }
 
   if (status) conditions.push(eq(casesTable.status, status as string));
   if (priority) conditions.push(eq(casesTable.priority, priority as string));
@@ -63,6 +111,12 @@ router.get("/", async (req, res) => {
 });
 
 router.post("/", async (req, res) => {
+  const officer = await resolveOfficer(req);
+  if (!officer) {
+    res.status(401).json({ error: "Nicht angemeldet" });
+    return;
+  }
+
   const { title, category, priority, status, leadAgent, description } = req.body;
 
   const allCases = await db.select({ id: casesTable.id }).from(casesTable);
@@ -80,6 +134,11 @@ router.post("/", async (req, res) => {
   }).returning();
 
   await db.insert(caseAgentsTable).values({ caseId: newCase.id, name: leadAgent, role: "Leitender Agent" });
+  // Always link the creator to the case so they can see their own case even
+  // when they entered someone else as the lead agent.
+  if (officer.name !== leadAgent) {
+    await db.insert(caseAgentsTable).values({ caseId: newCase.id, name: officer.name, role: "Ersteller" });
+  }
   await db.insert(caseStatusHistoryTable).values({ caseId: newCase.id, fromStatus: "Neu", toStatus: status || "Offen", changedBy: leadAgent });
 
   res.status(201).json({
@@ -93,12 +152,13 @@ router.post("/", async (req, res) => {
 
 router.get("/:id", async (req, res) => {
   const id = parseInt(req.params.id);
-  const [c] = await db.select().from(casesTable).where(eq(casesTable.id, id));
-  if (!c) { res.status(404).json({ error: "Fall nicht gefunden" }); return; }
+  const access = await loadAccessibleCase(req, res, id);
+  if (!access) return;
+  const c = access.case;
 
   const agents = await db.select().from(caseAgentsTable).where(eq(caseAgentsTable.caseId, id));
   const leadAgent = agents.find(a => a.role === "Leitender Agent");
-  const supporting = agents.filter(a => a.role !== "Leitender Agent" && a.role !== "Supervisor").map(a => a.name);
+  const supporting = agents.filter(a => a.role !== "Leitender Agent" && a.role !== "Supervisor" && a.role !== "Ersteller").map(a => a.name);
   const supervisor = agents.find(a => a.role === "Supervisor")?.name ?? null;
 
   res.json({
@@ -114,8 +174,9 @@ router.get("/:id", async (req, res) => {
 
 router.patch("/:id", async (req, res) => {
   const id = parseInt(req.params.id);
-  const [existing] = await db.select().from(casesTable).where(eq(casesTable.id, id));
-  if (!existing) { res.status(404).json({ error: "Fall nicht gefunden" }); return; }
+  const access = await loadAccessibleCase(req, res, id);
+  if (!access) return;
+  const existing = access.case;
 
   const { title, category, priority, status, leadAgent, description } = req.body;
   const updates: Partial<typeof casesTable.$inferInsert> = {};
@@ -154,11 +215,8 @@ router.delete("/:id", async (req, res) => {
 
   // Don't report a successful deletion for a case that never existed — otherwise
   // the client removes a row that was never there and the failure goes unnoticed.
-  const [existing] = await db.select({ id: casesTable.id }).from(casesTable).where(eq(casesTable.id, id));
-  if (!existing) {
-    res.status(404).json({ error: "Fall nicht gefunden" });
-    return;
-  }
+  const access = await loadAccessibleCase(req, res, id);
+  if (!access) return;
 
   // Delete associated evidence files from object storage before removing the case,
   // so we don't leave orphaned GCS objects under the case-<id>/ prefix.
@@ -204,6 +262,8 @@ router.delete("/:id", async (req, res) => {
 
 router.get("/:id/status-history", async (req, res) => {
   const id = parseInt(req.params.id);
+  const access = await loadAccessibleCase(req, res, id);
+  if (!access) return;
   const history = await db.select().from(caseStatusHistoryTable)
     .where(eq(caseStatusHistoryTable.caseId, id))
     .orderBy(desc(caseStatusHistoryTable.timestamp));
@@ -212,12 +272,16 @@ router.get("/:id/status-history", async (req, res) => {
 
 router.get("/:id/persons", async (req, res) => {
   const id = parseInt(req.params.id);
+  const access = await loadAccessibleCase(req, res, id);
+  if (!access) return;
   const persons = await db.select().from(casePersonsTable).where(eq(casePersonsTable.caseId, id));
   res.json(persons.map(p => ({ ...p, formerIds: p.formerIds ?? null, lastLocation: p.lastLocation ?? null })));
 });
 
 router.get("/:id/agents", async (req, res) => {
   const id = parseInt(req.params.id);
+  const access = await loadAccessibleCase(req, res, id);
+  if (!access) return;
   const agents = await db.select().from(caseAgentsTable).where(eq(caseAgentsTable.caseId, id));
   res.json(agents);
 });
@@ -230,11 +294,8 @@ router.post("/:id/evidence/upload", upload.array("files", 20), async (req, res) 
     return;
   }
 
-  const [existingCase] = await db.select({ id: casesTable.id }).from(casesTable).where(eq(casesTable.id, caseId));
-  if (!existingCase) {
-    res.status(404).json({ error: "Fall nicht gefunden" });
-    return;
-  }
+  const access = await loadAccessibleCase(req, res, caseId);
+  if (!access) return;
 
   const files = (req.files as Express.Multer.File[]) ?? [];
   const privateObjectDir = process.env.PRIVATE_OBJECT_DIR;
@@ -247,7 +308,7 @@ router.post("/:id/evidence/upload", upload.array("files", 20), async (req, res) 
 
   const { bucketName, gcsPrefix } = parsePrivateObjectDir(privateObjectDir);
   const bucket = objectStorageClient.bucket(bucketName);
-  const uploadedBy = await resolveOfficerName(req);
+  const uploadedBy = access.officer.name;
 
   const results = await Promise.all(files.map(async (f) => {
     const ext = path.extname(f.originalname);
@@ -292,11 +353,8 @@ router.delete("/:id/evidence/:filename", async (req, res) => {
     return;
   }
 
-  const [existingCase] = await db.select({ id: casesTable.id }).from(casesTable).where(eq(casesTable.id, id));
-  if (!existingCase) {
-    res.status(404).json({ error: "Fall nicht gefunden" });
-    return;
-  }
+  const access = await loadAccessibleCase(req, res, id);
+  if (!access) return;
 
   const privateObjectDir = process.env.PRIVATE_OBJECT_DIR;
 
@@ -333,6 +391,9 @@ router.delete("/:id/evidence/:filename", async (req, res) => {
 router.get("/:id/evidence/files", async (req, res) => {
   const privateObjectDir = process.env.PRIVATE_OBJECT_DIR;
   const caseId = req.params.id;
+
+  const access = await loadAccessibleCase(req, res, parseInt(caseId));
+  if (!access) return;
 
   const imageExts = new Set([".jpg", ".jpeg", ".png", ".gif", ".webp"]);
   const videoExts = new Set([".mp4", ".webm", ".mov", ".avi", ".mkv"]);

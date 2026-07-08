@@ -145,7 +145,13 @@ export default function Fallmanagement() {
           <tbody>
             {isLoading ? (
               <tr><td colSpan={8} className="text-center py-8 text-gray-500">Laden...</td></tr>
-            ) : cases?.map(c => (
+            ) : !cases || cases.length === 0 ? (
+              <tr>
+                <td colSpan={8} className="text-center py-8 text-gray-500" data-testid="text-no-cases">
+                  Keine Fälle vorhanden. Es werden nur Fälle angezeigt, an denen Sie beteiligt sind.
+                </td>
+              </tr>
+            ) : cases.map(c => (
               <tr key={c.id} className="border-b border-[#1e2d4a]/40 hover:bg-[#1a2744]/30 transition-colors" data-testid={`case-row-${c.id}`}>
                 <td className="px-3 py-2.5 text-[#c9a227] font-mono whitespace-nowrap">{c.caseNumber}</td>
                 <td className="px-3 py-2.5 text-white max-w-[180px] truncate">{c.title}</td>

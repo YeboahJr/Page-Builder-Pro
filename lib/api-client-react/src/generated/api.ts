@@ -646,7 +646,7 @@ export const getGetCasesQueryKey = (params?: GetCasesParams,) => {
     }
 
 
-export const getGetCasesQueryOptions = <TData = Awaited<ReturnType<typeof getCases>>, TError = ErrorType<unknown>>(params?: GetCasesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getCases>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export const getGetCasesQueryOptions = <TData = Awaited<ReturnType<typeof getCases>>, TError = ErrorType<void>>(params?: GetCasesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getCases>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
@@ -665,14 +665,14 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type GetCasesQueryResult = NonNullable<Awaited<ReturnType<typeof getCases>>>
-export type GetCasesQueryError = ErrorType<unknown>
+export type GetCasesQueryError = ErrorType<void>
 
 
 /**
  * @summary List all cases (Fälle)
  */
 
-export function useGetCases<TData = Awaited<ReturnType<typeof getCases>>, TError = ErrorType<unknown>>(
+export function useGetCases<TData = Awaited<ReturnType<typeof getCases>>, TError = ErrorType<void>>(
  params?: GetCasesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getCases>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
@@ -715,7 +715,7 @@ export const createCase = async (caseInput: CaseInput, options?: RequestInit): P
 
 
 
-export const getCreateCaseMutationOptions = <TError = ErrorType<unknown>,
+export const getCreateCaseMutationOptions = <TError = ErrorType<void>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createCase>>, TError,{data: BodyType<CaseInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
 ): UseMutationOptions<Awaited<ReturnType<typeof createCase>>, TError,{data: BodyType<CaseInput>}, TContext> => {
 
@@ -744,12 +744,12 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type CreateCaseMutationResult = NonNullable<Awaited<ReturnType<typeof createCase>>>
     export type CreateCaseMutationBody = BodyType<CaseInput>
-    export type CreateCaseMutationError = ErrorType<unknown>
+    export type CreateCaseMutationError = ErrorType<void>
 
     /**
  * @summary Create a new case
  */
-export const useCreateCase = <TError = ErrorType<unknown>,
+export const useCreateCase = <TError = ErrorType<void>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createCase>>, TError,{data: BodyType<CaseInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
         Awaited<ReturnType<typeof createCase>>,
@@ -863,7 +863,7 @@ export const updateCase = async (id: number,
 
 
 
-export const getUpdateCaseMutationOptions = <TError = ErrorType<unknown>,
+export const getUpdateCaseMutationOptions = <TError = ErrorType<void>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateCase>>, TError,{id: number;data: BodyType<CaseUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
 ): UseMutationOptions<Awaited<ReturnType<typeof updateCase>>, TError,{id: number;data: BodyType<CaseUpdate>}, TContext> => {
 
@@ -892,12 +892,12 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type UpdateCaseMutationResult = NonNullable<Awaited<ReturnType<typeof updateCase>>>
     export type UpdateCaseMutationBody = BodyType<CaseUpdate>
-    export type UpdateCaseMutationError = ErrorType<unknown>
+    export type UpdateCaseMutationError = ErrorType<void>
 
     /**
  * @summary Update a case
  */
-export const useUpdateCase = <TError = ErrorType<unknown>,
+export const useUpdateCase = <TError = ErrorType<void>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateCase>>, TError,{id: number;data: BodyType<CaseUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
         Awaited<ReturnType<typeof updateCase>>,
@@ -933,7 +933,7 @@ export const deleteCase = async (id: number, options?: RequestInit): Promise<voi
 
 
 
-export const getDeleteCaseMutationOptions = <TError = ErrorType<unknown>,
+export const getDeleteCaseMutationOptions = <TError = ErrorType<void>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteCase>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
 ): UseMutationOptions<Awaited<ReturnType<typeof deleteCase>>, TError,{id: number}, TContext> => {
 
@@ -962,12 +962,12 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type DeleteCaseMutationResult = NonNullable<Awaited<ReturnType<typeof deleteCase>>>
 
-    export type DeleteCaseMutationError = ErrorType<unknown>
+    export type DeleteCaseMutationError = ErrorType<void>
 
     /**
  * @summary Delete a case
  */
-export const useDeleteCase = <TError = ErrorType<unknown>,
+export const useDeleteCase = <TError = ErrorType<void>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteCase>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
         Awaited<ReturnType<typeof deleteCase>>,
