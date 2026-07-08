@@ -11,6 +11,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { RANK_NAMES, isLeadership } from "@/lib/ranks";
 import { PAGE_DEFS, ALL_PAGE_KEYS } from "@/lib/pages";
 import { useToast } from "@/hooks/use-toast";
+import OfficerAvatar from "@/components/OfficerAvatar";
 
 const DEFAULT_RANK = "Agent";
 
@@ -112,7 +113,12 @@ export default function Registrierungen() {
                 return (
                   <tr key={o.id} className="border-b border-[#1e2d4a]/50" data-testid={`row-pending-${o.id}`}>
                     <td className="px-4 py-3 text-gray-200">{o.dienstnummer}</td>
-                    <td className="px-4 py-3 text-gray-200">{o.name}</td>
+                    <td className="px-4 py-3 text-gray-200">
+                      <span className="flex items-center gap-2">
+                        <OfficerAvatar name={o.name} avatarUrl={o.avatarUrl} testId={`avatar-pending-${o.id}`} />
+                        {o.name}
+                      </span>
+                    </td>
                     <td className="px-4 py-3">
                       <select
                         className="bg-[#0a1020] text-gray-200 border border-[#1e2d4a] rounded px-2 py-1.5 text-xs w-52"

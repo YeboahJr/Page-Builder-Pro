@@ -10,6 +10,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { isLeadership } from "@/lib/ranks";
 import { PAGE_DEFS, ALL_PAGE_KEYS } from "@/lib/pages";
 import { useToast } from "@/hooks/use-toast";
+import OfficerAvatar from "@/components/OfficerAvatar";
 
 export default function Administration() {
   const { officer } = useAuth();
@@ -101,7 +102,12 @@ export default function Administration() {
                 return (
                   <tr key={o.id} className="border-b border-[#1e2d4a]/50" data-testid={`row-admin-${o.id}`}>
                     <td className="px-4 py-3 text-gray-200">{o.dienstnummer}</td>
-                    <td className="px-4 py-3 text-gray-200">{o.name}</td>
+                    <td className="px-4 py-3 text-gray-200">
+                      <span className="flex items-center gap-2">
+                        <OfficerAvatar name={o.name} avatarUrl={o.avatarUrl} testId={`avatar-admin-${o.id}`} />
+                        {o.name}
+                      </span>
+                    </td>
                     <td className="px-4 py-3">
                       <span className={oLeadership ? "text-[#c9a227]" : "text-gray-300"}>{o.rank}</span>
                     </td>

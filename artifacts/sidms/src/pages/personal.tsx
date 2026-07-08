@@ -11,6 +11,7 @@ import {
 import { useQueryClient } from "@tanstack/react-query";
 import { Users, Check, Pencil, X, Plus, Trash2, KeyRound, RefreshCw } from "lucide-react";
 import DeleteConfirmModal from "@/components/DeleteConfirmModal";
+import OfficerAvatar from "@/components/OfficerAvatar";
 
 const CHECKBOX_COLS = [
   { key: "einweisung", label: "Einweisung" },
@@ -370,7 +371,12 @@ export default function Personal() {
                   <td className="px-3 py-2">
                     {isEditing
                       ? <input className={`${inputCls} w-36`} value={draft.name} onChange={e => setDraftField("name", e.target.value)} />
-                      : <span className="text-white font-medium">{o.name}</span>}
+                      : (
+                        <span className="flex items-center gap-2">
+                          <OfficerAvatar name={o.name} avatarUrl={o.avatarUrl} className="w-6 h-6" testId={`avatar-officer-${o.id}`} />
+                          <span className="text-white font-medium">{o.name}</span>
+                        </span>
+                      )}
                   </td>
                   <td className="px-3 py-2">
                     {isEditing ? (

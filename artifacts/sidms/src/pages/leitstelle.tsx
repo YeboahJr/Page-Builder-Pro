@@ -7,6 +7,7 @@ import {
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { AlertCircle, Check, Loader2, Users } from "lucide-react";
+import OfficerAvatar from "@/components/OfficerAvatar";
 
 const PATROL_TYPES = ["Regelstreife", "Undercoverstreife", "Zivilstreife", "Overwatch"];
 const STATUS_META: Record<string, { text: string; dot: string }> = {
@@ -458,11 +459,12 @@ export default function Streifen() {
                     className="px-4 py-2.5 flex items-center gap-3 hover:bg-[#1a2744]/30 transition-colors"
                     data-testid={`officer-row-${o.id}`}
                   >
-                    <div className="w-7 h-7 rounded-full bg-[#1a2744] border border-[#253650] flex items-center justify-center flex-shrink-0">
-                      <span className="text-xs text-gray-400 font-medium">
-                        {o.name.split(" ").map(n => n[0]).join("").slice(0, 2)}
-                      </span>
-                    </div>
+                    <OfficerAvatar
+                      name={o.name}
+                      avatarUrl={o.avatarUrl}
+                      className="flex-shrink-0"
+                      testId={`avatar-duty-${o.id}`}
+                    />
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-medium text-white truncate">{o.name}</p>
                       <p className="text-xs text-gray-500">
