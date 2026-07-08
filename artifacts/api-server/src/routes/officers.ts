@@ -1,9 +1,23 @@
 import { Router } from "express";
 import { db, officersTable, sessionsTable } from "@workspace/db";
 import { eq, asc, and } from "drizzle-orm";
+import multer from "multer";
+import path from "path";
+import { randomUUID } from "crypto";
+import { objectStorageClient } from "../lib/objectStorage";
+import { parsePrivateObjectDir } from "@workspace/object-storage";
 import { hashPassword, resolveOfficer, isLeadership } from "../lib/auth";
 
 const router = Router();
+
+const AVATAR_MAX_BYTES = 5 * 1024 * 1024;
+const avatarUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: AVATAR_MAX_BYTES },
+  fileFilter: (_req, file, cb) => {
+    cb(null, /^image\/(jpeg|png|gif|webp)$/.test(file.mimetype));
+  },
+});
 
 const BOOL_FIELDS = [
   "einweisung", "waffenfreigabeLMG", "waffenfreigabeHeavySniper",
@@ -117,6 +131,60 @@ router.post("/:id/password", async (req, res) => {
     .set({ passwortHash: hashPassword(newPassword) })
     .where(eq(officersTable.id, id));
   return res.json({ success: true });
+});
+
+router.post("/:id/avatar", (req, res) => {
+  avatarUpload.single("file")(req, res, async (err: unknown) => {
+    if (err) {
+      const isSize = typeof err === "object" && err !== null && (err as { code?: string }).code === "LIMIT_FILE_SIZE";
+      return res.status(400).json({
+        error: isSize ? "Die Datei ist zu groß (max. 5 MB)" : "Ungültige Datei",
+      });
+    }
+    const current = await resolveOfficer(req);
+    if (!current) {
+      return res.status(401).json({ error: "Nicht angemeldet" });
+    }
+    const id = parseInt(req.params.id);
+    if (!Number.isInteger(id)) {
+      return res.status(400).json({ error: "Ungültige ID" });
+    }
+    if (current.id !== id) {
+      return res.status(403).json({ error: "Sie können nur Ihr eigenes Profilbild ändern" });
+    }
+    const file = req.file;
+    if (!file) {
+      return res.status(400).json({ error: "Bitte wählen Sie eine Bilddatei (PNG, JPG, GIF oder WebP, max. 5 MB)" });
+    }
+
+    const privateObjectDir = process.env.PRIVATE_OBJECT_DIR;
+    if (!privateObjectDir) {
+      req.log.error("PRIVATE_OBJECT_DIR not set — cannot upload avatar to object storage");
+      return res.status(500).json({ error: "Object storage nicht konfiguriert" });
+    }
+
+    try {
+      const { bucketName, gcsPrefix } = parsePrivateObjectDir(privateObjectDir);
+      const bucket = objectStorageClient.bucket(bucketName);
+      const ext = path.extname(file.originalname) || `.${file.mimetype.split("/")[1]}`;
+      const unique = `avatar-${id}-${Date.now()}-${randomUUID()}${ext}`;
+      const objectName = `${gcsPrefix}/avatars/${unique}`;
+      const gcsFile = bucket.file(objectName);
+      await gcsFile.save(file.buffer, { contentType: file.mimetype, resumable: false });
+
+      const avatarUrl = `/api/storage/objects/avatars/${unique}`;
+      const [updated] = await db
+        .update(officersTable)
+        .set({ avatarUrl })
+        .where(eq(officersTable.id, id))
+        .returning();
+      if (!updated) return res.status(404).json({ error: "Officer nicht gefunden" });
+      return res.json(stripHash(updated));
+    } catch (e) {
+      req.log.error({ err: e }, "Avatar upload failed");
+      return res.status(500).json({ error: "Profilbild konnte nicht hochgeladen werden" });
+    }
+  });
 });
 
 router.get("/:id", async (req, res) => {

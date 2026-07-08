@@ -1,6 +1,6 @@
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import { useLocation } from "wouter";
-import { UserCog, Shield, Radio, Save, ArrowLeft, CheckCircle2, AlertCircle, KeyRound } from "lucide-react";
+import { UserCog, Shield, Save, ArrowLeft, CheckCircle2, AlertCircle, KeyRound, Camera, Loader2 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   useUpdateOfficerPermissions,
@@ -8,12 +8,14 @@ import {
   getGetOfficersQueryKey,
 } from "@workspace/api-client-react";
 import { useAuth } from "@/contexts/AuthContext";
-
-const STATUS_OPTIONS = ["Anwesend", "In Einsatz", "Pause", "Abwesend"];
-const RADIO_STATUS_OPTIONS = ["Aktiv", "Ausgeschaltet"];
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { initials } from "@/lib/initials";
 
 const inputCls =
   "w-full bg-[#0a0f1a] border border-[#1e2d4a] rounded px-3 py-2 text-sm text-white outline-none focus:border-[#c9a227]";
+
+const AVATAR_MAX_BYTES = 5 * 1024 * 1024;
+const AVATAR_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp"];
 
 export default function ProfilBearbeiten() {
   const { officer, updateOfficer } = useAuth();
@@ -21,38 +23,25 @@ export default function ProfilBearbeiten() {
   const updateMutation = useUpdateOfficerPermissions();
   const passwordMutation = useChangeOfficerPassword();
   const queryClient = useQueryClient();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [form, setForm] = useState({
-    name: officer?.name ?? "",
-    rank: officer?.rank ?? "",
-    status: officer?.status ?? "Anwesend",
-    radioStatus: officer?.radioStatus ?? "Aktiv",
-    radioFreq: officer?.radioFreq ?? "",
-  });
+  const [name, setName] = useState(officer?.name ?? "");
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  const [pwForm, setPwForm] = useState({
-    current: "",
-    next: "",
-    confirm: "",
-  });
+  const [avatarError, setAvatarError] = useState<string | null>(null);
+  const [avatarSuccess, setAvatarSuccess] = useState(false);
+  const [uploading, setUploading] = useState(false);
+
+  const [pwForm, setPwForm] = useState({ current: "", next: "", confirm: "" });
   const [pwError, setPwError] = useState<string | null>(null);
   const [pwSuccess, setPwSuccess] = useState(false);
   const [pwSaving, setPwSaving] = useState(false);
 
   if (!officer) {
-    return (
-      <div className="text-sm text-gray-400">Kein angemeldeter Officer.</div>
-    );
+    return <div className="text-sm text-gray-400">Kein angemeldeter Officer.</div>;
   }
-
-  const set = (key: keyof typeof form, value: string) => {
-    setForm((prev) => ({ ...prev, [key]: value }));
-    setError(null);
-    setSuccess(false);
-  };
 
   const setPw = (key: keyof typeof pwForm, value: string) => {
     setPwForm((prev) => ({ ...prev, [key]: value }));
@@ -60,13 +49,49 @@ export default function ProfilBearbeiten() {
     setPwSuccess(false);
   };
 
+  const handleAvatarFile = async (file: File | null | undefined) => {
+    setAvatarError(null);
+    setAvatarSuccess(false);
+    if (!file) return;
+    if (!AVATAR_TYPES.includes(file.type)) {
+      setAvatarError("Ungültiger Dateityp. Erlaubt sind PNG, JPG, GIF und WebP.");
+      return;
+    }
+    if (file.size > AVATAR_MAX_BYTES) {
+      setAvatarError("Die Datei ist zu groß (max. 5 MB).");
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await fetch(`/api/officers/${officer.id}/avatar`, {
+        method: "POST",
+        body: formData,
+        headers: { Authorization: `Bearer ${sessionStorage.getItem("sidms_token") ?? ""}` },
+      });
+      const data = (await res.json().catch(() => null)) as { avatarUrl?: string | null; error?: string } | null;
+      if (!res.ok) {
+        setAvatarError(data?.error ?? "Profilbild konnte nicht hochgeladen werden.");
+        return;
+      }
+      updateOfficer({ avatarUrl: data?.avatarUrl ?? null });
+      queryClient.invalidateQueries({ queryKey: getGetOfficersQueryKey() });
+      setAvatarSuccess(true);
+    } catch {
+      setAvatarError("Profilbild konnte nicht hochgeladen werden. Bitte versuchen Sie es erneut.");
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
   const handleChangePassword = async () => {
     setPwError(null);
     setPwSuccess(false);
 
-    const current = pwForm.current;
-    const next = pwForm.next;
-    const confirm = pwForm.confirm;
+    const { current, next, confirm } = pwForm;
 
     if (!current) {
       setPwError("Bitte geben Sie Ihr aktuelles Passwort ein.");
@@ -113,20 +138,9 @@ export default function ProfilBearbeiten() {
     setError(null);
     setSuccess(false);
 
-    const name = form.name.trim();
-    const rank = form.rank.trim();
-    const radioFreq = form.radioFreq.trim();
-
-    if (!name) {
+    const trimmed = name.trim();
+    if (!trimmed) {
       setError("Name darf nicht leer sein.");
-      return;
-    }
-    if (!rank) {
-      setError("Rang darf nicht leer sein.");
-      return;
-    }
-    if (!radioFreq) {
-      setError("Funkfrequenz darf nicht leer sein.");
       return;
     }
 
@@ -134,21 +148,9 @@ export default function ProfilBearbeiten() {
     try {
       const updated = await updateMutation.mutateAsync({
         id: officer.id,
-        data: {
-          name,
-          rank,
-          status: form.status,
-          radioStatus: form.radioStatus,
-          radioFreq,
-        },
+        data: { name: trimmed },
       });
-      updateOfficer({
-        name: updated.name,
-        rank: updated.rank,
-        status: updated.status,
-        radioStatus: updated.radioStatus ?? form.radioStatus,
-        radioFreq: updated.radioFreq,
-      });
+      updateOfficer({ name: updated.name });
       queryClient.invalidateQueries({ queryKey: getGetOfficersQueryKey() });
       setSuccess(true);
     } catch {
@@ -170,82 +172,106 @@ export default function ProfilBearbeiten() {
 
       <div className="bg-[#0d1526] border border-[#1e2d4a] rounded p-5 space-y-4">
         <h2 className="text-sm font-semibold text-white flex items-center gap-2">
+          <Camera className="w-4 h-4 text-[#c9a227]" /> Profilbild
+        </h2>
+
+        <div className="flex items-center gap-5">
+          <Avatar className="h-20 w-20 border border-[#c9a227]/50">
+            {officer.avatarUrl && <AvatarImage src={officer.avatarUrl} alt={officer.name} />}
+            <AvatarFallback className="bg-[#c9a227]/20 text-[#c9a227] text-lg font-semibold">
+              {initials(officer.name)}
+            </AvatarFallback>
+          </Avatar>
+          <div className="space-y-2">
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploading}
+              data-testid="button-upload-avatar"
+              className="flex items-center gap-2 text-sm text-white border border-[#1e2d4a] hover:border-[#c9a227]/60 rounded px-4 py-2 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Camera className="w-4 h-4 text-[#c9a227]" />}
+              {uploading ? "Wird hochgeladen…" : officer.avatarUrl ? "Bild ändern" : "Bild hochladen"}
+            </button>
+            <p className="text-[11px] text-gray-500">PNG, JPG, GIF oder WebP, max. 5 MB</p>
+          </div>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/png,image/jpeg,image/gif,image/webp"
+            className="hidden"
+            data-testid="input-avatar-file"
+            onChange={(e) => handleAvatarFile(e.target.files?.[0])}
+          />
+        </div>
+
+        {avatarError && (
+          <div
+            className="flex items-center gap-2 text-sm text-red-400 bg-red-950/30 border border-red-900/50 rounded px-3 py-2"
+            data-testid="text-avatar-error"
+          >
+            <AlertCircle className="w-4 h-4 flex-shrink-0" />
+            {avatarError}
+          </div>
+        )}
+        {avatarSuccess && (
+          <div
+            className="flex items-center gap-2 text-sm text-green-400 bg-green-950/30 border border-green-900/50 rounded px-3 py-2"
+            data-testid="text-avatar-success"
+          >
+            <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
+            Profilbild erfolgreich aktualisiert.
+          </div>
+        )}
+      </div>
+
+      <div className="bg-[#0d1526] border border-[#1e2d4a] rounded p-5 space-y-4">
+        <h2 className="text-sm font-semibold text-white flex items-center gap-2">
           <Shield className="w-4 h-4 text-[#c9a227]" /> Profil
         </h2>
 
         <div className="space-y-1.5">
-          <label className="block text-xs text-gray-400">Dienstnummer</label>
-          <input
-            value={officer.dienstnummer}
-            disabled
-            className={`${inputCls} opacity-60 cursor-not-allowed`}
-            data-testid="input-dienstnummer"
-          />
-        </div>
-
-        <div className="space-y-1.5">
           <label className="block text-xs text-gray-400">Name</label>
           <input
-            value={form.name}
-            onChange={(e) => set("name", e.target.value)}
+            value={name}
+            onChange={(e) => {
+              setName(e.target.value);
+              setError(null);
+              setSuccess(false);
+            }}
             className={inputCls}
             data-testid="input-name"
           />
         </div>
 
-        <div className="space-y-1.5">
-          <label className="block text-xs text-gray-400">Rang</label>
-          <input
-            value={form.rank}
-            onChange={(e) => set("rank", e.target.value)}
-            className={inputCls}
-            data-testid="input-rank"
-          />
-        </div>
-
-        <div className="space-y-1.5">
-          <label className="block text-xs text-gray-400">Status</label>
-          <select
-            value={form.status}
-            onChange={(e) => set("status", e.target.value)}
-            className={inputCls}
-            data-testid="select-status"
+        {error && (
+          <div
+            className="flex items-center gap-2 text-sm text-red-400 bg-red-950/30 border border-red-900/50 rounded px-3 py-2"
+            data-testid="text-error"
           >
-            {STATUS_OPTIONS.map((s) => (
-              <option key={s} value={s}>{s}</option>
-            ))}
-          </select>
-        </div>
-      </div>
-
-      <div className="bg-[#0d1526] border border-[#1e2d4a] rounded p-5 space-y-4">
-        <h2 className="text-sm font-semibold text-white flex items-center gap-2">
-          <Radio className="w-4 h-4 text-[#c9a227]" /> Funkeinstellungen
-        </h2>
-
-        <div className="space-y-1.5">
-          <label className="block text-xs text-gray-400">Frequenz</label>
-          <input
-            value={form.radioFreq}
-            onChange={(e) => set("radioFreq", e.target.value)}
-            className={inputCls}
-            data-testid="input-radio-freq"
-          />
-        </div>
-
-        <div className="space-y-1.5">
-          <label className="block text-xs text-gray-400">Funk-Status</label>
-          <select
-            value={form.radioStatus}
-            onChange={(e) => set("radioStatus", e.target.value)}
-            className={inputCls}
-            data-testid="select-radio-status"
+            <AlertCircle className="w-4 h-4 flex-shrink-0" />
+            {error}
+          </div>
+        )}
+        {success && (
+          <div
+            className="flex items-center gap-2 text-sm text-green-400 bg-green-950/30 border border-green-900/50 rounded px-3 py-2"
+            data-testid="text-success"
           >
-            {RADIO_STATUS_OPTIONS.map((s) => (
-              <option key={s} value={s}>{s}</option>
-            ))}
-          </select>
-        </div>
+            <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
+            Profil erfolgreich gespeichert.
+          </div>
+        )}
+
+        <button
+          onClick={handleSave}
+          disabled={saving}
+          data-testid="button-save"
+          className="flex items-center gap-2 bg-[#c9a227] hover:bg-[#b8941f] text-black text-sm font-semibold rounded px-4 py-2 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+        >
+          <Save className="w-4 h-4" />
+          {saving ? "Speichern…" : "Speichern"}
+        </button>
       </div>
 
       <div className="bg-[#0d1526] border border-[#1e2d4a] rounded p-5 space-y-4">
@@ -322,44 +348,14 @@ export default function ProfilBearbeiten() {
         </button>
       </div>
 
-      {error && (
-        <div
-          className="flex items-center gap-2 text-sm text-red-400 bg-red-950/30 border border-red-900/50 rounded px-3 py-2"
-          data-testid="text-error"
-        >
-          <AlertCircle className="w-4 h-4 flex-shrink-0" />
-          {error}
-        </div>
-      )}
-      {success && (
-        <div
-          className="flex items-center gap-2 text-sm text-green-400 bg-green-950/30 border border-green-900/50 rounded px-3 py-2"
-          data-testid="text-success"
-        >
-          <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
-          Profil erfolgreich gespeichert.
-        </div>
-      )}
-
-      <div className="flex items-center gap-3">
-        <button
-          onClick={handleSave}
-          disabled={saving}
-          data-testid="button-save"
-          className="flex items-center gap-2 bg-[#c9a227] hover:bg-[#b8941f] text-black text-sm font-semibold rounded px-4 py-2 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
-        >
-          <Save className="w-4 h-4" />
-          {saving ? "Speichern…" : "Speichern"}
-        </button>
-        <button
-          onClick={() => setLocation("/einstellungen")}
-          data-testid="button-back"
-          className="flex items-center gap-2 text-sm text-gray-400 hover:text-white border border-[#1e2d4a] rounded px-4 py-2 transition-colors"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Zurück
-        </button>
-      </div>
+      <button
+        onClick={() => setLocation("/dashboard")}
+        data-testid="button-back"
+        className="flex items-center gap-2 text-sm text-gray-400 hover:text-white border border-[#1e2d4a] rounded px-4 py-2 transition-colors"
+      >
+        <ArrowLeft className="w-4 h-4" />
+        Zurück
+      </button>
     </div>
   );
 }

@@ -22,7 +22,9 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { isLeadership } from "@/lib/ranks";
+import { initials } from "@/lib/initials";
 import { Input } from "@/components/ui/input";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -215,9 +217,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                   data-testid="button-profile-menu"
                   className="flex items-center gap-2.5 border-l border-primary/20 pl-4 outline-none focus-visible:ring-2 focus-visible:ring-primary/40 rounded-sm transition-colors data-[state=open]:[&_svg.chevron]:rotate-180"
                 >
-                  <div className="w-8 h-8 rounded-full bg-primary/20 border border-primary/50 flex items-center justify-center">
-                    <Users className="w-4 h-4 text-primary" />
-                  </div>
+                  <Avatar className="w-8 h-8 border border-primary/50" data-testid="avatar-header">
+                    {officer?.avatarUrl && <AvatarImage src={officer.avatarUrl} alt={officer.name} />}
+                    <AvatarFallback className="bg-primary/20 text-primary text-xs font-semibold">
+                      {officer?.name ? initials(officer.name) : <Users className="w-4 h-4" />}
+                    </AvatarFallback>
+                  </Avatar>
                   <div className="text-left">
                     <p className="text-xs font-semibold text-white leading-none">{officer?.name ?? "Agent"}</p>
                     <p className="text-xs text-primary leading-none mt-0.5">{officer?.rank ?? "Special Agent"}</p>
