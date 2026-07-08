@@ -28,6 +28,15 @@ const upload = multer({
 
 type Officer = typeof officersTable.$inferSelect;
 
+// Strictly parses a case id from a route param. Returns null unless the raw
+// value is a positive integer that round-trips to the same string (so "12abc"
+// and "abc" are rejected instead of silently becoming 12 or NaN).
+function parseCaseIdParam(raw: string): number | null {
+  const id = parseInt(raw, 10);
+  if (!Number.isInteger(id) || id <= 0 || String(id) !== raw) return null;
+  return id;
+}
+
 // A non-leadership officer may only access cases where they are the lead agent
 // or listed among the case agents. Leadership sees everything.
 async function canAccessCase(officer: Officer, caseId: number, leadAgent: string): Promise<boolean> {
@@ -151,7 +160,11 @@ router.post("/", async (req, res) => {
 });
 
 router.get("/:id", async (req, res) => {
-  const id = parseInt(req.params.id);
+  const id = parseCaseIdParam(req.params.id);
+  if (id === null) {
+    res.status(400).json({ error: "Ungültige ID" });
+    return;
+  }
   const access = await loadAccessibleCase(req, res, id);
   if (!access) return;
   const c = access.case;
@@ -173,7 +186,11 @@ router.get("/:id", async (req, res) => {
 });
 
 router.patch("/:id", async (req, res) => {
-  const id = parseInt(req.params.id);
+  const id = parseCaseIdParam(req.params.id);
+  if (id === null) {
+    res.status(400).json({ error: "Ungültige ID" });
+    return;
+  }
   const access = await loadAccessibleCase(req, res, id);
   if (!access) return;
   const existing = access.case;
@@ -207,8 +224,8 @@ router.patch("/:id", async (req, res) => {
 });
 
 router.delete("/:id", async (req, res) => {
-  const id = parseInt(req.params.id);
-  if (!Number.isInteger(id) || id <= 0) {
+  const id = parseCaseIdParam(req.params.id);
+  if (id === null) {
     res.status(400).json({ error: "Ungültige ID" });
     return;
   }
@@ -261,7 +278,11 @@ router.delete("/:id", async (req, res) => {
 });
 
 router.get("/:id/status-history", async (req, res) => {
-  const id = parseInt(req.params.id);
+  const id = parseCaseIdParam(req.params.id);
+  if (id === null) {
+    res.status(400).json({ error: "Ungültige ID" });
+    return;
+  }
   const access = await loadAccessibleCase(req, res, id);
   if (!access) return;
   const history = await db.select().from(caseStatusHistoryTable)
@@ -271,7 +292,11 @@ router.get("/:id/status-history", async (req, res) => {
 });
 
 router.get("/:id/persons", async (req, res) => {
-  const id = parseInt(req.params.id);
+  const id = parseCaseIdParam(req.params.id);
+  if (id === null) {
+    res.status(400).json({ error: "Ungültige ID" });
+    return;
+  }
   const access = await loadAccessibleCase(req, res, id);
   if (!access) return;
   const persons = await db.select().from(casePersonsTable).where(eq(casePersonsTable.caseId, id));
@@ -279,7 +304,11 @@ router.get("/:id/persons", async (req, res) => {
 });
 
 router.get("/:id/agents", async (req, res) => {
-  const id = parseInt(req.params.id);
+  const id = parseCaseIdParam(req.params.id);
+  if (id === null) {
+    res.status(400).json({ error: "Ungültige ID" });
+    return;
+  }
   const access = await loadAccessibleCase(req, res, id);
   if (!access) return;
   const agents = await db.select().from(caseAgentsTable).where(eq(caseAgentsTable.caseId, id));
@@ -287,9 +316,8 @@ router.get("/:id/agents", async (req, res) => {
 });
 
 router.post("/:id/evidence/upload", upload.array("files", 20), async (req, res) => {
-  const rawId = String(req.params.id);
-  const caseId = parseInt(rawId);
-  if (!Number.isInteger(caseId) || caseId <= 0 || String(caseId) !== rawId) {
+  const caseId = parseCaseIdParam(String(req.params.id));
+  if (caseId === null) {
     res.status(400).json({ error: "Ungültige ID" });
     return;
   }
@@ -347,8 +375,8 @@ router.post("/:id/evidence/upload", upload.array("files", 20), async (req, res) 
 
 router.delete("/:id/evidence/:filename", async (req, res) => {
   const { filename } = req.params;
-  const id = parseInt(req.params.id);
-  if (!Number.isInteger(id) || id <= 0 || String(id) !== req.params.id) {
+  const id = parseCaseIdParam(req.params.id);
+  if (id === null) {
     res.status(400).json({ error: "Ungültige ID" });
     return;
   }
@@ -390,9 +418,13 @@ router.delete("/:id/evidence/:filename", async (req, res) => {
 
 router.get("/:id/evidence/files", async (req, res) => {
   const privateObjectDir = process.env.PRIVATE_OBJECT_DIR;
-  const caseId = req.params.id;
+  const caseId = parseCaseIdParam(req.params.id);
+  if (caseId === null) {
+    res.status(400).json({ error: "Ungültige ID" });
+    return;
+  }
 
-  const access = await loadAccessibleCase(req, res, parseInt(caseId));
+  const access = await loadAccessibleCase(req, res, caseId);
   if (!access) return;
 
   const imageExts = new Set([".jpg", ".jpeg", ".png", ".gif", ".webp"]);
@@ -411,7 +443,7 @@ router.get("/:id/evidence/files", async (req, res) => {
 
   // Read evidence file metadata from the DB (source of truth — avoids GCS round-trips).
   const rows = await db.select().from(evidenceFilesTable)
-    .where(eq(evidenceFilesTable.caseId, parseInt(caseId)))
+    .where(eq(evidenceFilesTable.caseId, caseId))
     .orderBy(desc(evidenceFilesTable.uploadedAt));
 
   const dbFiles: FileEntry[] = rows.map((r) => {
