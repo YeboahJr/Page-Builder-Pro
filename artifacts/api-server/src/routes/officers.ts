@@ -228,9 +228,34 @@ router.post("/", async (req, res) => {
   }
 });
 
+const SELF_EDITABLE_FIELDS = new Set<string>(["name", "rank", "status", "radioStatus", "radioFreq"]);
+
 router.patch("/:id", async (req, res) => {
+  const current = await resolveOfficer(req);
+  if (!current) {
+    return res.status(401).json({ error: "Nicht angemeldet" });
+  }
   const id = parseInt(req.params.id);
+  if (!Number.isInteger(id)) {
+    return res.status(400).json({ error: "Ungültige ID" });
+  }
   const body = req.body as Record<string, unknown>;
+
+  if (!isLeadership(current.rank)) {
+    if (current.id !== id) {
+      return res.status(403).json({ error: "Sie können nur Ihr eigenes Profil bearbeiten" });
+    }
+    const disallowed = Object.keys(body).filter((k) => !SELF_EDITABLE_FIELDS.has(k));
+    if (disallowed.length > 0) {
+      return res.status(403).json({
+        error: `Diese Felder dürfen Sie nicht ändern: ${disallowed.join(", ")}`,
+      });
+    }
+    if (typeof body.rank === "string" && body.rank.trim() !== current.rank && isLeadership(body.rank.trim())) {
+      return res.status(403).json({ error: "Sie können sich keinen Leitungsrang zuweisen" });
+    }
+  }
+
   const update: Patchable = {};
 
   for (const f of TEXT_FIELDS) {
