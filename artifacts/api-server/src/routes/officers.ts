@@ -226,6 +226,10 @@ router.post("/:id/avatar", (req, res) => {
     }
 
     try {
+      const [existing] = await db.select().from(officersTable).where(eq(officersTable.id, id));
+      if (!existing) return res.status(404).json({ error: "Officer nicht gefunden" });
+      const oldUrl = existing.avatarUrl;
+
       const { bucketName, gcsPrefix } = parsePrivateObjectDir(privateObjectDir);
       const bucket = objectStorageClient.bucket(bucketName);
       const ext = path.extname(file.originalname) || `.${file.mimetype.split("/")[1]}`;
@@ -242,6 +246,18 @@ router.post("/:id/avatar", (req, res) => {
         .where(eq(officersTable.id, id))
         .returning();
       if (!updated) return res.status(404).json({ error: "Officer nicht gefunden" });
+
+      const urlPrefix = "/api/storage/objects/";
+      if (oldUrl && oldUrl !== avatarUrl && oldUrl.startsWith(urlPrefix)) {
+        try {
+          const oldRel = oldUrl.slice(urlPrefix.length);
+          const oldObjectName = gcsPrefix ? `${gcsPrefix}/${oldRel}` : oldRel;
+          await bucket.file(oldObjectName).delete({ ignoreNotFound: true });
+        } catch (e) {
+          req.log.warn({ err: e, oldUrl }, "Could not delete old avatar object from storage");
+        }
+      }
+
       return res.json(stripHash(updated));
     } catch (e) {
       req.log.error({ err: e }, "Avatar upload failed");
