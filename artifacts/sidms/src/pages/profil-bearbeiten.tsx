@@ -1,10 +1,11 @@
 import React, { useRef, useState } from "react";
 import { useLocation } from "wouter";
-import { UserCog, Shield, Save, ArrowLeft, CheckCircle2, AlertCircle, KeyRound, Camera, Loader2 } from "lucide-react";
+import { UserCog, Shield, Save, ArrowLeft, CheckCircle2, AlertCircle, KeyRound, Camera, Loader2, Trash2 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   useUpdateOfficerPermissions,
   useChangeOfficerPassword,
+  useRemoveOfficerAvatar,
   getGetOfficersQueryKey,
 } from "@workspace/api-client-react";
 import { useAuth } from "@/contexts/AuthContext";
@@ -31,8 +32,10 @@ export default function ProfilBearbeiten() {
   const [saving, setSaving] = useState(false);
 
   const [avatarError, setAvatarError] = useState<string | null>(null);
-  const [avatarSuccess, setAvatarSuccess] = useState(false);
+  const [avatarSuccess, setAvatarSuccess] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [removing, setRemoving] = useState(false);
+  const removeAvatarMutation = useRemoveOfficerAvatar();
 
   const [pwForm, setPwForm] = useState({ current: "", next: "", confirm: "" });
   const [pwError, setPwError] = useState<string | null>(null);
@@ -51,7 +54,7 @@ export default function ProfilBearbeiten() {
 
   const handleAvatarFile = async (file: File | null | undefined) => {
     setAvatarError(null);
-    setAvatarSuccess(false);
+    setAvatarSuccess(null);
     if (!file) return;
     if (!AVATAR_TYPES.includes(file.type)) {
       setAvatarError("Ungültiger Dateityp. Erlaubt sind PNG, JPG, GIF und WebP.");
@@ -78,12 +81,28 @@ export default function ProfilBearbeiten() {
       }
       updateOfficer({ avatarUrl: data?.avatarUrl ?? null });
       queryClient.invalidateQueries({ queryKey: getGetOfficersQueryKey() });
-      setAvatarSuccess(true);
+      setAvatarSuccess("Profilbild erfolgreich aktualisiert.");
     } catch {
       setAvatarError("Profilbild konnte nicht hochgeladen werden. Bitte versuchen Sie es erneut.");
     } finally {
       setUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
+  const handleRemoveAvatar = async () => {
+    setAvatarError(null);
+    setAvatarSuccess(null);
+    setRemoving(true);
+    try {
+      const updated = await removeAvatarMutation.mutateAsync({ id: officer.id });
+      updateOfficer({ avatarUrl: updated.avatarUrl ?? null });
+      queryClient.invalidateQueries({ queryKey: getGetOfficersQueryKey() });
+      setAvatarSuccess("Profilbild entfernt.");
+    } catch {
+      setAvatarError("Profilbild konnte nicht entfernt werden. Bitte versuchen Sie es erneut.");
+    } finally {
+      setRemoving(false);
     }
   };
 
@@ -183,16 +202,30 @@ export default function ProfilBearbeiten() {
             </AvatarFallback>
           </Avatar>
           <div className="space-y-2">
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={uploading}
-              data-testid="button-upload-avatar"
-              className="flex items-center gap-2 text-sm text-white border border-[#1e2d4a] hover:border-[#c9a227]/60 rounded px-4 py-2 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
-            >
-              {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Camera className="w-4 h-4 text-[#c9a227]" />}
-              {uploading ? "Wird hochgeladen…" : officer.avatarUrl ? "Bild ändern" : "Bild hochladen"}
-            </button>
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploading || removing}
+                data-testid="button-upload-avatar"
+                className="flex items-center gap-2 text-sm text-white border border-[#1e2d4a] hover:border-[#c9a227]/60 rounded px-4 py-2 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Camera className="w-4 h-4 text-[#c9a227]" />}
+                {uploading ? "Wird hochgeladen…" : officer.avatarUrl ? "Bild ändern" : "Bild hochladen"}
+              </button>
+              {officer.avatarUrl && (
+                <button
+                  type="button"
+                  onClick={handleRemoveAvatar}
+                  disabled={uploading || removing}
+                  data-testid="button-remove-avatar"
+                  className="flex items-center gap-2 text-sm text-red-400 border border-[#1e2d4a] hover:border-red-500/60 rounded px-4 py-2 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  {removing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                  {removing ? "Wird entfernt…" : "Bild entfernen"}
+                </button>
+              )}
+            </div>
             <p className="text-[11px] text-gray-500">PNG, JPG, GIF oder WebP, max. 5 MB</p>
           </div>
           <input
@@ -220,7 +253,7 @@ export default function ProfilBearbeiten() {
             data-testid="text-avatar-success"
           >
             <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
-            Profilbild erfolgreich aktualisiert.
+            {avatarSuccess}
           </div>
         )}
       </div>

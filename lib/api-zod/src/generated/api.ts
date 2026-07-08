@@ -858,6 +858,42 @@ export const ResetOfficerPasswordResponse = zod.object({
 
 
 /**
+ * @summary Remove own profile picture (sets avatarUrl to null)
+ */
+export const RemoveOfficerAvatarParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const RemoveOfficerAvatarResponse = zod.object({
+  "id": zod.number(),
+  "dienstnummer": zod.string(),
+  "name": zod.string(),
+  "rank": zod.string(),
+  "division": zod.string(),
+  "status": zod.string().describe('Anwesend | In Einsatz | Pause | Abwesend'),
+  "radioStatus": zod.string().optional().describe('Aktiv | Ausgeschaltet'),
+  "radioFreq": zod.string(),
+  "avatarUrl": zod.string().nullish(),
+  "deckname": zod.string().nullish(),
+  "telNr": zod.string().nullish(),
+  "abmeldungBis": zod.string().nullish(),
+  "beitritt": zod.string().nullish(),
+  "einweisung": zod.boolean(),
+  "waffenfreigabeLMG": zod.boolean(),
+  "waffenfreigabeHeavySniper": zod.boolean(),
+  "freigabeCCU": zod.boolean(),
+  "freigabeZivil": zod.boolean(),
+  "freigabeUndercover": zod.boolean(),
+  "meldeamtSAHP": zod.boolean(),
+  "meldeamtPD": zod.boolean(),
+  "meldeamtLI": zod.boolean(),
+  "idChange": zod.boolean(),
+  "allowedPages": zod.array(zod.string()).nullish().describe('Erlaubte Sidebar-Seiten. null = alle Seiten erlaubt.'),
+  "freigegeben": zod.boolean()
+})
+
+
+/**
  * @summary List all ID change requests
  */
 export const GetIdChangesResponseItem = zod.object({

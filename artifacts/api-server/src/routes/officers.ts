@@ -250,6 +250,46 @@ router.post("/:id/avatar", (req, res) => {
   });
 });
 
+router.delete("/:id/avatar", async (req, res) => {
+  const current = await resolveOfficer(req);
+  if (!current) {
+    return res.status(401).json({ error: "Nicht angemeldet" });
+  }
+  const id = parseInt(req.params.id);
+  if (!Number.isInteger(id)) {
+    return res.status(400).json({ error: "Ungültige ID" });
+  }
+  if (current.id !== id) {
+    return res.status(403).json({ error: "Sie können nur Ihr eigenes Profilbild ändern" });
+  }
+
+  const [existing] = await db.select().from(officersTable).where(eq(officersTable.id, id));
+  if (!existing) return res.status(404).json({ error: "Officer nicht gefunden" });
+
+  const oldUrl = existing.avatarUrl;
+  const [updated] = await db
+    .update(officersTable)
+    .set({ avatarUrl: null })
+    .where(eq(officersTable.id, id))
+    .returning();
+  if (!updated) return res.status(404).json({ error: "Officer nicht gefunden" });
+
+  const prefix = "/api/storage/objects/";
+  const privateObjectDir = process.env.PRIVATE_OBJECT_DIR;
+  if (oldUrl && oldUrl.startsWith(prefix) && privateObjectDir) {
+    try {
+      const rel = oldUrl.slice(prefix.length);
+      const { bucketName, gcsPrefix } = parsePrivateObjectDir(privateObjectDir);
+      const objectName = gcsPrefix ? `${gcsPrefix}/${rel}` : rel;
+      await objectStorageClient.bucket(bucketName).file(objectName).delete({ ignoreNotFound: true });
+    } catch (e) {
+      req.log.warn({ err: e, oldUrl }, "Could not delete old avatar object from storage");
+    }
+  }
+
+  return res.json(stripHash(updated));
+});
+
 router.get("/:id", async (req, res) => {
   const id = parseInt(req.params.id);
   const [officer] = await db.select().from(officersTable).where(eq(officersTable.id, id));

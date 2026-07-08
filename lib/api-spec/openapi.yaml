@@ -740,6 +740,33 @@ paths:
         "404":
           description: Officer not found
 
+  /officers/{id}/avatar:
+    delete:
+      operationId: removeOfficerAvatar
+      tags: [officers]
+      summary: Remove own profile picture (sets avatarUrl to null)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Avatar removed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Officer"
+        "400":
+          description: Invalid ID
+        "401":
+          description: Not authenticated
+        "403":
+          description: Not allowed to change this officer's avatar
+        "404":
+          description: Officer not found
+
   /idchanges:
     get:
       operationId: getIdChanges

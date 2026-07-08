@@ -2602,6 +2602,76 @@ export const useResetOfficerPassword = <TError = ErrorType<void>,
       return useMutation(getResetOfficerPasswordMutationOptions(options));
     }
 
+export const getRemoveOfficerAvatarUrl = (id: number,) => {
+
+
+
+
+  return `/api/officers/${id}/avatar`
+}
+
+/**
+ * @summary Remove own profile picture (sets avatarUrl to null)
+ */
+export const removeOfficerAvatar = async (id: number, options?: RequestInit): Promise<Officer> => {
+
+  return customFetch<Officer>(getRemoveOfficerAvatarUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getRemoveOfficerAvatarMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof removeOfficerAvatar>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof removeOfficerAvatar>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['removeOfficerAvatar'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof removeOfficerAvatar>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  removeOfficerAvatar(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RemoveOfficerAvatarMutationResult = NonNullable<Awaited<ReturnType<typeof removeOfficerAvatar>>>
+
+    export type RemoveOfficerAvatarMutationError = ErrorType<void>
+
+    /**
+ * @summary Remove own profile picture (sets avatarUrl to null)
+ */
+export const useRemoveOfficerAvatar = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof removeOfficerAvatar>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof removeOfficerAvatar>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getRemoveOfficerAvatarMutationOptions(options));
+    }
+
 export const getGetIdChangesUrl = () => {
 
 
