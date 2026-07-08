@@ -242,7 +242,7 @@ export default function Streifen() {
     }
   }
 
-  const onDutyOfficers = officers ?? [];
+  const onDutyOfficers = (officers ?? []).filter(o => assignedMap.has(o.id));
 
   return (
     <div className="space-y-4">
@@ -435,10 +435,18 @@ export default function Streifen() {
               <Users className="w-4 h-4 text-[#c9a227]" />
               <div>
                 <h2 className="text-xs font-semibold text-white">Officer im Dienst</h2>
-                <p className="text-xs text-gray-500">Übersicht aller aktuell angemeldeten Officer.</p>
+                <p className="text-xs text-gray-500">Officer, die aktuell in einer Streife eingetragen sind.</p>
               </div>
             </div>
             <div className="divide-y divide-[#1e2d4a]/40 max-h-[500px] overflow-y-auto">
+              {onDutyOfficers.length === 0 && (
+                <div className="px-4 py-6 text-center" data-testid="text-no-officers-on-duty">
+                  <p className="text-xs text-gray-500">Keine Officer im Dienst.</p>
+                  <p className="text-[11px] text-gray-600 mt-1">
+                    Officer erscheinen hier, sobald sie in eine Streife eingetragen sind.
+                  </p>
+                </div>
+              )}
               {onDutyOfficers.map(o => {
                 const a = assignedMap.get(o.id);
                 const status = a ? (a.abwesend ? "Abwesend" : "Anwesend") : "Abwesend";
