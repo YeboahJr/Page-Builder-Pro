@@ -83,6 +83,10 @@ export interface ChangePasswordInput {
   newPassword: string;
 }
 
+export interface ResetPasswordInput {
+  newPassword: string;
+}
+
 export interface ChangePasswordResult {
   success: boolean;
 }

@@ -709,6 +709,37 @@ paths:
         "404":
           description: Officer not found
 
+  /officers/{id}/reset-password:
+    post:
+      operationId: resetOfficerPassword
+      tags: [officers]
+      summary: Reset an officer's password to a temporary value (leadership only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResetPasswordInput"
+      responses:
+        "200":
+          description: Password reset
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChangePasswordResult"
+        "400":
+          description: Invalid input
+        "403":
+          description: Only leadership may reset passwords
+        "404":
+          description: Officer not found
+
   /idchanges:
     get:
       operationId: getIdChanges
@@ -974,6 +1005,13 @@ components:
       properties:
         currentPassword:
           type: string
+        newPassword:
+          type: string
+
+    ResetPasswordInput:
+      type: object
+      required: [newPassword]
+      properties:
         newPassword:
           type: string
 

@@ -169,6 +169,32 @@ router.post("/:id/password", async (req, res) => {
   return res.json({ success: true });
 });
 
+router.post("/:id/reset-password", async (req, res) => {
+  const current = await resolveOfficer(req);
+  if (!current || !isLeadership(current.rank)) {
+    return res.status(403).json({ error: "Nur die Leitung darf Passwörter zurücksetzen" });
+  }
+  const id = parseInt(req.params.id);
+  if (!Number.isInteger(id)) {
+    return res.status(400).json({ error: "Ungültige ID" });
+  }
+  const body = req.body as Record<string, unknown>;
+  const newPassword = typeof body.newPassword === "string" ? body.newPassword : "";
+  if (!newPassword) {
+    return res.status(400).json({ error: "Neues Passwort ist erforderlich" });
+  }
+  if (newPassword.length < 4) {
+    return res.status(400).json({ error: "Das neue Passwort muss mindestens 4 Zeichen lang sein" });
+  }
+  const [updated] = await db
+    .update(officersTable)
+    .set({ passwortHash: hashPassword(newPassword) })
+    .where(eq(officersTable.id, id))
+    .returning();
+  if (!updated) return res.status(404).json({ error: "Officer nicht gefunden" });
+  return res.json({ success: true });
+});
+
 router.post("/:id/avatar", (req, res) => {
   avatarUpload.single("file")(req, res, async (err: unknown) => {
     if (err) {

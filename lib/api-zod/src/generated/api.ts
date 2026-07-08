@@ -842,6 +842,22 @@ export const ChangeOfficerPasswordResponse = zod.object({
 
 
 /**
+ * @summary Reset an officer's password to a temporary value (leadership only)
+ */
+export const ResetOfficerPasswordParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ResetOfficerPasswordBody = zod.object({
+  "newPassword": zod.string()
+})
+
+export const ResetOfficerPasswordResponse = zod.object({
+  "success": zod.boolean()
+})
+
+
+/**
  * @summary List all ID change requests
  */
 export const GetIdChangesResponseItem = zod.object({

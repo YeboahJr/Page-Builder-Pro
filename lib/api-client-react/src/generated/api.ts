@@ -52,6 +52,7 @@ import type {
   ReportInput,
   ReportStats,
   ReportUpdate,
+  ResetPasswordInput,
   StatusHistoryEntry,
   UpdateIdChange,
   UpdateOfficerPagesInput,
@@ -2528,6 +2529,77 @@ export const useChangeOfficerPassword = <TError = ErrorType<void>,
         TContext
       > => {
       return useMutation(getChangeOfficerPasswordMutationOptions(options));
+    }
+
+export const getResetOfficerPasswordUrl = (id: number,) => {
+
+
+
+
+  return `/api/officers/${id}/reset-password`
+}
+
+/**
+ * @summary Reset an officer's password to a temporary value (leadership only)
+ */
+export const resetOfficerPassword = async (id: number,
+    resetPasswordInput: ResetPasswordInput, options?: RequestInit): Promise<ChangePasswordResult> => {
+
+  return customFetch<ChangePasswordResult>(getResetOfficerPasswordUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(resetPasswordInput)
+  }
+);}
+
+
+
+
+export const getResetOfficerPasswordMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof resetOfficerPassword>>, TError,{id: number;data: BodyType<ResetPasswordInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof resetOfficerPassword>>, TError,{id: number;data: BodyType<ResetPasswordInput>}, TContext> => {
+
+const mutationKey = ['resetOfficerPassword'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof resetOfficerPassword>>, {id: number;data: BodyType<ResetPasswordInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  resetOfficerPassword(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ResetOfficerPasswordMutationResult = NonNullable<Awaited<ReturnType<typeof resetOfficerPassword>>>
+    export type ResetOfficerPasswordMutationBody = BodyType<ResetPasswordInput>
+    export type ResetOfficerPasswordMutationError = ErrorType<void>
+
+    /**
+ * @summary Reset an officer's password to a temporary value (leadership only)
+ */
+export const useResetOfficerPassword = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof resetOfficerPassword>>, TError,{id: number;data: BodyType<ResetPasswordInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof resetOfficerPassword>>,
+        TError,
+        {id: number;data: BodyType<ResetPasswordInput>},
+        TContext
+      > => {
+      return useMutation(getResetOfficerPasswordMutationOptions(options));
     }
 
 export const getGetIdChangesUrl = () => {

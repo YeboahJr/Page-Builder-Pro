@@ -39,6 +39,7 @@ export * from './report';
 export * from './reportInput';
 export * from './reportStats';
 export * from './reportUpdate';
+export * from './resetPasswordInput';
 export * from './statusHistoryEntry';
 export * from './updateIdChange';
 export * from './updateOfficerPagesInput';

@@ -4,11 +4,12 @@ import {
   useUpdateOfficerPermissions,
   useCreateOfficer,
   useDeleteOfficer,
+  useResetOfficerPassword,
   getGetOfficersQueryKey,
   type Officer,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Users, Check, Pencil, X, Plus, Trash2 } from "lucide-react";
+import { Users, Check, Pencil, X, Plus, Trash2, KeyRound, RefreshCw } from "lucide-react";
 import DeleteConfirmModal from "@/components/DeleteConfirmModal";
 
 const CHECKBOX_COLS = [
@@ -100,6 +101,13 @@ function draftFromOfficer(o: Officer): Draft {
   return d;
 }
 
+function generateTempPassword(): string {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789";
+  const bytes = new Uint32Array(10);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes, b => chars[b % chars.length]).join("");
+}
+
 const inputCls =
   "bg-[#0a0f1a] border border-[#c9a227]/40 rounded px-1.5 py-1 text-white text-xs outline-none focus:border-[#c9a227]";
 
@@ -117,6 +125,13 @@ export default function Personal() {
   const [busyId, setBusyId] = useState<number | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Officer | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  const resetPassword = useResetOfficerPassword();
+  const [resetTarget, setResetTarget] = useState<Officer | null>(null);
+  const [resetPasswordValue, setResetPasswordValue] = useState("");
+  const [resetError, setResetError] = useState<string | null>(null);
+  const [resetBusy, setResetBusy] = useState(false);
+  const [resetDone, setResetDone] = useState(false);
 
   const [showNew, setShowNew] = useState(false);
   const [newForm, setNewForm] = useState({ dienstnummer: "", name: "", rank: RANKS[RANKS.length - 1].name, passwort: "", deckname: "", telNr: "", abmeldungBis: "", beitritt: "" });
@@ -237,6 +252,45 @@ export default function Personal() {
       setNewError("Konnte nicht angelegt werden. Ist die Dienstnummer evtl. schon vergeben?");
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const openReset = (o: Officer) => {
+    setResetTarget(o);
+    setResetPasswordValue(generateTempPassword());
+    setResetError(null);
+    setResetDone(false);
+  };
+
+  const closeReset = () => {
+    if (resetBusy) return;
+    setResetTarget(null);
+    setResetPasswordValue("");
+    setResetError(null);
+    setResetDone(false);
+  };
+
+  const confirmReset = async () => {
+    if (!resetTarget) return;
+    const pw = resetPasswordValue.trim();
+    if (pw.length < 4) {
+      setResetError("Das Passwort muss mindestens 4 Zeichen lang sein.");
+      return;
+    }
+    setResetBusy(true);
+    setResetError(null);
+    try {
+      await resetPassword.mutateAsync({ id: resetTarget.id, data: { newPassword: pw } });
+      setResetDone(true);
+    } catch (err) {
+      const status = (err as { response?: { status?: number } })?.response?.status;
+      setResetError(
+        status === 403
+          ? "Nur die Leitung darf Passwörter zurücksetzen."
+          : "Zurücksetzen fehlgeschlagen — bitte erneut versuchen."
+      );
+    } finally {
+      setResetBusy(false);
     }
   };
 
@@ -389,6 +443,9 @@ export default function Personal() {
                         <button onClick={() => startEdit(o)} disabled={busy} className="p-1 rounded bg-[#1e3a8a]/40 text-blue-300 hover:bg-[#1e3a8a]/60 disabled:opacity-50" title="Bearbeiten">
                           <Pencil className="w-3.5 h-3.5" />
                         </button>
+                        <button onClick={() => openReset(o)} disabled={busy} className="p-1 rounded bg-[#c9a227]/20 text-[#c9a227] hover:bg-[#c9a227]/30 disabled:opacity-50" title="Passwort zurücksetzen" data-testid={`reset-password-${o.id}`}>
+                          <KeyRound className="w-3.5 h-3.5" />
+                        </button>
                         <button onClick={() => { setDeleteError(null); setDeleteTarget(o); }} disabled={busy} className="p-1 rounded bg-red-900/30 text-red-400 hover:bg-red-900/50 disabled:opacity-50" title="Löschen">
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
@@ -454,6 +511,80 @@ export default function Personal() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+      {resetTarget && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+          <div className="bg-[#0d1526] border border-[#1e2d4a] rounded-lg w-full max-w-md">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-[#1e2d4a]">
+              <h2 className="text-sm font-semibold text-white flex items-center gap-2">
+                <KeyRound className="w-4 h-4 text-[#c9a227]" /> Passwort zurücksetzen
+              </h2>
+              <button onClick={closeReset} className="text-gray-500 hover:text-gray-300"><X className="w-4 h-4" /></button>
+            </div>
+            <div className="p-5 space-y-4">
+              {resetDone ? (
+                <>
+                  <p className="text-xs text-gray-300">
+                    Das Passwort von{" "}
+                    <span className="text-white font-medium">{resetTarget.name} ({resetTarget.dienstnummer})</span>{" "}
+                    wurde zurückgesetzt.
+                  </p>
+                  <div>
+                    <label className="block text-[10px] text-gray-400 mb-1 uppercase tracking-wider">Temporäres Passwort — jetzt notieren und dem Beamten mitteilen</label>
+                    <div className="bg-[#0a0f1a] border border-[#c9a227]/40 rounded px-3 py-2 text-sm text-[#c9a227] font-mono select-all" data-testid="reset-password-result">
+                      {resetPasswordValue.trim()}
+                    </div>
+                  </div>
+                  <div className="flex justify-end pt-1">
+                    <button onClick={closeReset} className="bg-[#1e3a8a] hover:bg-[#1e40af] text-white px-4 py-1.5 rounded text-xs font-medium transition-colors">
+                      Schließen
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <p className="text-xs text-gray-300">
+                    Neues temporäres Passwort für{" "}
+                    <span className="text-white font-medium">{resetTarget.name} ({resetTarget.dienstnummer})</span>{" "}
+                    setzen. Das bisherige Passwort wird dabei ungültig.
+                  </p>
+                  <div>
+                    <label className="block text-[10px] text-gray-400 mb-1 uppercase tracking-wider">Temporäres Passwort</label>
+                    <div className="flex gap-2">
+                      <input
+                        value={resetPasswordValue}
+                        onChange={e => setResetPasswordValue(e.target.value)}
+                        className="flex-1 bg-[#0a0f1a] border border-[#1e2d4a] rounded px-2.5 py-1.5 text-xs text-white font-mono outline-none focus:border-[#c9a227]/50"
+                        data-testid="reset-password-input"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setResetPasswordValue(generateTempPassword())}
+                        className="p-1.5 rounded border border-[#1e2d4a] text-gray-400 hover:text-[#c9a227] hover:border-[#c9a227]/50 transition-colors"
+                        title="Neues Passwort generieren"
+                      >
+                        <RefreshCw className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                    <p className="text-[10px] text-gray-500 mt-1">Mindestens 4 Zeichen. Sie können das generierte Passwort auch überschreiben.</p>
+                  </div>
+                  {resetError && <p className="text-xs text-red-400">{resetError}</p>}
+                  <div className="flex justify-end gap-2 pt-1">
+                    <button onClick={closeReset} disabled={resetBusy} className="px-3 py-1.5 rounded text-xs text-gray-400 hover:text-white transition-colors disabled:opacity-50">Abbrechen</button>
+                    <button
+                      onClick={confirmReset}
+                      disabled={resetBusy}
+                      className="bg-[#c9a227] hover:bg-[#b8941f] disabled:opacity-50 text-black px-4 py-1.5 rounded text-xs font-semibold transition-colors"
+                      data-testid="reset-password-confirm"
+                    >
+                      {resetBusy ? "Zurücksetzen..." : "Passwort zurücksetzen"}
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
           </div>
         </div>
       )}
