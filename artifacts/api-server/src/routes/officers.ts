@@ -168,7 +168,8 @@ router.post("/:id/avatar", (req, res) => {
       const bucket = objectStorageClient.bucket(bucketName);
       const ext = path.extname(file.originalname) || `.${file.mimetype.split("/")[1]}`;
       const unique = `avatar-${id}-${Date.now()}-${randomUUID()}${ext}`;
-      const objectName = `${gcsPrefix}/avatars/${unique}`;
+      const rel = `avatars/${unique}`;
+      const objectName = gcsPrefix ? `${gcsPrefix}/${rel}` : rel;
       const gcsFile = bucket.file(objectName);
       await gcsFile.save(file.buffer, { contentType: file.mimetype, resumable: false });
 
