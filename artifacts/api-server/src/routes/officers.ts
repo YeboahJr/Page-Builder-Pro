@@ -7,6 +7,7 @@ import { randomUUID } from "crypto";
 import { objectStorageClient } from "../lib/objectStorage";
 import { parsePrivateObjectDir } from "@workspace/object-storage";
 import { hashPassword, resolveOfficer, isLeadership } from "../lib/auth";
+import { parseAllowedPages } from "../lib/pages";
 
 const router = Router();
 
@@ -74,12 +75,47 @@ router.post("/:id/approve", async (req, res) => {
   if (!rank) {
     return res.status(400).json({ error: "Rang ist erforderlich" });
   }
+  const allowedPages = parseAllowedPages(body.allowedPages);
+  if (allowedPages === null) {
+    return res.status(400).json({ error: "Ungültige Seitenrechte" });
+  }
   const [updated] = await db
     .update(officersTable)
-    .set({ rank, freigegeben: true, status: "Anwesend" })
+    .set({
+      rank,
+      freigegeben: true,
+      status: "Anwesend",
+      ...(allowedPages !== undefined ? { allowedPages } : {}),
+    })
     .where(and(eq(officersTable.id, id), eq(officersTable.freigegeben, false)))
     .returning();
   if (!updated) return res.status(404).json({ error: "Keine offene Registrierung gefunden" });
+  return res.json(stripHash(updated));
+});
+
+router.put("/:id/pages", async (req, res) => {
+  const current = await resolveOfficer(req);
+  if (!current) {
+    return res.status(401).json({ error: "Nicht angemeldet" });
+  }
+  if (!isLeadership(current.rank)) {
+    return res.status(403).json({ error: "Nur die Leitung darf Seitenrechte ändern" });
+  }
+  const id = parseInt(req.params.id);
+  if (!Number.isInteger(id)) {
+    return res.status(400).json({ error: "Ungültige ID" });
+  }
+  const body = req.body as Record<string, unknown>;
+  const allowedPages = parseAllowedPages(body.allowedPages);
+  if (allowedPages === undefined || allowedPages === null) {
+    return res.status(400).json({ error: "Ungültige Seitenrechte" });
+  }
+  const [updated] = await db
+    .update(officersTable)
+    .set({ allowedPages })
+    .where(eq(officersTable.id, id))
+    .returning();
+  if (!updated) return res.status(404).json({ error: "Officer nicht gefunden" });
   return res.json(stripHash(updated));
 });
 

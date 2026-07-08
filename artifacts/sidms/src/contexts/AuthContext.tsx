@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, ReactNode, useEffect } from "react";
 import { useLocation } from "wouter";
-import { useLogin, useRegister } from "@workspace/api-client-react";
+import { useLogin, useRegister, useGetMe, getGetMeQueryKey } from "@workspace/api-client-react";
 
 interface OfficerData {
   id: number;
@@ -12,6 +12,7 @@ interface OfficerData {
   radioStatus: string;
   radioFreq: string;
   avatarUrl: string | null;
+  allowedPages?: string[] | null;
 }
 
 interface AuthContextType {
@@ -45,6 +46,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const loginMutation = useLogin();
   const registerMutation = useRegister();
+
+  const meQuery = useGetMe({
+    query: { enabled: isAuthenticated, queryKey: getGetMeQueryKey(), retry: false },
+  });
+
+  useEffect(() => {
+    if (meQuery.data) {
+      const fresh = meQuery.data as unknown as OfficerData;
+      setOfficer((prev) => {
+        if (!prev) return prev;
+        const next = { ...prev, ...fresh };
+        sessionStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+        return next;
+      });
+    }
+  }, [meQuery.data]);
 
   const login = async (dienstnummer: string, passwort: string) => {
     setError(null);

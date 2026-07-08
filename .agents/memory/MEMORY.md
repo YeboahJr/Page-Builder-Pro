@@ -1,2 +1,3 @@
 - [SIDMS Architecture](sidms-architecture.md) — Key decisions: API server builds before starting (pnpm run build && start), not hot-reloaded; must restart workflow to pick up route changes.
 - [SIDMS Auth](sidms-auth.md) — seeded officers use plain dienstnummers (e.g. 08/34/39), not D-1xxx; self-registration → freigegeben gate (403 login) + leadership approve/reject only on pending.
+- [SIDMS Seitenrechte](sidms-page-rights.md) — allowedPages null = alle Seiten; Keys in api-server und sidms bewusst dupliziert; nur UI-Gating, Daten-API nicht gefiltert; Leitung sieht immer alles.

@@ -49,6 +49,7 @@ export const LoginResponse = zod.object({
   "meldeamtPD": zod.boolean(),
   "meldeamtLI": zod.boolean(),
   "idChange": zod.boolean(),
+  "allowedPages": zod.array(zod.string()).nullish().describe('Erlaubte Sidebar-Seiten. null = alle Seiten erlaubt.'),
   "freigegeben": zod.boolean()
 }),
   "token": zod.string()
@@ -97,6 +98,7 @@ export const GetMeResponse = zod.object({
   "meldeamtPD": zod.boolean(),
   "meldeamtLI": zod.boolean(),
   "idChange": zod.boolean(),
+  "allowedPages": zod.array(zod.string()).nullish().describe('Erlaubte Sidebar-Seiten. null = alle Seiten erlaubt.'),
   "freigegeben": zod.boolean()
 })
 
@@ -543,6 +545,7 @@ export const GetOfficersResponseItem = zod.object({
   "meldeamtPD": zod.boolean(),
   "meldeamtLI": zod.boolean(),
   "idChange": zod.boolean(),
+  "allowedPages": zod.array(zod.string()).nullish().describe('Erlaubte Sidebar-Seiten. null = alle Seiten erlaubt.'),
   "freigegeben": zod.boolean()
 })
 export const GetOfficersResponse = zod.array(GetOfficersResponseItem)
@@ -586,6 +589,7 @@ export const CreateOfficerResponse = zod.object({
   "meldeamtPD": zod.boolean(),
   "meldeamtLI": zod.boolean(),
   "idChange": zod.boolean(),
+  "allowedPages": zod.array(zod.string()).nullish().describe('Erlaubte Sidebar-Seiten. null = alle Seiten erlaubt.'),
   "freigegeben": zod.boolean()
 })
 
@@ -617,6 +621,7 @@ export const GetPendingOfficersResponseItem = zod.object({
   "meldeamtPD": zod.boolean(),
   "meldeamtLI": zod.boolean(),
   "idChange": zod.boolean(),
+  "allowedPages": zod.array(zod.string()).nullish().describe('Erlaubte Sidebar-Seiten. null = alle Seiten erlaubt.'),
   "freigegeben": zod.boolean()
 })
 export const GetPendingOfficersResponse = zod.array(GetPendingOfficersResponseItem)
@@ -630,7 +635,8 @@ export const ApproveOfficerParams = zod.object({
 })
 
 export const ApproveOfficerBody = zod.object({
-  "rank": zod.string()
+  "rank": zod.string(),
+  "allowedPages": zod.array(zod.string()).optional()
 })
 
 export const ApproveOfficerResponse = zod.object({
@@ -657,6 +663,47 @@ export const ApproveOfficerResponse = zod.object({
   "meldeamtPD": zod.boolean(),
   "meldeamtLI": zod.boolean(),
   "idChange": zod.boolean(),
+  "allowedPages": zod.array(zod.string()).nullish().describe('Erlaubte Sidebar-Seiten. null = alle Seiten erlaubt.'),
+  "freigegeben": zod.boolean()
+})
+
+
+/**
+ * @summary Update an officer's allowed sidebar pages (leadership only)
+ */
+export const UpdateOfficerPagesParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateOfficerPagesBody = zod.object({
+  "allowedPages": zod.array(zod.string())
+})
+
+export const UpdateOfficerPagesResponse = zod.object({
+  "id": zod.number(),
+  "dienstnummer": zod.string(),
+  "name": zod.string(),
+  "rank": zod.string(),
+  "division": zod.string(),
+  "status": zod.string().describe('Anwesend | In Einsatz | Pause | Abwesend'),
+  "radioStatus": zod.string().optional().describe('Aktiv | Ausgeschaltet'),
+  "radioFreq": zod.string(),
+  "avatarUrl": zod.string().nullish(),
+  "deckname": zod.string().nullish(),
+  "telNr": zod.string().nullish(),
+  "abmeldungBis": zod.string().nullish(),
+  "beitritt": zod.string().nullish(),
+  "einweisung": zod.boolean(),
+  "waffenfreigabeLMG": zod.boolean(),
+  "waffenfreigabeHeavySniper": zod.boolean(),
+  "freigabeCCU": zod.boolean(),
+  "freigabeZivil": zod.boolean(),
+  "freigabeUndercover": zod.boolean(),
+  "meldeamtSAHP": zod.boolean(),
+  "meldeamtPD": zod.boolean(),
+  "meldeamtLI": zod.boolean(),
+  "idChange": zod.boolean(),
+  "allowedPages": zod.array(zod.string()).nullish().describe('Erlaubte Sidebar-Seiten. null = alle Seiten erlaubt.'),
   "freigegeben": zod.boolean()
 })
 
@@ -702,6 +749,7 @@ export const GetOfficerResponse = zod.object({
   "meldeamtPD": zod.boolean(),
   "meldeamtLI": zod.boolean(),
   "idChange": zod.boolean(),
+  "allowedPages": zod.array(zod.string()).nullish().describe('Erlaubte Sidebar-Seiten. null = alle Seiten erlaubt.'),
   "freigegeben": zod.boolean()
 })
 
@@ -761,6 +809,7 @@ export const UpdateOfficerPermissionsResponse = zod.object({
   "meldeamtPD": zod.boolean(),
   "meldeamtLI": zod.boolean(),
   "idChange": zod.boolean(),
+  "allowedPages": zod.array(zod.string()).nullish().describe('Erlaubte Sidebar-Seiten. null = alle Seiten erlaubt.'),
   "freigegeben": zod.boolean()
 })
 

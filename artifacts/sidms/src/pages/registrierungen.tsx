@@ -9,6 +9,7 @@ import {
 } from "@workspace/api-client-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { RANK_NAMES, isLeadership } from "@/lib/ranks";
+import { PAGE_DEFS, ALL_PAGE_KEYS } from "@/lib/pages";
 import { useToast } from "@/hooks/use-toast";
 
 const DEFAULT_RANK = "Agent";
@@ -25,6 +26,19 @@ export default function Registrierungen() {
   const approveMutation = useApproveOfficer();
   const rejectMutation = useRejectOfficer();
   const [ranks, setRanks] = useState<Record<number, string>>({});
+  const [pages, setPages] = useState<Record<number, string[]>>({});
+
+  const pagesFor = (id: number) => pages[id] ?? ALL_PAGE_KEYS;
+
+  const togglePage = (id: number, key: string) => {
+    setPages(prev => {
+      const current = prev[id] ?? ALL_PAGE_KEYS;
+      const next = current.includes(key)
+        ? current.filter(k => k !== key)
+        : [...current, key];
+      return { ...prev, [id]: next };
+    });
+  };
 
   const refresh = () =>
     queryClient.invalidateQueries({ queryKey: getGetPendingOfficersQueryKey() });
@@ -32,7 +46,7 @@ export default function Registrierungen() {
   const handleApprove = async (id: number) => {
     const rank = ranks[id] ?? DEFAULT_RANK;
     try {
-      await approveMutation.mutateAsync({ id, data: { rank } });
+      await approveMutation.mutateAsync({ id, data: { rank, allowedPages: pagesFor(id) } });
       toast({ title: "Freigegeben", description: `Officer wurde als „${rank}" freigegeben.` });
       refresh();
     } catch {
@@ -88,6 +102,7 @@ export default function Registrierungen() {
                 <th className="px-4 py-3 font-medium">Dienstnummer</th>
                 <th className="px-4 py-3 font-medium">Name</th>
                 <th className="px-4 py-3 font-medium">Rang zuweisen</th>
+                <th className="px-4 py-3 font-medium">Seitenrechte</th>
                 <th className="px-4 py-3 font-medium text-right">Aktion</th>
               </tr>
             </thead>
@@ -109,6 +124,25 @@ export default function Registrierungen() {
                           <option key={r} value={r}>{r}</option>
                         ))}
                       </select>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex flex-wrap gap-x-3 gap-y-1.5 max-w-xs">
+                        {PAGE_DEFS.map(p => (
+                          <label
+                            key={p.key}
+                            className="flex items-center gap-1.5 text-xs text-gray-300 cursor-pointer select-none"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={pagesFor(o.id).includes(p.key)}
+                              onChange={() => togglePage(o.id, p.key)}
+                              className="accent-[#c9a227] w-3.5 h-3.5"
+                              data-testid={`checkbox-page-${o.id}-${p.key}`}
+                            />
+                            {p.label}
+                          </label>
+                        ))}
+                      </div>
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-end gap-2">

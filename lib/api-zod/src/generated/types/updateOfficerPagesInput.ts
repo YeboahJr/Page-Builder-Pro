@@ -6,7 +6,6 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface ApproveOfficerInput {
-  rank: string;
-  allowedPages?: string[];
+export interface UpdateOfficerPagesInput {
+  allowedPages: string[];
 }

@@ -37,5 +37,10 @@ export interface Officer {
   meldeamtPD: boolean;
   meldeamtLI: boolean;
   idChange: boolean;
+  /**
+     * Erlaubte Sidebar-Seiten. null = alle Seiten erlaubt.
+     * @nullable
+     */
+  allowedPages?: string[] | null;
   freigegeben: boolean;
 }

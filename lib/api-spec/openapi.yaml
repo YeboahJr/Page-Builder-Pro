@@ -567,6 +567,39 @@ paths:
         "404":
           description: Officer not found
 
+  /officers/{id}/pages:
+    put:
+      operationId: updateOfficerPages
+      tags: [officers]
+      summary: Update an officer's allowed sidebar pages (leadership only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateOfficerPagesInput"
+      responses:
+        "200":
+          description: Updated officer
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Officer"
+        "400":
+          description: Invalid page keys
+        "401":
+          description: Not authenticated
+        "403":
+          description: Not authorized
+        "404":
+          description: Officer not found
+
   /officers/{id}/reject:
     post:
       operationId: rejectOfficer
@@ -887,6 +920,11 @@ components:
           type: boolean
         idChange:
           type: boolean
+        allowedPages:
+          type: ["array", "null"]
+          description: "Erlaubte Sidebar-Seiten. null = alle Seiten erlaubt."
+          items:
+            type: string
         freigegeben:
           type: boolean
 
@@ -916,6 +954,19 @@ components:
       properties:
         rank:
           type: string
+        allowedPages:
+          type: array
+          items:
+            type: string
+
+    UpdateOfficerPagesInput:
+      type: object
+      required: [allowedPages]
+      properties:
+        allowedPages:
+          type: array
+          items:
+            type: string
 
     ChangePasswordInput:
       type: object

@@ -19,9 +19,11 @@ import {
   FileText,
   UserCog,
   UserPlus,
+  Shield,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { isLeadership } from "@/lib/ranks";
+import { pageAllowed } from "@/lib/pages";
 import { initials } from "@/lib/initials";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
@@ -38,22 +40,24 @@ interface NavItem {
   icon: React.ComponentType<{ className?: string }>;
   label: string;
   href: string;
+  pageKey: string;
   children?: { label: string; href: string }[];
 }
 
 const navItems: NavItem[] = [
-  { icon: LayoutDashboard, label: "Dashboard", href: "/dashboard" },
-  { icon: Radio, label: "Leitstelle", href: "/leitstelle" },
-  { icon: Briefcase, label: "Fallmanagement", href: "/fallmanagement" },
+  { icon: LayoutDashboard, label: "Dashboard", href: "/dashboard", pageKey: "dashboard" },
+  { icon: Radio, label: "Leitstelle", href: "/leitstelle", pageKey: "leitstelle" },
+  { icon: Briefcase, label: "Fallmanagement", href: "/fallmanagement", pageKey: "fallmanagement" },
   {
     icon: Users,
     label: "Personal",
     href: "/personal",
+    pageKey: "personal",
     children: [
       { label: "ID Change", href: "/personal/id-change" },
     ],
   },
-  { icon: Archive, label: "Archiv", href: "/archiv" },
+  { icon: Archive, label: "Archiv", href: "/archiv", pageKey: "archiv" },
 ];
 
 const quickLinks = [
@@ -76,6 +80,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   const isActive = (href: string) => location === href || location.startsWith(href + "/");
 
+  const visibleNavItems = leadership
+    ? navItems
+    : navItems.filter((item) => pageAllowed(officer?.allowedPages, item.pageKey));
+
   return (
     <div className="min-h-screen bg-background text-foreground flex dark">
       {/* Sidebar */}
@@ -92,7 +100,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         {/* Nav */}
         <div className="flex-1 py-4 overflow-y-auto">
           <nav className="px-2 space-y-0.5">
-            {navItems.map((item) => {
+            {visibleNavItems.map((item) => {
               const active = isActive(item.href);
               const isExpanded = expanded.includes(item.href);
               const hasChildren = item.children && item.children.length > 0;
@@ -169,6 +177,21 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               >
                 <UserPlus className="w-4 h-4 flex-shrink-0" />
                 <span className="font-medium">Registrierungen</span>
+              </Link>
+            )}
+
+            {leadership && (
+              <Link
+                href="/administration"
+                className={`flex items-center gap-2.5 px-3 py-2 rounded cursor-pointer transition-colors text-sm
+                  ${isActive("/administration")
+                    ? "bg-primary/10 text-primary border-l-2 border-primary"
+                    : "text-muted-foreground hover:bg-white/5 hover:text-foreground"
+                  }`}
+                data-testid="nav-administration"
+              >
+                <Shield className="w-4 h-4 flex-shrink-0" />
+                <span className="font-medium">Administration</span>
               </Link>
             )}
           </nav>

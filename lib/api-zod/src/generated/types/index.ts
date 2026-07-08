@@ -41,6 +41,7 @@ export * from './reportStats';
 export * from './reportUpdate';
 export * from './statusHistoryEntry';
 export * from './updateIdChange';
+export * from './updateOfficerPagesInput';
 export * from './updateOfficerPermissions';
 export * from './uploadUrlRequest';
 export * from './uploadUrlResponse';

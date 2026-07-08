@@ -45,6 +45,11 @@ export interface Officer {
   meldeamtPD: boolean;
   meldeamtLI: boolean;
   idChange: boolean;
+  /**
+     * Erlaubte Sidebar-Seiten. null = alle Seiten erlaubt.
+     * @nullable
+     */
+  allowedPages?: string[] | null;
   freigegeben: boolean;
 }
 
@@ -66,6 +71,11 @@ export interface RegisterResult {
 
 export interface ApproveOfficerInput {
   rank: string;
+  allowedPages?: string[];
+}
+
+export interface UpdateOfficerPagesInput {
+  allowedPages: string[];
 }
 
 export interface ChangePasswordInput {
