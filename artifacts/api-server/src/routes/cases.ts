@@ -223,6 +223,19 @@ router.get("/:id/agents", async (req, res) => {
 });
 
 router.post("/:id/evidence/upload", upload.array("files", 20), async (req, res) => {
+  const rawId = String(req.params.id);
+  const caseId = parseInt(rawId);
+  if (!Number.isInteger(caseId) || caseId <= 0 || String(caseId) !== rawId) {
+    res.status(400).json({ error: "Ungültige ID" });
+    return;
+  }
+
+  const [existingCase] = await db.select({ id: casesTable.id }).from(casesTable).where(eq(casesTable.id, caseId));
+  if (!existingCase) {
+    res.status(404).json({ error: "Fall nicht gefunden" });
+    return;
+  }
+
   const files = (req.files as Express.Multer.File[]) ?? [];
   const privateObjectDir = process.env.PRIVATE_OBJECT_DIR;
 
@@ -234,7 +247,6 @@ router.post("/:id/evidence/upload", upload.array("files", 20), async (req, res) 
 
   const { bucketName, gcsPrefix } = parsePrivateObjectDir(privateObjectDir);
   const bucket = objectStorageClient.bucket(bucketName);
-  const caseId = parseInt(String(req.params.id));
   const uploadedBy = await resolveOfficerName(req);
 
   const results = await Promise.all(files.map(async (f) => {
@@ -273,7 +285,19 @@ router.post("/:id/evidence/upload", upload.array("files", 20), async (req, res) 
 });
 
 router.delete("/:id/evidence/:filename", async (req, res) => {
-  const { id, filename } = req.params;
+  const { filename } = req.params;
+  const id = parseInt(req.params.id);
+  if (!Number.isInteger(id) || id <= 0 || String(id) !== req.params.id) {
+    res.status(400).json({ error: "Ungültige ID" });
+    return;
+  }
+
+  const [existingCase] = await db.select({ id: casesTable.id }).from(casesTable).where(eq(casesTable.id, id));
+  if (!existingCase) {
+    res.status(404).json({ error: "Fall nicht gefunden" });
+    return;
+  }
+
   const privateObjectDir = process.env.PRIVATE_OBJECT_DIR;
 
   if (!privateObjectDir) {
