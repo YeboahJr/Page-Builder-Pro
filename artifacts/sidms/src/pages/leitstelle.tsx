@@ -356,28 +356,45 @@ export default function Streifen() {
                             <span className="text-[10px] uppercase tracking-wide text-gray-500 font-mono">
                               Position {slot.position}
                             </span>
-                            <select
-                              value={slot.officerName ?? ""}
-                              onChange={e => {
-                                const name = e.target.value;
-                                const officer = officers?.find(o => o.name != null && o.name === name);
-                                updateSlot(patrol.id, idx, {
-                                  officerName: name || null,
-                                  officerId: officer?.id ?? null,
-                                  abwesend: false,
-                                  funkAus: false,
-                                });
-                              }}
-                              className="bg-[#0a0f1a] border border-[#253650] text-gray-300 text-xs px-1 py-1 rounded focus:outline-none w-full"
-                              data-testid={`select-officer-${patrol.id}-${idx}`}
-                            >
-                              <option value="">Dienstnummer wählen</option>
-                              {officers?.map(o => (
-                                <option key={o.id} value={o.name}>
-                                  {o.dienstnummer} – {o.name}
-                                </option>
-                              ))}
-                            </select>
+                            <div className="flex items-center gap-1.5">
+                              {slot.officerName && (
+                                <OfficerAvatar
+                                  name={slot.officerName}
+                                  avatarUrl={
+                                    officers?.find(o =>
+                                      slot.officerId != null
+                                        ? o.id === slot.officerId
+                                        : o.name === slot.officerName
+                                    )?.avatarUrl
+                                  }
+                                  className="w-6 h-6 flex-shrink-0"
+                                  fallbackClassName="text-[9px]"
+                                  testId={`avatar-slot-${patrol.id}-${idx}`}
+                                />
+                              )}
+                              <select
+                                value={slot.officerName ?? ""}
+                                onChange={e => {
+                                  const name = e.target.value;
+                                  const officer = officers?.find(o => o.name != null && o.name === name);
+                                  updateSlot(patrol.id, idx, {
+                                    officerName: name || null,
+                                    officerId: officer?.id ?? null,
+                                    abwesend: false,
+                                    funkAus: false,
+                                  });
+                                }}
+                                className="bg-[#0a0f1a] border border-[#253650] text-gray-300 text-xs px-1 py-1 rounded focus:outline-none w-full min-w-0 flex-1"
+                                data-testid={`select-officer-${patrol.id}-${idx}`}
+                              >
+                                <option value="">Dienstnummer wählen</option>
+                                {officers?.map(o => (
+                                  <option key={o.id} value={o.name}>
+                                    {o.dienstnummer} – {o.name}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
                             <div className="flex items-center gap-3">
                               <label
                                 className={`flex items-center gap-1 text-[10px] ${slot.officerId ? "text-gray-300" : "text-gray-600"}`}
