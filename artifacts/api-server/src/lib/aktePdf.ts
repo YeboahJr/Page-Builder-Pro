@@ -1,4 +1,5 @@
 import PDFDocument from "pdfkit";
+import fibEmblem from "../assets/fib-emblem-gray.png";
 
 // Data needed to render a case file ("Akte") as a PDF document that follows
 // the user's Google-Doc template as closely as possible: DOJ/FIB letterhead
@@ -39,34 +40,48 @@ export function buildAktePdf(data: AktePdfData): PDFKit.PDFDocument {
   const left = doc.page.margins.left;
   const pageWidth = doc.page.width - doc.page.margins.left - doc.page.margins.right;
 
-  // ---------- Letterhead: DOJ/FIB left, Aktenzeichen/Sachbearbeiter/Datum right ----------
+  // ---------- Letterhead (per template screenshot): titles left, FIB emblem
+  // top-right, thin rule between the two title lines, then a three-column
+  // meta row (Aktenzeichen / Sachbearbeiter / Datum), then a full rule. ----------
   const headerTop = doc.y;
-  doc.font("Helvetica-Bold").fontSize(11).fillColor(BLACK)
-    .text("U.S. Department of Justice", left, headerTop);
-  doc.font("Helvetica").fontSize(11)
-    .text("Federal Investigation Bureau", left, doc.y);
+  const emblemSize = 72;
+  const emblemX = doc.page.width - doc.page.margins.right - emblemSize;
+  try {
+    doc.image(Buffer.from(fibEmblem, "base64"), emblemX, headerTop, { fit: [emblemSize, emblemSize] });
+  } catch {
+    // Emblem is decorative; the PDF is still valid without it.
+  }
+
+  doc.font("Helvetica").fontSize(18).fillColor(BLACK)
+    .text("U.S. Department of Justice", left, headerTop + 8, { width: pageWidth - emblemSize - 12 });
+  // Thin rule between the two title lines, running toward the emblem.
+  const midY = doc.y + 3;
+  doc.moveTo(left, midY).lineTo(emblemX - 8, midY).lineWidth(0.7).strokeColor(BLACK).stroke();
+  doc.font("Helvetica-Bold").fontSize(18)
+    .text("Federal Investigation Bureau", left, midY + 4, { width: pageWidth - emblemSize - 12 });
 
   const sachbearbeiter = data.leadAgentDienstnummer
     ? `DN-${data.leadAgentDienstnummer} | ${data.leadAgent}`
     : data.leadAgent;
 
-  const metaWidth = 250;
-  const metaX = doc.page.width - doc.page.margins.right - metaWidth;
-  let metaY = headerTop;
-  const metaRows: Array<[string, string]> = [
-    ["Aktenzeichen:", data.caseNumber],
-    ["Sachbearbeiter:", sachbearbeiter],
-    ["Datum:", formatDateDe(data.createdAt)],
+  // Three meta columns under the titles.
+  const metaTop = Math.max(doc.y + 14, headerTop + emblemSize + 10);
+  const cols: Array<{ label: string; value: string; x: number; width: number }> = [
+    { label: "Aktenzeichen:", value: data.caseNumber, x: left, width: 235 },
+    { label: "Sachbearbeiter:", value: sachbearbeiter, x: left + 245, width: 130 },
+    { label: "Datum:", value: formatDateDe(data.createdAt), x: left + 385, width: pageWidth - 385 },
   ];
-  for (const [label, value] of metaRows) {
-    doc.font("Helvetica-Bold").fontSize(9).text(label, metaX, metaY, { width: metaWidth, align: "right" });
-    metaY = doc.y;
-    doc.font("Helvetica").fontSize(9).text(value, metaX, metaY, { width: metaWidth, align: "right" });
-    metaY = doc.y + 2;
+  let metaBottom = metaTop;
+  for (const col of cols) {
+    doc.font("Helvetica-Bold").fontSize(10).fillColor(BLACK)
+      .text(col.label, col.x, metaTop, { width: col.width });
+    doc.font("Helvetica").fontSize(10)
+      .text(col.value, col.x, doc.y, { width: col.width });
+    metaBottom = Math.max(metaBottom, doc.y);
   }
 
   doc.x = left;
-  doc.y = Math.max(doc.y, metaY) + 10;
+  doc.y = metaBottom + 16;
 
   hr(doc);
   doc.moveDown(1.5);

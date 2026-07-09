@@ -11,6 +11,14 @@ Regel: `pdfkit` muss in `artifacts/api-server/build.mjs` unter `external` stehen
 
 **How to apply:** Bei neuen Paketen mit Laufzeit-Dateizugriff relativ zum Paket (Fonts, .proto, Templates) direkt als external markieren statt Bundle-Fehler zu debuggen.
 
+## esbuild-Loader für Binärassets
+
+Regel: Für eingebettete Binärdateien (PNG etc.) im api-server-Bundle den esbuild-Loader `base64` verwenden und mit `Buffer.from(x, "base64")` dekodieren — NICHT den `binary`-Loader.
+
+**Why:** Der `binary`-Loader erzeugt `Uint8Array.fromBase64(...)`, das Node 24 nicht kennt → Server crasht beim Start mit `TypeError: Uint8Array.fromBase64 is not a function`.
+
+**How to apply:** Gilt solange Node < 25 läuft; Ambient-Deklaration `declare module "*.png" { const s: string; export default s }` passend zum base64-Loader halten.
+
 ## Akte-Download
 
 - `GET /api/cases/:id/akte` (cases.ts) nutzt `loadAccessibleCase` → gleiche Fall-Sichtbarkeitsregeln wie die Fallakte selbst.
