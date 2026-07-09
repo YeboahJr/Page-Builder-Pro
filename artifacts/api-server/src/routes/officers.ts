@@ -82,7 +82,10 @@ router.get("/pending", async (req, res) => {
 
 router.post("/:id/approve", async (req, res) => {
   const current = await resolveOfficer(req);
-  if (!current || !isLeadership(current.rank)) {
+  if (!current) {
+    return res.status(401).json({ error: "Nicht angemeldet" });
+  }
+  if (!isLeadership(current.rank)) {
     return res.status(403).json({ error: "Nur die Leitung darf Registrierungen freigeben" });
   }
   const id = parseInt(req.params.id);
@@ -140,7 +143,10 @@ router.put("/:id/pages", async (req, res) => {
 
 router.post("/:id/reject", async (req, res) => {
   const current = await resolveOfficer(req);
-  if (!current || !isLeadership(current.rank)) {
+  if (!current) {
+    return res.status(401).json({ error: "Nicht angemeldet" });
+  }
+  if (!isLeadership(current.rank)) {
     return res.status(403).json({ error: "Nur die Leitung darf Registrierungen ablehnen" });
   }
   const id = parseInt(req.params.id);
