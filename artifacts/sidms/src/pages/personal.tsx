@@ -143,9 +143,12 @@ export default function Personal() {
 
   const sortedOfficers = useMemo(() => {
     if (!officers) return [];
-    return [...officers].sort((a, b) =>
-      a.dienstnummer.localeCompare(b.dienstnummer, "de", { numeric: true, sensitivity: "base" })
-    );
+    // Der System-Admin-Account ist kein RP-Charakter und gehört nicht in die Personalliste.
+    return officers
+      .filter((o) => o.role !== "Admin")
+      .sort((a, b) =>
+        a.dienstnummer.localeCompare(b.dienstnummer, "de", { numeric: true, sensitivity: "base" })
+      );
   }, [officers]);
 
   const startEdit = (o: Officer) => {
