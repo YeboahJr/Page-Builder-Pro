@@ -38,6 +38,10 @@ function parseCaseIdParam(raw: string): number | null {
   return id;
 }
 
+// Status, mit dem eine Akte an die Staatsanwaltschaft übergeben wird — muss
+// mit STA_STATUS im Frontend (staatsanwaltschaft.tsx) übereinstimmen.
+const STA_STATUS = "An STA übergeben";
+
 // A non-leadership officer may only access cases where they are the lead agent
 // or listed among the case agents. Leadership sees everything.
 async function canAccessCase(officer: Officer, caseId: number, leadAgent: string): Promise<boolean> {
@@ -50,13 +54,23 @@ async function canAccessCase(officer: Officer, caseId: number, leadAgent: string
   return !!row;
 }
 
-// Loads the case and enforces involvement. Sends the appropriate error response
-// and returns null when access is denied or the case doesn't exist.
+type CaseAccess = {
+  officer: Officer;
+  case: typeof casesTable.$inferSelect;
+  // True when access was granted solely because the officer has the STA role
+  // and the case was handed to the Staatsanwaltschaft — read-only access.
+  staReadOnly: boolean;
+};
+
+// Loads the case and enforces involvement. Officers with the STA role
+// additionally get read-only access to every case that was handed to the
+// Staatsanwaltschaft. Sends the appropriate error response and returns null
+// when access is denied or the case doesn't exist.
 async function loadAccessibleCase(
   req: Parameters<typeof resolveOfficer>[0],
   res: { status: (code: number) => { json: (body: unknown) => unknown } },
   id: number,
-): Promise<{ officer: Officer; case: typeof casesTable.$inferSelect } | null> {
+): Promise<CaseAccess | null> {
   const officer = await resolveOfficer(req);
   if (!officer) {
     res.status(401).json({ error: "Nicht angemeldet" });
@@ -67,11 +81,26 @@ async function loadAccessibleCase(
     res.status(404).json({ error: "Fall nicht gefunden" });
     return null;
   }
-  if (!(await canAccessCase(officer, c.id, c.leadAgent))) {
+  const involved = await canAccessCase(officer, c.id, c.leadAgent);
+  const staReadOnly = !involved && officer.role === "STA" && c.status === STA_STATUS;
+  if (!involved && !staReadOnly) {
     res.status(403).json({ error: "Kein Zugriff auf diesen Fall" });
     return null;
   }
-  return { officer, case: c };
+  return { officer, case: c, staReadOnly };
+}
+
+// Guard for mutating endpoints: STA officers whose access is based only on the
+// handover status may read the case but never modify it.
+function rejectStaReadOnly(
+  access: CaseAccess,
+  res: { status: (code: number) => { json: (body: unknown) => unknown } },
+): boolean {
+  if (access.staReadOnly) {
+    res.status(403).json({ error: "Die Staatsanwaltschaft hat nur Lesezugriff auf diesen Fall" });
+    return true;
+  }
+  return false;
 }
 
 const router = Router();
@@ -88,15 +117,19 @@ router.get("/", async (req, res) => {
   const conditions = [];
 
   if (!hasFullAccess(officer.role)) {
-    conditions.push(
-      or(
-        eq(casesTable.leadAgent, officer.name),
-        inArray(
-          casesTable.id,
-          db.select({ caseId: caseAgentsTable.caseId }).from(caseAgentsTable).where(eq(caseAgentsTable.name, officer.name)),
-        ),
+    const visibility = [
+      eq(casesTable.leadAgent, officer.name),
+      inArray(
+        casesTable.id,
+        db.select({ caseId: caseAgentsTable.caseId }).from(caseAgentsTable).where(eq(caseAgentsTable.name, officer.name)),
       ),
-    );
+    ];
+    // STA-Offiziere sehen zusätzlich alle an die Staatsanwaltschaft
+    // übergebenen Akten, auch ohne eigene Beteiligung.
+    if (officer.role === "STA") {
+      visibility.push(eq(casesTable.status, STA_STATUS));
+    }
+    conditions.push(or(...visibility));
   }
 
   if (status) conditions.push(eq(casesTable.status, status as string));
@@ -235,6 +268,7 @@ router.patch("/:id", async (req, res) => {
   }
   const access = await loadAccessibleCase(req, res, id);
   if (!access) return;
+  if (rejectStaReadOnly(access, res)) return;
   const existing = access.case;
 
   const { title, category, priority, status, leadAgent, description, details, verhandlungsfuehrung, straftaten, tatDatum, tatWann, tatWo, tatWer } = req.body;
@@ -354,6 +388,7 @@ router.delete("/:id", async (req, res) => {
   // the client removes a row that was never there and the failure goes unnoticed.
   const access = await loadAccessibleCase(req, res, id);
   if (!access) return;
+  if (rejectStaReadOnly(access, res)) return;
 
   // Delete associated evidence files from object storage before removing the case,
   // so we don't leave orphaned GCS objects under the case-<id>/ prefix.
@@ -536,6 +571,7 @@ router.post("/:id/evidence/upload", upload.array("files", 20), async (req, res) 
 
   const access = await loadAccessibleCase(req, res, caseId);
   if (!access) return;
+  if (rejectStaReadOnly(access, res)) return;
 
   const files = (req.files as Express.Multer.File[]) ?? [];
   const privateObjectDir = process.env.PRIVATE_OBJECT_DIR;
@@ -607,6 +643,7 @@ router.delete("/:id/evidence/:filename", async (req, res) => {
 
   const access = await loadAccessibleCase(req, res, id);
   if (!access) return;
+  if (rejectStaReadOnly(access, res)) return;
 
   const privateObjectDir = process.env.PRIVATE_OBJECT_DIR;
 
@@ -651,6 +688,7 @@ router.patch("/:id/evidence/:filename/description", async (req, res) => {
 
   const access = await loadAccessibleCase(req, res, id);
   if (!access) return;
+  if (rejectStaReadOnly(access, res)) return;
 
   const raw = (req.body as { description?: unknown } | undefined)?.description;
   if (typeof raw !== "string" || raw.length > 2000) {
