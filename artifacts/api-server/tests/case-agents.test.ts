@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { Server } from "http";
 import { db, pool, officersTable, sessionsTable, casesTable, caseAgentsTable, caseStatusHistoryTable } from "@workspace/db";
-import { inArray } from "drizzle-orm";
+import { inArray, eq, desc } from "drizzle-orm";
 import app from "../src/app";
 import { hashPassword } from "../src/lib/auth";
 
@@ -243,5 +243,73 @@ describe("case agent management (/cases/:id/agents)", () => {
       token: tokenMember,
     });
     expect(missing.status).toBe(404);
+  });
+});
+
+describe("lead agent change via PATCH /cases/:id", () => {
+  it("rejects an unknown or empty lead agent", async () => {
+    const unknown = await api(`/cases/${caseId}`, {
+      method: "PATCH",
+      token: tokenMember,
+      body: { leadAgent: `Unbekannt ${RUN_ID}` },
+    });
+    expect(unknown.status).toBe(400);
+
+    const empty = await api(`/cases/${caseId}`, {
+      method: "PATCH",
+      token: tokenMember,
+      body: { leadAgent: "   " },
+    });
+    expect(empty.status).toBe(400);
+  });
+
+  it("syncs the case_agents lead row and keeps the previous lead involved", async () => {
+    const res = await api(`/cases/${caseId}`, {
+      method: "PATCH",
+      token: tokenMember,
+      body: { leadAgent: NAME_ADDED },
+    });
+    expect(res.status).toBe(200);
+    expect(res.json.leadAgent).toBe(NAME_ADDED);
+
+    const agents = await api(`/cases/${caseId}/agents`, { token: tokenMember });
+    const leadRows = agents.json.filter((a: { role: string }) => a.role === "Leitender Agent");
+    expect(leadRows).toHaveLength(1);
+    expect(leadRows[0].name).toBe(NAME_ADDED);
+    // Previous lead keeps case access via a support role.
+    expect(agents.json.some((a: { name: string }) => a.name === NAME_LEAD)).toBe(true);
+    // No duplicate rows for the new lead.
+    expect(agents.json.filter((a: { name: string }) => a.name === NAME_ADDED)).toHaveLength(1);
+
+    // New lead sees the case immediately.
+    const visible = await api("/cases", { token: tokenAdded });
+    expect(visible.json.some((c: { id: number }) => c.id === caseId)).toBe(true);
+  });
+
+  it("records the new lead as changedBy when status and lead change in the same PATCH", async () => {
+    const res = await api(`/cases/${caseId}`, {
+      method: "PATCH",
+      token: tokenMember,
+      body: { status: "Aktiv", leadAgent: `  ${NAME_OUTSIDER}  ` },
+    });
+    expect(res.status).toBe(200);
+    expect(res.json.leadAgent).toBe(NAME_OUTSIDER);
+    expect(res.json.status).toBe("Aktiv");
+
+    const [historyRow] = await db
+      .select()
+      .from(caseStatusHistoryTable)
+      .where(eq(caseStatusHistoryTable.caseId, caseId))
+      .orderBy(desc(caseStatusHistoryTable.id))
+      .limit(1);
+    expect(historyRow).toBeDefined();
+    expect(historyRow.toStatus).toBe("Aktiv");
+    // changedBy uses the normalized (trimmed) new lead, not the raw input.
+    expect(historyRow.changedBy).toBe(NAME_OUTSIDER);
+
+    const agents = await api(`/cases/${caseId}/agents`, { token: tokenMember });
+    const leadRows = agents.json.filter((a: { role: string }) => a.role === "Leitender Agent");
+    expect(leadRows).toHaveLength(1);
+    expect(leadRows[0].name).toBe(NAME_OUTSIDER);
   });
 });

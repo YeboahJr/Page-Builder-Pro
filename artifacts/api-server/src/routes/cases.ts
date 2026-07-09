@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db, casesTable, casePersonsTable, caseAgentsTable, caseStatusHistoryTable, evidenceFilesTable, officersTable } from "@workspace/db";
-import { eq, ilike, and, gte, lte, desc, or, inArray } from "drizzle-orm";
+import { eq, ilike, and, gte, lte, desc, or, inArray, ne } from "drizzle-orm";
 import { resolveOfficer, isLeadership } from "../lib/auth";
 import multer from "multer";
 import path from "path";
@@ -204,16 +204,66 @@ router.patch("/:id", async (req, res) => {
   if (leadAgent !== undefined) updates.leadAgent = leadAgent;
   if (description !== undefined) updates.description = description;
 
-  if (status && status !== existing.status) {
-    await db.insert(caseStatusHistoryTable).values({
-      caseId: id,
-      fromStatus: existing.status,
-      toStatus: status,
-      changedBy: leadAgent || existing.leadAgent,
-    });
+  const leadChanged = leadAgent !== undefined && leadAgent !== existing.leadAgent;
+  if (leadChanged) {
+    const name = typeof leadAgent === "string" ? leadAgent.trim() : "";
+    if (!name) {
+      res.status(400).json({ error: "Leitender Agent darf nicht leer sein" });
+      return;
+    }
+    const [officerRow] = await db
+      .select({ id: officersTable.id })
+      .from(officersTable)
+      .where(and(eq(officersTable.name, name), eq(officersTable.freigegeben, true)));
+    if (!officerRow) {
+      res.status(400).json({ error: "Leitender Agent muss ein freigegebener Officer sein" });
+      return;
+    }
+    updates.leadAgent = name;
   }
 
-  const [updated] = await db.update(casesTable).set(updates).where(eq(casesTable.id, id)).returning();
+  const updated = await db.transaction(async (tx) => {
+    if (status && status !== existing.status) {
+      await tx.insert(caseStatusHistoryTable).values({
+        caseId: id,
+        fromStatus: existing.status,
+        toStatus: status,
+        changedBy: updates.leadAgent ?? existing.leadAgent,
+      });
+    }
+
+    const [updatedCase] = await tx.update(casesTable).set(updates).where(eq(casesTable.id, id)).returning();
+
+    if (leadChanged) {
+      // Keep the case_agents lead row in sync so involvement-based visibility
+      // and the Agenten tab reflect the new lead agent. The new lead's existing
+      // support/supervisor row (if any) is removed to avoid duplicates; the
+      // previous lead stays involved via a support role instead of losing access.
+      await tx
+        .delete(caseAgentsTable)
+        .where(and(
+          eq(caseAgentsTable.caseId, id),
+          eq(caseAgentsTable.name, updatedCase.leadAgent),
+          ne(caseAgentsTable.role, "Leitender Agent"),
+        ));
+      const renamed = await tx
+        .update(caseAgentsTable)
+        .set({ name: updatedCase.leadAgent })
+        .where(and(eq(caseAgentsTable.caseId, id), eq(caseAgentsTable.role, "Leitender Agent")))
+        .returning({ id: caseAgentsTable.id });
+      if (renamed.length === 0) {
+        await tx.insert(caseAgentsTable).values({ caseId: id, name: updatedCase.leadAgent, role: "Leitender Agent" });
+      }
+      const [prevLeadRow] = await tx
+        .select({ id: caseAgentsTable.id })
+        .from(caseAgentsTable)
+        .where(and(eq(caseAgentsTable.caseId, id), eq(caseAgentsTable.name, existing.leadAgent)));
+      if (!prevLeadRow && existing.leadAgent) {
+        await tx.insert(caseAgentsTable).values({ caseId: id, name: existing.leadAgent, role: "Unterstützender Agent" });
+      }
+    }
+    return updatedCase;
+  });
   res.json({
     ...updated,
     lastModified: updated.updatedAt.toISOString().split("T")[0],
