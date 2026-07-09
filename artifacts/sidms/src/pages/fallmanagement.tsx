@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useGetCases, useCreateCase, useUpdateCase, useDeleteCase, getGetCasesQueryKey } from "@workspace/api-client-react";
+import { useGetCases, useCreateCase, useUpdateCase, useDeleteCase, getGetCasesQueryKey, useGetOfficers } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Plus, Trash2, Edit3, X } from "lucide-react";
 import EvidenceUpload, { type UploadFile, uploadEvidenceFiles } from "@/components/EvidenceUpload";
@@ -25,6 +25,8 @@ interface CaseForm { title: string; category: string; priority: string; status: 
 export default function Fallmanagement() {
   const qc = useQueryClient();
   const { data: cases, isLoading } = useGetCases();
+  const { data: officers } = useGetOfficers();
+  const officerNames = [...new Set((officers ?? []).filter(o => o.freigegeben).map(o => o.name))].sort((a, b) => a.localeCompare(b, "de"));
   const createCase = useCreateCase();
   const deleteCase = useDeleteCase();
   const [showForm, setShowForm] = useState(false);
@@ -111,7 +113,11 @@ export default function Fallmanagement() {
                 </div>
                 <div>
                   <label className="text-xs text-gray-400 block mb-1">Leitender Agent *</label>
-                  <input required value={form.leadAgent} onChange={e => setForm(f => ({ ...f, leadAgent: e.target.value }))} placeholder="z.B. SA Michael Harper" className="w-full bg-[#0a0f1a] border border-[#1e2d4a] text-white text-sm px-3 py-2 rounded focus:outline-none focus:border-[#c9a227]/50" />
+                  <select required value={form.leadAgent} onChange={e => setForm(f => ({ ...f, leadAgent: e.target.value }))} className="w-full bg-[#0a0f1a] border border-[#1e2d4a] text-white text-sm px-3 py-2 rounded focus:outline-none focus:border-[#c9a227]/50" data-testid="select-lead-agent">
+                    <option value="" disabled>Officer auswählen…</option>
+                    {form.leadAgent && !officerNames.includes(form.leadAgent) && <option value={form.leadAgent}>{form.leadAgent}</option>}
+                    {officerNames.map(n => <option key={n} value={n}>{n}</option>)}
+                  </select>
                 </div>
                 <div className="col-span-2">
                   <label className="text-xs text-gray-400 block mb-1">Beschreibung</label>

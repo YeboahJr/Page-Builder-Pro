@@ -7,6 +7,7 @@ import {
   useGetCaseAgents,
   useGetCaseStatusHistory,
   useCreateCase,
+  useGetOfficers,
   getGetCasesQueryKey,
   getGetDashboardStatsQueryKey,
   getGetCaseQueryKey,
@@ -95,6 +96,8 @@ export default function Dashboard() {
   });
 
   const createCase = useCreateCase();
+  const { data: allOfficers } = useGetOfficers();
+  const officerNames = [...new Set((allOfficers ?? []).filter(o => o.freigegeben).map(o => o.name))].sort((a, b) => a.localeCompare(b, "de"));
 
   useEffect(() => {
     if (activeTab !== "Beweismittel" || !selectedId) return;
@@ -273,7 +276,11 @@ export default function Dashboard() {
                 </div>
                 <div>
                   <label className="text-xs text-gray-400 block mb-1">Leitender Agent *</label>
-                  <input required value={newCaseForm.leadAgent} onChange={e => setNewCaseForm(f => ({ ...f, leadAgent: e.target.value }))} placeholder="z.B. SA Michael Harper" className="w-full bg-[#0a0f1a] border border-[#1e2d4a] text-white text-sm px-3 py-2 rounded focus:outline-none focus:border-[#c9a227]/50" />
+                  <select required value={newCaseForm.leadAgent} onChange={e => setNewCaseForm(f => ({ ...f, leadAgent: e.target.value }))} className="w-full bg-[#0a0f1a] border border-[#1e2d4a] text-white text-sm px-3 py-2 rounded focus:outline-none focus:border-[#c9a227]/50" data-testid="select-lead-agent-dashboard">
+                    <option value="" disabled>Officer auswählen…</option>
+                    {newCaseForm.leadAgent && !officerNames.includes(newCaseForm.leadAgent) && <option value={newCaseForm.leadAgent}>{newCaseForm.leadAgent}</option>}
+                    {officerNames.map(n => <option key={n} value={n}>{n}</option>)}
+                  </select>
                 </div>
                 <div className="col-span-2">
                   <label className="text-xs text-gray-400 block mb-1">Beschreibung</label>
