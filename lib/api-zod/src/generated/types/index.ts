@@ -7,6 +7,7 @@
  */
 
 export * from './activityEntry';
+export * from './addCaseAgentInput';
 export * from './approveOfficerInput';
 export * from './case';
 export * from './caseAgent';
@@ -29,6 +30,7 @@ export * from './idChange';
 export * from './loginInput';
 export * from './loginResult';
 export * from './officer';
+export * from './officerName';
 export * from './patrol';
 export * from './patrolInput';
 export * from './patrolSlot';

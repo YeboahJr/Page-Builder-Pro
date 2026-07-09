@@ -33,3 +33,17 @@ passieren immer. Mapping (mehrere Keys = "eine der Seiten reicht"):
 befüllen — Routen, die mehrere Seiten bedienen, alle Keys angeben. Frontend-Seiten ohne
 eigenen Seiten-Key (z. B. Audit-Log nutzt /dashboard/recent-activity) erben faktisch das
 Gating der Datenroute. Tests: artifacts/api-server/tests/page-rights.test.ts.
+
+## Officer-Dropdowns nie über GET /officers befüllen
+
+Regel: Namens-Dropdowns (Lead-Agent, Fall-Agenten) nutzen `GET /officers/names` —
+auth-only, liefert nur id+name freigegebener Officer. `GET /officers` bleibt
+personal|leitstelle-gegated.
+
+**Why:** Fall-Zugriff ist unabhängig von Seitenrechten; ein fallberechtigter Officer
+ohne personal/leitstelle bekam sonst leere Dropdowns (Architect-Finding bei
+Agenten-Verwaltung).
+
+**How to apply:** Neue UI, die Officer-Namen zur Auswahl braucht, immer über
+useGetOfficerNames anbinden, nicht useGetOfficers. Regressionstest:
+artifacts/api-server/tests/case-agents.test.ts.

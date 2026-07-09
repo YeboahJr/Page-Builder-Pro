@@ -51,6 +51,22 @@ router.get("/", requirePages("personal", "leitstelle"), async (req, res) => {
   res.json(officers.map(stripHash));
 });
 
+// Minimal name directory for dropdowns (lead agent, case agents). Case access
+// is independent of the personal/leitstelle page rights, so this only requires
+// being logged in and exposes nothing beyond id + name of approved officers.
+router.get("/names", async (req, res) => {
+  const current = await resolveOfficer(req);
+  if (!current) {
+    return res.status(401).json({ error: "Nicht angemeldet" });
+  }
+  const officers = await db
+    .select({ id: officersTable.id, name: officersTable.name })
+    .from(officersTable)
+    .where(eq(officersTable.freigegeben, true))
+    .orderBy(asc(officersTable.name));
+  return res.json(officers);
+});
+
 router.get("/pending", async (req, res) => {
   const current = await resolveOfficer(req);
   if (!current || !isLeadership(current.rank)) {

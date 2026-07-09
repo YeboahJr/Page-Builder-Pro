@@ -21,6 +21,7 @@ import type {
 
 import type {
   ActivityEntry,
+  AddCaseAgentInput,
   ApproveOfficerInput,
   Case,
   CaseAgent,
@@ -43,6 +44,7 @@ import type {
   LoginInput,
   LoginResult,
   Officer,
+  OfficerName,
   Patrol,
   PatrolInput,
   PatrolUpdate,
@@ -1209,6 +1211,149 @@ export function useGetCaseAgents<TData = Awaited<ReturnType<typeof getCaseAgents
 
 
 
+export const getAddCaseAgentUrl = (id: number,) => {
+
+
+
+
+  return `/api/cases/${id}/agents`
+}
+
+/**
+ * @summary Add an agent to a case (requires case involvement)
+ */
+export const addCaseAgent = async (id: number,
+    addCaseAgentInput: AddCaseAgentInput, options?: RequestInit): Promise<CaseAgent> => {
+
+  return customFetch<CaseAgent>(getAddCaseAgentUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(addCaseAgentInput)
+  }
+);}
+
+
+
+
+export const getAddCaseAgentMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof addCaseAgent>>, TError,{id: number;data: BodyType<AddCaseAgentInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof addCaseAgent>>, TError,{id: number;data: BodyType<AddCaseAgentInput>}, TContext> => {
+
+const mutationKey = ['addCaseAgent'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof addCaseAgent>>, {id: number;data: BodyType<AddCaseAgentInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  addCaseAgent(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AddCaseAgentMutationResult = NonNullable<Awaited<ReturnType<typeof addCaseAgent>>>
+    export type AddCaseAgentMutationBody = BodyType<AddCaseAgentInput>
+    export type AddCaseAgentMutationError = ErrorType<void>
+
+    /**
+ * @summary Add an agent to a case (requires case involvement)
+ */
+export const useAddCaseAgent = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof addCaseAgent>>, TError,{id: number;data: BodyType<AddCaseAgentInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof addCaseAgent>>,
+        TError,
+        {id: number;data: BodyType<AddCaseAgentInput>},
+        TContext
+      > => {
+      return useMutation(getAddCaseAgentMutationOptions(options));
+    }
+
+export const getRemoveCaseAgentUrl = (id: number,
+    agentId: number,) => {
+
+
+
+
+  return `/api/cases/${id}/agents/${agentId}`
+}
+
+/**
+ * @summary Remove an agent from a case (requires case involvement)
+ */
+export const removeCaseAgent = async (id: number,
+    agentId: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getRemoveCaseAgentUrl(id,agentId),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getRemoveCaseAgentMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof removeCaseAgent>>, TError,{id: number;agentId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof removeCaseAgent>>, TError,{id: number;agentId: number}, TContext> => {
+
+const mutationKey = ['removeCaseAgent'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof removeCaseAgent>>, {id: number;agentId: number}> = (props) => {
+          const {id,agentId} = props ?? {};
+
+          return  removeCaseAgent(id,agentId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RemoveCaseAgentMutationResult = NonNullable<Awaited<ReturnType<typeof removeCaseAgent>>>
+
+    export type RemoveCaseAgentMutationError = ErrorType<void>
+
+    /**
+ * @summary Remove an agent from a case (requires case involvement)
+ */
+export const useRemoveCaseAgent = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof removeCaseAgent>>, TError,{id: number;agentId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof removeCaseAgent>>,
+        TError,
+        {id: number;agentId: number},
+        TContext
+      > => {
+      return useMutation(getRemoveCaseAgentMutationOptions(options));
+    }
+
 export const getGetReportsUrl = (params?: GetReportsParams,) => {
   const normalizedParams = new URLSearchParams();
 
@@ -1805,6 +1950,83 @@ export const useUpdatePatrol = <TError = ErrorType<unknown>,
       > => {
       return useMutation(getUpdatePatrolMutationOptions(options));
     }
+
+export const getGetOfficerNamesUrl = () => {
+
+
+
+
+  return `/api/officers/names`
+}
+
+/**
+ * @summary List names of approved officers (any authenticated officer)
+ */
+export const getOfficerNames = async ( options?: RequestInit): Promise<OfficerName[]> => {
+
+  return customFetch<OfficerName[]>(getGetOfficerNamesUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetOfficerNamesQueryKey = () => {
+    return [
+    `/api/officers/names`
+    ] as const;
+    }
+
+
+export const getGetOfficerNamesQueryOptions = <TData = Awaited<ReturnType<typeof getOfficerNames>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getOfficerNames>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetOfficerNamesQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getOfficerNames>>> = ({ signal }) => getOfficerNames({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getOfficerNames>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetOfficerNamesQueryResult = NonNullable<Awaited<ReturnType<typeof getOfficerNames>>>
+export type GetOfficerNamesQueryError = ErrorType<void>
+
+
+/**
+ * @summary List names of approved officers (any authenticated officer)
+ */
+
+export function useGetOfficerNames<TData = Awaited<ReturnType<typeof getOfficerNames>>, TError = ErrorType<void>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getOfficerNames>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetOfficerNamesQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 
 export const getGetOfficersUrl = () => {
 

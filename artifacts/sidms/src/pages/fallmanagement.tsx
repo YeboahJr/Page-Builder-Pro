@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useGetCases, useCreateCase, useUpdateCase, useDeleteCase, getGetCasesQueryKey, useGetOfficers } from "@workspace/api-client-react";
+import { useGetCases, useCreateCase, useUpdateCase, useDeleteCase, getGetCasesQueryKey, useGetOfficerNames } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Plus, Trash2, Edit3, X } from "lucide-react";
 import EvidenceUpload, { type UploadFile, uploadEvidenceFiles } from "@/components/EvidenceUpload";
@@ -25,8 +25,8 @@ interface CaseForm { title: string; category: string; priority: string; status: 
 export default function Fallmanagement() {
   const qc = useQueryClient();
   const { data: cases, isLoading } = useGetCases();
-  const { data: officers } = useGetOfficers();
-  const officerNames = [...new Set((officers ?? []).filter(o => o.freigegeben).map(o => o.name))].sort((a, b) => a.localeCompare(b, "de"));
+  const { data: officers } = useGetOfficerNames();
+  const officerNames = [...new Set((officers ?? []).map(o => o.name))].sort((a, b) => a.localeCompare(b, "de"));
   const createCase = useCreateCase();
   const deleteCase = useDeleteCase();
   const [showForm, setShowForm] = useState(false);

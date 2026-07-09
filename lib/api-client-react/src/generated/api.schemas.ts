@@ -293,6 +293,18 @@ export interface CaseAgent {
   role: string;
 }
 
+export interface OfficerName {
+  id: number;
+  name: string;
+}
+
+export interface AddCaseAgentInput {
+  /** Exact name of a registered (approved) officer */
+  name: string;
+  /** Unterstützender Agent (default) | Supervisor */
+  role?: string;
+}
+
 export interface Report {
   id: number;
   /** GEISELNAHME | SCHUSSWAFFEN EINSATZ | VERDÄCHTIGE PERSON | VERKEHRSUNFALL | EINBRUCH / ALARM | TÄTLICHER ANGRIFF */

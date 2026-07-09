@@ -318,6 +318,36 @@ export const GetCaseAgentsResponse = zod.array(GetCaseAgentsResponseItem)
 
 
 /**
+ * @summary Add an agent to a case (requires case involvement)
+ */
+export const AddCaseAgentParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const AddCaseAgentBody = zod.object({
+  "name": zod.string().describe('Exact name of a registered (approved) officer'),
+  "role": zod.string().optional().describe('Unterstützender Agent (default) | Supervisor')
+})
+
+export const AddCaseAgentResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "role": zod.string().describe('Leitender Agent | Unterstützender Agent | Supervisor')
+})
+
+
+/**
+ * @summary Remove an agent from a case (requires case involvement)
+ */
+export const RemoveCaseAgentParams = zod.object({
+  "id": zod.coerce.number(),
+  "agentId": zod.coerce.number()
+})
+
+export const RemoveCaseAgentResponse = zod.void()
+
+
+/**
  * @summary List all reports/meldungen
  */
 export const GetReportsQueryParams = zod.object({
@@ -516,6 +546,16 @@ export const UpdatePatrolResponse = zod.object({
   "notes": zod.string().nullish()
 }))
 })
+
+
+/**
+ * @summary List names of approved officers (any authenticated officer)
+ */
+export const GetOfficerNamesResponseItem = zod.object({
+  "id": zod.number(),
+  "name": zod.string()
+})
+export const GetOfficerNamesResponse = zod.array(GetOfficerNamesResponseItem)
 
 
 /**

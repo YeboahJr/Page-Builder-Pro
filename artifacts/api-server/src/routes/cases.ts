@@ -315,6 +315,84 @@ router.get("/:id/agents", async (req, res) => {
   res.json(agents);
 });
 
+const ADDABLE_AGENT_ROLES = ["Unterstützender Agent", "Supervisor"];
+
+router.post("/:id/agents", async (req, res) => {
+  const id = parseCaseIdParam(req.params.id);
+  if (id === null) {
+    res.status(400).json({ error: "Ungültige ID" });
+    return;
+  }
+  const access = await loadAccessibleCase(req, res, id);
+  if (!access) return;
+
+  const name = typeof req.body?.name === "string" ? req.body.name.trim() : "";
+  const role = req.body?.role === undefined ? "Unterstützender Agent" : String(req.body.role);
+
+  if (!name) {
+    res.status(400).json({ error: "Name ist erforderlich" });
+    return;
+  }
+  if (!ADDABLE_AGENT_ROLES.includes(role)) {
+    res.status(400).json({ error: `Ungültige Rolle. Erlaubt: ${ADDABLE_AGENT_ROLES.join(", ")}` });
+    return;
+  }
+
+  // The visibility check matches by exact officer name, so only registered
+  // (approved) officers may be added — otherwise the entry is useless.
+  const [officerRow] = await db
+    .select({ id: officersTable.id })
+    .from(officersTable)
+    .where(and(eq(officersTable.name, name), eq(officersTable.freigegeben, true)));
+  if (!officerRow) {
+    res.status(400).json({ error: "Kein freigegebener Officer mit diesem Namen" });
+    return;
+  }
+
+  if (access.case.leadAgent === name) {
+    res.status(400).json({ error: "Dieser Officer ist bereits leitender Agent" });
+    return;
+  }
+  const existing = await db
+    .select({ id: caseAgentsTable.id, role: caseAgentsTable.role })
+    .from(caseAgentsTable)
+    .where(and(eq(caseAgentsTable.caseId, id), eq(caseAgentsTable.name, name)));
+  if (existing.some(a => a.role !== "Ersteller")) {
+    res.status(400).json({ error: "Dieser Officer ist dem Fall bereits zugewiesen" });
+    return;
+  }
+
+  const [created] = await db.insert(caseAgentsTable).values({ caseId: id, name, role }).returning();
+  res.status(201).json(created);
+});
+
+router.delete("/:id/agents/:agentId", async (req, res) => {
+  const id = parseCaseIdParam(req.params.id);
+  const agentId = parseCaseIdParam(req.params.agentId);
+  if (id === null || agentId === null) {
+    res.status(400).json({ error: "Ungültige ID" });
+    return;
+  }
+  const access = await loadAccessibleCase(req, res, id);
+  if (!access) return;
+
+  const [agent] = await db
+    .select()
+    .from(caseAgentsTable)
+    .where(and(eq(caseAgentsTable.id, agentId), eq(caseAgentsTable.caseId, id)));
+  if (!agent) {
+    res.status(404).json({ error: "Agent nicht gefunden" });
+    return;
+  }
+  if (agent.role === "Leitender Agent") {
+    res.status(400).json({ error: "Der leitende Agent kann nicht entfernt werden" });
+    return;
+  }
+
+  await db.delete(caseAgentsTable).where(eq(caseAgentsTable.id, agentId));
+  res.status(204).end();
+});
+
 router.post("/:id/evidence/upload", upload.array("files", 20), async (req, res) => {
   const caseId = parseCaseIdParam(String(req.params.id));
   if (caseId === null) {

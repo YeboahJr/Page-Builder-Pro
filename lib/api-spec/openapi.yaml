@@ -351,6 +351,65 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/CaseAgent"
+    post:
+      operationId: addCaseAgent
+      tags: [cases]
+      summary: Add an agent to a case (requires case involvement)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddCaseAgentInput"
+      responses:
+        "201":
+          description: Agent added
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CaseAgent"
+        "400":
+          description: Invalid input (unknown officer, invalid role, or already assigned)
+        "401":
+          description: Not authenticated
+        "403":
+          description: No access to this case
+        "404":
+          description: Case not found
+
+  /cases/{id}/agents/{agentId}:
+    delete:
+      operationId: removeCaseAgent
+      tags: [cases]
+      summary: Remove an agent from a case (requires case involvement)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: agentId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Agent removed
+        "400":
+          description: Invalid id or lead agent cannot be removed
+        "401":
+          description: Not authenticated
+        "403":
+          description: No access to this case
+        "404":
+          description: Case or agent not found
 
   /reports:
     get:
@@ -508,6 +567,23 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Patrol"
+
+  /officers/names:
+    get:
+      operationId: getOfficerNames
+      tags: [officers]
+      summary: List names of approved officers (any authenticated officer)
+      responses:
+        "200":
+          description: Approved officer names
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/OfficerName"
+        "401":
+          description: Not authenticated
 
   /officers:
     get:
@@ -1387,6 +1463,26 @@ components:
         role:
           type: string
           description: "Leitender Agent | Unterstützender Agent | Supervisor"
+
+    OfficerName:
+      type: object
+      required: [id, name]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+
+    AddCaseAgentInput:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          description: Exact name of a registered (approved) officer
+        role:
+          type: string
+          description: "Unterstützender Agent (default) | Supervisor"
 
     Report:
       type: object

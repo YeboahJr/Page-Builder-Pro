@@ -7,7 +7,9 @@ import {
   useGetCaseAgents,
   useGetCaseStatusHistory,
   useCreateCase,
-  useGetOfficers,
+  useGetOfficerNames,
+  useAddCaseAgent,
+  useRemoveCaseAgent,
   getGetCasesQueryKey,
   getGetDashboardStatsQueryKey,
   getGetCaseQueryKey,
@@ -96,8 +98,60 @@ export default function Dashboard() {
   });
 
   const createCase = useCreateCase();
-  const { data: allOfficers } = useGetOfficers();
-  const officerNames = [...new Set((allOfficers ?? []).filter(o => o.freigegeben).map(o => o.name))].sort((a, b) => a.localeCompare(b, "de"));
+  const { data: allOfficers } = useGetOfficerNames();
+  const officerNames = [...new Set((allOfficers ?? []).map(o => o.name))].sort((a, b) => a.localeCompare(b, "de"));
+
+  const addCaseAgent = useAddCaseAgent();
+  const removeCaseAgent = useRemoveCaseAgent();
+  const [newAgentName, setNewAgentName] = useState("");
+  const [newAgentRole, setNewAgentRole] = useState("Unterstützender Agent");
+  const [agentError, setAgentError] = useState<string | null>(null);
+  const [agentSubmitting, setAgentSubmitting] = useState(false);
+  const [removingAgentId, setRemovingAgentId] = useState<number | null>(null);
+
+  const invalidateAgents = (caseId: number) => {
+    qc.invalidateQueries({ queryKey: getGetCaseAgentsQueryKey(caseId) });
+    qc.invalidateQueries({ queryKey: getGetCaseQueryKey(caseId) });
+    qc.invalidateQueries({ queryKey: getGetCasesQueryKey() });
+  };
+
+  const handleAddAgent = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedId || !newAgentName) return;
+    setAgentSubmitting(true);
+    setAgentError(null);
+    try {
+      await addCaseAgent.mutateAsync({ id: selectedId, data: { name: newAgentName, role: newAgentRole } });
+      setNewAgentName("");
+      invalidateAgents(selectedId);
+    } catch (err) {
+      const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error;
+      setAgentError(msg ?? "Agent konnte nicht hinzugefügt werden.");
+    } finally {
+      setAgentSubmitting(false);
+    }
+  };
+
+  const handleRemoveAgent = async (agentId: number) => {
+    if (!selectedId) return;
+    setRemovingAgentId(agentId);
+    setAgentError(null);
+    try {
+      await removeCaseAgent.mutateAsync({ id: selectedId, agentId });
+      invalidateAgents(selectedId);
+    } catch (err) {
+      const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error;
+      setAgentError(msg ?? "Agent konnte nicht entfernt werden.");
+    } finally {
+      setRemovingAgentId(null);
+    }
+  };
+
+  useEffect(() => {
+    setNewAgentName("");
+    setNewAgentRole("Unterstützender Agent");
+    setAgentError(null);
+  }, [selectedId]);
 
   useEffect(() => {
     if (activeTab !== "Beweismittel" || !selectedId) return;
@@ -492,14 +546,50 @@ export default function Dashboard() {
                 {activeTab === "Agenten" && (
                   <div>
                     <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Beteiligte Agenten</h3>
+                    <form onSubmit={handleAddAgent} className="flex flex-wrap items-end gap-2 mb-4 p-3 bg-[#0a0f1a] border border-[#1e2d4a] rounded-lg">
+                      <div className="flex-1 min-w-[180px]">
+                        <label className="text-xs text-gray-400 block mb-1">Officer</label>
+                        <select
+                          value={newAgentName}
+                          onChange={e => setNewAgentName(e.target.value)}
+                          className="w-full bg-[#0d1526] border border-[#1e2d4a] text-white text-xs px-2 py-1.5 rounded focus:outline-none focus:border-[#c9a227]/50"
+                          data-testid="select-add-agent-name"
+                        >
+                          <option value="">Officer auswählen…</option>
+                          {officerNames
+                            .filter(n => n !== caseDetail?.leadAgent && !caseAgents?.some(a => a.name === n && a.role !== "Ersteller"))
+                            .map(n => <option key={n} value={n}>{n}</option>)}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="text-xs text-gray-400 block mb-1">Rolle</label>
+                        <select
+                          value={newAgentRole}
+                          onChange={e => setNewAgentRole(e.target.value)}
+                          className="bg-[#0d1526] border border-[#1e2d4a] text-white text-xs px-2 py-1.5 rounded focus:outline-none"
+                          data-testid="select-add-agent-role"
+                        >
+                          {["Unterstützender Agent", "Supervisor"].map(r => <option key={r} value={r}>{r}</option>)}
+                        </select>
+                      </div>
+                      <button
+                        type="submit"
+                        disabled={!newAgentName || agentSubmitting}
+                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-[#1a3d7c] hover:bg-[#1e4a94] border border-[#2a5bb0] text-white rounded transition-colors disabled:opacity-50"
+                        data-testid="button-add-agent"
+                      >
+                        <Plus className="w-3 h-3" /> {agentSubmitting ? "Hinzufügen..." : "Hinzufügen"}
+                      </button>
+                      {agentError && <p className="w-full text-xs text-red-400" data-testid="text-agent-error">{agentError}</p>}
+                    </form>
                     {!caseAgents?.length ? (
                       <p className="text-xs text-gray-500">Keine Agenten zugewiesen.</p>
                     ) : (
                       <table className="w-full text-xs">
                         <thead>
                           <tr className="border-b border-[#1e2d4a]">
-                            {["Name", "Rolle"].map(h => (
-                              <th key={h} className="text-left px-2 py-1.5 text-gray-400">{h}</th>
+                            {["Name", "Rolle", ""].map((h, i) => (
+                              <th key={i} className="text-left px-2 py-1.5 text-gray-400">{h}</th>
                             ))}
                           </tr>
                         </thead>
@@ -508,6 +598,19 @@ export default function Dashboard() {
                             <tr key={a.id} className="border-b border-[#1e2d4a]/30">
                               <td className="px-2 py-2 text-gray-200">{a.name}</td>
                               <td className="px-2 py-2 text-gray-400">{a.role}</td>
+                              <td className="px-2 py-2 text-right">
+                                {a.role !== "Leitender Agent" && (
+                                  <button
+                                    onClick={() => handleRemoveAgent(a.id)}
+                                    disabled={removingAgentId === a.id}
+                                    title="Agent entfernen"
+                                    className="text-gray-500 hover:text-red-400 transition-colors disabled:opacity-50"
+                                    data-testid={`button-remove-agent-${a.id}`}
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                )}
+                              </td>
                             </tr>
                           ))}
                         </tbody>
