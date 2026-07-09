@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   useGetDashboardStats,
   useGetCases,
@@ -14,9 +14,10 @@ import {
 import { useQueryClient } from "@tanstack/react-query";
 import {
   Activity, FolderOpen, CheckCircle, Eye, Package, AlertTriangle,
-  Plus, RotateCcw, Download, X
+  Plus, RotateCcw, Download, X, Film, ImageIcon, ZoomIn, Trash2
 } from "lucide-react";
 import EvidenceUpload, { type UploadFile, uploadEvidenceFiles } from "@/components/EvidenceUpload";
+import DeleteConfirmModal from "@/components/DeleteConfirmModal";
 
 const CATEGORIES_NEW = ["Drogenkriminalität", "Waffendelikte", "Korruption", "Finanzkriminalität", "Gewaltdelikte", "Cyberkriminalität"];
 const PRIORITIES_NEW = ["Hoch", "Mittel", "Niedrig"];
@@ -57,6 +58,17 @@ export default function Dashboard() {
   const [newCaseFiles, setNewCaseFiles] = useState<UploadFile[]>([]);
   const [newCaseSubmitting, setNewCaseSubmitting] = useState(false);
 
+  const [evidenceFiles, setEvidenceFiles] = useState<Array<{ filename: string; url: string; type: string; size: number; uploadedAt: string; uploadedBy: string | null }>>([]);
+  const [evidenceLoading, setEvidenceLoading] = useState(false);
+  const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
+  const [videoUrl, setVideoUrl] = useState<string | null>(null);
+  const [showAddEvidence, setShowAddEvidence] = useState(false);
+  const [addEvidenceFiles, setAddEvidenceFiles] = useState<UploadFile[]>([]);
+  const [addEvidenceUploading, setAddEvidenceUploading] = useState(false);
+  const [deletingFile, setDeletingFile] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
   const [filters, setFilters] = useState({
     caseNumber: "", title: "", category: "", status: "", agentId: "", priority: "",
     suspectName: "", vehiclePlate: "", missionNumber: "", dateFrom: "", dateTo: "",
@@ -76,6 +88,77 @@ export default function Dashboard() {
   const createCase = useCreateCase();
   const { data: allOfficers } = useGetOfficerNames();
   const officerNames = [...new Set((allOfficers ?? []).map(o => o.name))].sort((a, b) => a.localeCompare(b, "de"));
+
+  useEffect(() => {
+    if (activeTab !== "Beweismittel" || !selectedId) return;
+    setEvidenceLoading(true);
+    fetch(`/api/cases/${selectedId}/evidence/files`, {
+      headers: { Authorization: `Bearer ${sessionStorage.getItem("sidms_token") ?? ""}` },
+    })
+      .then(r => r.json())
+      .then(d => setEvidenceFiles(d.files ?? []))
+      .catch(() => setEvidenceFiles([]))
+      .finally(() => setEvidenceLoading(false));
+  }, [activeTab, selectedId]);
+
+  const fetchEvidenceFiles = (caseId: number) => {
+    setEvidenceLoading(true);
+    fetch(`/api/cases/${caseId}/evidence/files`, {
+      headers: { Authorization: `Bearer ${sessionStorage.getItem("sidms_token") ?? ""}` },
+    })
+      .then(r => r.json())
+      .then(d => setEvidenceFiles(d.files ?? []))
+      .catch(() => setEvidenceFiles([]))
+      .finally(() => setEvidenceLoading(false));
+  };
+
+  const requestDeleteEvidence = (filename: string) => {
+    setDeleteError(null);
+    setDeleteTarget(filename);
+  };
+
+  const confirmDeleteEvidence = async () => {
+    if (!selectedId || !deleteTarget) return;
+    const filename = deleteTarget;
+    setDeletingFile(filename);
+    setDeleteError(null);
+    try {
+      const res = await fetch(`/api/cases/${selectedId}/evidence/${encodeURIComponent(filename)}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${sessionStorage.getItem("sidms_token") ?? ""}` },
+      });
+      if (!res.ok) {
+        let message = `Löschen fehlgeschlagen (Status ${res.status}).`;
+        try {
+          const body = await res.json();
+          if (body?.error) message = body.error;
+        } catch {
+          // response had no JSON body; keep the status-based message
+        }
+        setDeleteError(message);
+        return;
+      }
+      setEvidenceFiles(prev => prev.filter(f => f.filename !== filename));
+      setDeleteTarget(null);
+    } catch {
+      setDeleteError("Netzwerkfehler – die Datei konnte nicht gelöscht werden.");
+    } finally {
+      setDeletingFile(null);
+    }
+  };
+
+  const handleAddEvidence = async () => {
+    if (!selectedId || addEvidenceFiles.length === 0) return;
+    setAddEvidenceUploading(true);
+    try {
+      await uploadEvidenceFiles(selectedId, addEvidenceFiles);
+      setAddEvidenceFiles([]);
+      setShowAddEvidence(false);
+      fetchEvidenceFiles(selectedId);
+    } finally {
+      setAddEvidenceUploading(false);
+    }
+  };
 
   const handleNewCase = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -101,7 +184,7 @@ export default function Dashboard() {
     { label: "Hohe Priorität", value: stats?.hohePrioritaet ?? 0, delta: stats?.hohePrioritaetDelta, icon: AlertTriangle, color: "text-red-400", border: "border-red-600/30" },
   ];
 
-  const TABS = ["Übersicht", "Einsätze", "Observationen", "Fahrzeuge", "ID-Changes", "Chronologie"];
+  const TABS = ["Übersicht", "Beweismittel", "Dokumente"];
 
   const applyFilters = () => {
     qc.invalidateQueries({ queryKey: getGetCasesQueryKey() });
@@ -115,6 +198,40 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-4 h-full flex flex-col">
+      {/* Image Lightbox */}
+      {lightboxUrl && (
+        <div className="fixed inset-0 bg-black/90 z-[100] flex items-center justify-center p-4" onClick={() => setLightboxUrl(null)}>
+          <button className="absolute top-4 right-4 text-white hover:text-gray-300 z-10" onClick={() => setLightboxUrl(null)}>
+            <X className="w-7 h-7" />
+          </button>
+          <img src={lightboxUrl} alt="Beweismittel" className="max-w-full max-h-full object-contain rounded shadow-2xl" onClick={e => e.stopPropagation()} />
+        </div>
+      )}
+      {/* Video Player */}
+      {videoUrl && (
+        <div className="fixed inset-0 bg-black/90 z-[100] flex items-center justify-center p-4" onClick={() => setVideoUrl(null)}>
+          <button className="absolute top-4 right-4 text-white hover:text-gray-300 z-10" onClick={() => setVideoUrl(null)}>
+            <X className="w-7 h-7" />
+          </button>
+          <video src={videoUrl} controls autoPlay className="max-w-full max-h-full rounded shadow-2xl" onClick={e => e.stopPropagation()} />
+        </div>
+      )}
+      {/* Delete Evidence Confirmation Modal */}
+      <DeleteConfirmModal
+        open={!!deleteTarget}
+        title="Beweismittel löschen"
+        description={deleteTarget ? (
+          <>
+            Diese Aktion kann nicht rückgängig gemacht werden. Die Datei{" "}
+            <span className="text-white font-medium break-all">"{deleteTarget}"</span>{" "}
+            wird dauerhaft gelöscht.
+          </>
+        ) : null}
+        busy={!!deletingFile}
+        error={deleteError}
+        onConfirm={confirmDeleteEvidence}
+        onCancel={() => { if (!deletingFile) setDeleteTarget(null); }}
+      />
       {/* New Case Modal */}
       {showNewCase && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
@@ -226,7 +343,7 @@ export default function Dashboard() {
                   ) : cases?.map(c => (
                     <tr
                       key={c.id}
-                      onClick={() => { setSelectedId(c.id); setActiveTab("Übersicht"); }}
+                      onClick={() => { setSelectedId(c.id); setActiveTab("Übersicht"); setShowAddEvidence(false); setAddEvidenceFiles([]); }}
                       className={`border-b border-[#1e2d4a]/50 cursor-pointer transition-colors hover:bg-[#1a2744]/50 ${selectedId === c.id ? "bg-[#1a2744]" : ""}`}
                       data-testid={`row-case-${c.id}`}
                     >
@@ -333,7 +450,104 @@ export default function Dashboard() {
                     </div>
                   </div>
                 )}
-                {activeTab !== "Übersicht" && (
+                {activeTab === "Beweismittel" && (
+                  <div>
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Hochgeladene Beweismittel</h3>
+                      <button
+                        onClick={() => { setShowAddEvidence(v => !v); setAddEvidenceFiles([]); }}
+                        className="flex items-center gap-1.5 px-2.5 py-1 text-xs bg-[#1a3d7c]/60 hover:bg-[#1a3d7c] border border-[#2a5bb0]/50 text-blue-300 rounded transition-colors"
+                        data-testid="button-upload-evidence"
+                      >
+                        <Plus className="w-3 h-3" />
+                        Hochladen
+                      </button>
+                    </div>
+                    {showAddEvidence && (
+                      <div className="mb-4 p-3 bg-[#0a0f1a] border border-[#1e2d4a] rounded-lg">
+                        <EvidenceUpload files={addEvidenceFiles} onChange={setAddEvidenceFiles} />
+                        <div className="flex gap-2 mt-3">
+                          <button
+                            type="button"
+                            onClick={() => { setShowAddEvidence(false); setAddEvidenceFiles([]); }}
+                            className="flex-1 py-1.5 bg-[#1e2d4a] text-gray-300 text-xs rounded transition-colors hover:bg-[#253650]"
+                          >
+                            Abbrechen
+                          </button>
+                          <button
+                            type="button"
+                            onClick={handleAddEvidence}
+                            disabled={addEvidenceUploading || addEvidenceFiles.length === 0}
+                            className="flex-1 py-1.5 bg-[#1a3d7c] hover:bg-[#1e4a94] text-white text-xs font-medium rounded transition-colors disabled:opacity-60"
+                          >
+                            {addEvidenceUploading ? "Hochladen..." : `${addEvidenceFiles.length} Datei${addEvidenceFiles.length !== 1 ? "en" : ""} hochladen`}
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                    {evidenceLoading ? (
+                      <p className="text-xs text-gray-500 py-4 text-center">Laden...</p>
+                    ) : evidenceFiles.length === 0 ? (
+                      <div className="flex flex-col items-center justify-center py-10 gap-2">
+                        <ImageIcon className="w-8 h-8 text-gray-700" />
+                        <p className="text-xs text-gray-500">Keine Beweismittel vorhanden.</p>
+                        <p className="text-[10px] text-gray-600">Klicken Sie auf "Hochladen", um Bilder und Videos hinzuzufügen.</p>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-4 gap-3">
+                        {evidenceFiles.map((f, i) => (
+                          <div key={i} className="group relative rounded-lg overflow-hidden bg-[#0a0f1a] border border-[#1e2d4a] hover:border-[#c9a227]/40 transition-colors">
+                            {/* Delete button — appears on hover */}
+                            <button
+                              onClick={e => { e.stopPropagation(); requestDeleteEvidence(f.filename); }}
+                              disabled={deletingFile === f.filename}
+                              className="absolute top-1 right-1 z-10 opacity-0 group-hover:opacity-100 transition-opacity bg-black/70 hover:bg-red-900/80 text-red-400 hover:text-red-300 rounded p-0.5 disabled:opacity-50"
+                              title="Beweismittel löschen"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                            {f.type === "image" ? (
+                              <div className="relative cursor-pointer" onClick={() => setLightboxUrl(f.url)}>
+                                <img src={f.url} alt={f.filename} className="w-full h-24 object-cover" />
+                                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center">
+                                  <ZoomIn className="w-5 h-5 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                                </div>
+                                <div className="absolute bottom-0 left-0 right-0 bg-black/60 px-1.5 py-1">
+                                  <p className="text-[9px] text-gray-300 truncate">{f.filename}</p>
+                                </div>
+                              </div>
+                            ) : f.type === "video" ? (
+                              <div className="relative cursor-pointer" onClick={() => setVideoUrl(f.url)}>
+                                <div className="w-full h-24 flex flex-col items-center justify-center gap-1 bg-[#0a1020]">
+                                  <Film className="w-6 h-6 text-blue-400" />
+                                  <span className="text-[9px] text-gray-500 px-1 truncate w-full text-center">{f.filename}</span>
+                                </div>
+                                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center">
+                                  <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <span className="text-white text-xs ml-0.5">▶</span>
+                                  </div>
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="w-full h-24 flex flex-col items-center justify-center gap-1">
+                                <ImageIcon className="w-5 h-5 text-gray-500" />
+                                <p className="text-[9px] text-gray-500 truncate px-1">{f.filename}</p>
+                              </div>
+                            )}
+                            <div className="px-1.5 py-1 border-t border-[#1e2d4a] space-y-0.5">
+                              <p className="text-[9px] text-gray-400 truncate" title={f.uploadedBy ?? "Unbekannt"}>{f.uploadedBy ?? "Unbekannt"}</p>
+                              <div className="flex items-center justify-between gap-1">
+                                <span className="text-[9px] text-gray-600">{new Date(f.uploadedAt).toLocaleDateString("de-DE")}</span>
+                                <span className="text-[9px] text-gray-600">{(f.size / 1024).toFixed(0)} KB</span>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+                {!["Übersicht", "Beweismittel"].includes(activeTab) && (
                   <p className="text-xs text-gray-500 py-4 text-center">Keine Daten für diesen Bereich vorhanden.</p>
                 )}
               </div>
