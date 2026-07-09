@@ -22,8 +22,9 @@ nur Direktion/Leitung/Agent zuweisbar; Admin-Rolle unveränderbar; eigene Rolle 
 
 ## Admin-User
 
-Geseedeter System-User: dienstnummer "Admin", Name "Admin", Passwort "1234",
-role "Admin", freigegeben. Existiert nur in der Dev-DB — bei neuer/Prod-Umgebung
-muss er erneut angelegt werden (INSERT mit hashPassword aus api-server lib/auth.ts).
+Geseedeter System-User: dienstnummer "Admin", Name "Admin", role "Admin",
+freigegeben; das Passwort wurde vom Nutzer vorgegeben und steht bewusst nicht
+hier. Existiert nur in der Dev-DB — bei neuer/Prod-Umgebung muss er erneut
+angelegt werden (INSERT mit hashPassword aus api-server lib/auth.ts).
 Test-Fixtures für Leitungsrechte brauchen jetzt `role: "Leitung"`, ein Leitungsrang
 allein reicht nicht mehr.

@@ -354,7 +354,7 @@ paths:
     post:
       operationId: addCaseAgent
       tags: [cases]
-      summary: Add an agent to a case (requires case involvement)
+      summary: Add an agent to a case (lead agent or leadership only)
       parameters:
         - name: id
           in: path
@@ -379,7 +379,7 @@ paths:
         "401":
           description: Not authenticated
         "403":
-          description: No access to this case
+          description: No access to this case or not allowed to manage agents
         "404":
           description: Case not found
 
@@ -387,7 +387,7 @@ paths:
     delete:
       operationId: removeCaseAgent
       tags: [cases]
-      summary: Remove an agent from a case (requires case involvement)
+      summary: Remove an agent from a case (lead agent or leadership only)
       parameters:
         - name: id
           in: path
@@ -407,7 +407,7 @@ paths:
         "401":
           description: Not authenticated
         "403":
-          description: No access to this case
+          description: No access to this case or not allowed to manage agents
         "404":
           description: Case or agent not found
 

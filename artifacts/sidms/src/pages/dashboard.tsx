@@ -6,10 +6,14 @@ import {
   useGetCaseStatusHistory,
   useCreateCase,
   useGetOfficerNames,
+  useGetCaseAgents,
+  useAddCaseAgent,
+  useRemoveCaseAgent,
   getGetCasesQueryKey,
   getGetDashboardStatsQueryKey,
   getGetCaseQueryKey,
   getGetCaseStatusHistoryQueryKey,
+  getGetCaseAgentsQueryKey,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
@@ -19,6 +23,8 @@ import {
 import EvidenceUpload, { type UploadFile, uploadEvidenceFiles } from "@/components/EvidenceUpload";
 import DeleteConfirmModal from "@/components/DeleteConfirmModal";
 import { STRAFTATEN } from "@/lib/straftaten";
+import { useAuth } from "@/contexts/AuthContext";
+import { hasFullAccess } from "@/lib/ranks";
 
 const CATEGORIES_NEW = ["Gang", "Familie"];
 const PRIORITIES_NEW = ["Hoch", "Mittel", "Niedrig"];
@@ -98,6 +104,56 @@ export default function Dashboard() {
   const createCase = useCreateCase();
   const { data: allOfficers } = useGetOfficerNames();
   const officerNames = [...new Set((allOfficers ?? []).map(o => o.name))].sort((a, b) => a.localeCompare(b, "de"));
+
+  const { officer } = useAuth();
+  const { data: caseAgents } = useGetCaseAgents(selectedId!, {
+    query: { enabled: !!selectedId && activeTab === "Agenten", queryKey: getGetCaseAgentsQueryKey(selectedId ?? 0) },
+  });
+  const addCaseAgent = useAddCaseAgent();
+  const removeCaseAgent = useRemoveCaseAgent();
+  const [addAgentName, setAddAgentName] = useState("");
+  const [addAgentRole, setAddAgentRole] = useState("Unterstützender Agent");
+  const [agentError, setAgentError] = useState<string | null>(null);
+  const canManageAgents = !!caseDetail && (hasFullAccess(officer?.role) || caseDetail.leadAgent === officer?.name);
+
+  const invalidateCaseAgents = (caseId: number) => {
+    qc.invalidateQueries({ queryKey: getGetCaseAgentsQueryKey(caseId) });
+    qc.invalidateQueries({ queryKey: getGetCaseQueryKey(caseId) });
+    qc.invalidateQueries({ queryKey: getGetCasesQueryKey() });
+  };
+
+  const handleAddAgent = () => {
+    if (!selectedId || !addAgentName) return;
+    setAgentError(null);
+    addCaseAgent.mutate(
+      { id: selectedId, data: { name: addAgentName, role: addAgentRole as "Unterstützender Agent" | "Supervisor" } },
+      {
+        onSuccess: () => {
+          setAddAgentName("");
+          invalidateCaseAgents(selectedId);
+        },
+        onError: (err: unknown) => {
+          const e = err as { response?: { data?: { error?: string } } };
+          setAgentError(e?.response?.data?.error ?? "Agent konnte nicht hinzugefügt werden");
+        },
+      },
+    );
+  };
+
+  const handleRemoveAgent = (agentId: number) => {
+    if (!selectedId) return;
+    setAgentError(null);
+    removeCaseAgent.mutate(
+      { id: selectedId, agentId },
+      {
+        onSuccess: () => invalidateCaseAgents(selectedId),
+        onError: (err: unknown) => {
+          const e = err as { response?: { data?: { error?: string } } };
+          setAgentError(e?.response?.data?.error ?? "Agent konnte nicht entfernt werden");
+        },
+      },
+    );
+  };
 
   useEffect(() => {
     if (activeTab !== "Beweismittel" || !selectedId) return;
@@ -195,7 +251,7 @@ export default function Dashboard() {
     { label: "Hohe Priorität", value: stats?.hohePrioritaet ?? 0, delta: stats?.hohePrioritaetDelta, icon: AlertTriangle, color: "text-red-400", border: "border-red-600/30" },
   ];
 
-  const TABS = ["Übersicht", "Beweismittel", "Dokumente"];
+  const TABS = ["Übersicht", "Agenten", "Beweismittel", "Dokumente"];
 
   const applyFilters = () => {
     qc.invalidateQueries({ queryKey: getGetCasesQueryKey() });
@@ -538,6 +594,81 @@ export default function Dashboard() {
                         </div>
                       )}
                     </div>
+                  </div>
+                )}
+                {activeTab === "Agenten" && (
+                  <div>
+                    <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Beteiligte Agenten</h3>
+                    {agentError && (
+                      <p className="text-xs text-red-400 mb-3" data-testid="text-agent-error">{agentError}</p>
+                    )}
+                    {!caseAgents ? (
+                      <p className="text-xs text-gray-500 py-4 text-center">Laden...</p>
+                    ) : caseAgents.length === 0 ? (
+                      <p className="text-xs text-gray-500 py-4 text-center">Keine Agenten zugewiesen.</p>
+                    ) : (
+                      <div className="space-y-1.5 mb-4">
+                        {caseAgents.map(a => (
+                          <div key={a.id} className="flex items-center justify-between bg-[#0a0f1a] border border-[#1e2d4a] rounded px-3 py-2" data-testid={`row-case-agent-${a.id}`}>
+                            <div className="flex items-center gap-3">
+                              <span className="text-xs text-gray-200">{a.name}</span>
+                              <span className={`px-1.5 py-0.5 rounded text-[10px] border ${a.role === "Leitender Agent" ? "bg-[#c9a227]/15 text-[#c9a227] border-[#c9a227]/40" : a.role === "Supervisor" ? "bg-purple-900/40 text-purple-300 border-purple-700/50" : "bg-[#1a2744] text-gray-400 border-[#1e2d4a]"}`}>
+                                {a.role}
+                              </span>
+                            </div>
+                            {canManageAgents && a.role !== "Leitender Agent" && (
+                              <button
+                                onClick={() => handleRemoveAgent(a.id)}
+                                disabled={removeCaseAgent.isPending}
+                                className="text-gray-500 hover:text-red-400 transition-colors disabled:opacity-50"
+                                title="Agent entfernen"
+                                data-testid={`button-remove-agent-${a.id}`}
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {canManageAgents ? (
+                      <div className="p-3 bg-[#0a0f1a] border border-[#1e2d4a] rounded-lg">
+                        <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-2">Agent hinzufügen</p>
+                        <div className="flex gap-2">
+                          <select
+                            value={addAgentName}
+                            onChange={e => setAddAgentName(e.target.value)}
+                            className="flex-1 bg-[#0d1526] border border-[#1e2d4a] text-xs text-white px-2 py-1.5 rounded focus:outline-none focus:border-[#c9a227]/50"
+                            data-testid="select-add-agent-name"
+                          >
+                            <option value="">Officer auswählen...</option>
+                            {officerNames
+                              .filter(n => n !== caseDetail?.leadAgent && !(caseAgents ?? []).some(a => a.name === n && a.role !== "Ersteller"))
+                              .map(n => <option key={n} value={n}>{n}</option>)}
+                          </select>
+                          <select
+                            value={addAgentRole}
+                            onChange={e => setAddAgentRole(e.target.value)}
+                            className="bg-[#0d1526] border border-[#1e2d4a] text-xs text-white px-2 py-1.5 rounded focus:outline-none focus:border-[#c9a227]/50"
+                            data-testid="select-add-agent-role"
+                          >
+                            <option value="Unterstützender Agent">Unterstützender Agent</option>
+                            <option value="Supervisor">Supervisor</option>
+                          </select>
+                          <button
+                            onClick={handleAddAgent}
+                            disabled={!addAgentName || addCaseAgent.isPending}
+                            className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-[#1a3d7c]/60 hover:bg-[#1a3d7c] border border-[#2a5bb0]/50 text-blue-300 rounded transition-colors disabled:opacity-50"
+                            data-testid="button-add-agent"
+                          >
+                            <Plus className="w-3 h-3" />
+                            Hinzufügen
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-[10px] text-gray-600">Nur der leitende Agent oder die Leitung kann Agenten verwalten.</p>
+                    )}
                   </div>
                 )}
                 {activeTab === "Beweismittel" && (

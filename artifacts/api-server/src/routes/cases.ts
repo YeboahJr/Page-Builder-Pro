@@ -389,6 +389,12 @@ router.get("/:id/agents", async (req, res) => {
 
 const ADDABLE_AGENT_ROLES = ["Unterstützender Agent", "Supervisor"];
 
+// Only the lead agent of a case or full-access roles may change the case
+// membership; mere involvement (support agents) is read-only here.
+function canManageCaseAgents(access: { officer: Officer; case: typeof casesTable.$inferSelect }): boolean {
+  return hasFullAccess(access.officer.role) || access.case.leadAgent === access.officer.name;
+}
+
 router.post("/:id/agents", async (req, res) => {
   const id = parseCaseIdParam(req.params.id);
   if (id === null) {
@@ -397,6 +403,10 @@ router.post("/:id/agents", async (req, res) => {
   }
   const access = await loadAccessibleCase(req, res, id);
   if (!access) return;
+  if (!canManageCaseAgents(access)) {
+    res.status(403).json({ error: "Nur der leitende Agent oder die Leitung darf Agenten verwalten" });
+    return;
+  }
 
   const name = typeof req.body?.name === "string" ? req.body.name.trim() : "";
   const role = req.body?.role === undefined ? "Unterstützender Agent" : String(req.body.role);
@@ -447,6 +457,10 @@ router.delete("/:id/agents/:agentId", async (req, res) => {
   }
   const access = await loadAccessibleCase(req, res, id);
   if (!access) return;
+  if (!canManageCaseAgents(access)) {
+    res.status(403).json({ error: "Nur der leitende Agent oder die Leitung darf Agenten verwalten" });
+    return;
+  }
 
   const [agent] = await db
     .select()

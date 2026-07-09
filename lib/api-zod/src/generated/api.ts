@@ -350,7 +350,7 @@ export const GetCaseAgentsResponse = zod.array(GetCaseAgentsResponseItem)
 
 
 /**
- * @summary Add an agent to a case (requires case involvement)
+ * @summary Add an agent to a case (lead agent or leadership only)
  */
 export const AddCaseAgentParams = zod.object({
   "id": zod.coerce.number()
@@ -369,7 +369,7 @@ export const AddCaseAgentResponse = zod.object({
 
 
 /**
- * @summary Remove an agent from a case (requires case involvement)
+ * @summary Remove an agent from a case (lead agent or leadership only)
  */
 export const RemoveCaseAgentParams = zod.object({
   "id": zod.coerce.number(),

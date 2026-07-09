@@ -1220,7 +1220,7 @@ export const getAddCaseAgentUrl = (id: number,) => {
 }
 
 /**
- * @summary Add an agent to a case (requires case involvement)
+ * @summary Add an agent to a case (lead agent or leadership only)
  */
 export const addCaseAgent = async (id: number,
     addCaseAgentInput: AddCaseAgentInput, options?: RequestInit): Promise<CaseAgent> => {
@@ -1269,7 +1269,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
     export type AddCaseAgentMutationError = ErrorType<void>
 
     /**
- * @summary Add an agent to a case (requires case involvement)
+ * @summary Add an agent to a case (lead agent or leadership only)
  */
 export const useAddCaseAgent = <TError = ErrorType<void>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof addCaseAgent>>, TError,{id: number;data: BodyType<AddCaseAgentInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
@@ -1292,7 +1292,7 @@ export const getRemoveCaseAgentUrl = (id: number,
 }
 
 /**
- * @summary Remove an agent from a case (requires case involvement)
+ * @summary Remove an agent from a case (lead agent or leadership only)
  */
 export const removeCaseAgent = async (id: number,
     agentId: number, options?: RequestInit): Promise<void> => {
@@ -1341,7 +1341,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
     export type RemoveCaseAgentMutationError = ErrorType<void>
 
     /**
- * @summary Remove an agent from a case (requires case involvement)
+ * @summary Remove an agent from a case (lead agent or leadership only)
  */
 export const useRemoveCaseAgent = <TError = ErrorType<void>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof removeCaseAgent>>, TError,{id: number;agentId: number}, TContext>, request?: SecondParameter<typeof customFetch>}

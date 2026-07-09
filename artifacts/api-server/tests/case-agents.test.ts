@@ -20,6 +20,7 @@ const NAME_PENDING = `Test CA Pending ${RUN_ID}`;
 
 let server: Server;
 let baseUrl: string;
+let tokenLead: string;
 let tokenMember: string;
 let tokenAdded: string;
 let tokenOutsider: string;
@@ -74,9 +75,10 @@ beforeAll(async () => {
     freigegeben: true,
   };
   await db.insert(officersTable).values([
-    { ...base, dienstnummer: LEAD_DN, name: NAME_LEAD, rank: "Special Agent" },
+    { ...base, dienstnummer: LEAD_DN, name: NAME_LEAD, rank: "Special Agent", allowedPages: ["dashboard"] },
     // Case-involved officer WITHOUT personal/leitstelle page rights — must
-    // still be able to load the name directory and manage case agents.
+    // still be able to load the name directory; agent management itself is
+    // reserved for the lead agent and full-access roles.
     { ...base, dienstnummer: MEMBER_DN, name: NAME_MEMBER, rank: "Special Agent", allowedPages: ["dashboard"] },
     { ...base, dienstnummer: ADDED_DN, name: NAME_ADDED, rank: "Special Agent", allowedPages: ["dashboard"] },
     { ...base, dienstnummer: OUTSIDER_DN, name: NAME_OUTSIDER, rank: "Special Agent", allowedPages: ["dashboard"] },
@@ -109,6 +111,7 @@ beforeAll(async () => {
   }
   baseUrl = `http://127.0.0.1:${address.port}/api`;
 
+  tokenLead = await login(LEAD_DN);
   tokenMember = await login(MEMBER_DN);
   tokenAdded = await login(ADDED_DN);
   tokenOutsider = await login(OUTSIDER_DN);
@@ -157,14 +160,33 @@ describe("case agent management (/cases/:id/agents)", () => {
     expect(outsider.status).toBe(403);
   });
 
-  it("lets an involved officer without personal/leitstelle rights add an agent, who then sees the case", async () => {
+  it("rejects a merely involved support agent for add and remove (lead/leadership only)", async () => {
+    const add = await api(`/cases/${caseId}/agents`, {
+      method: "POST",
+      token: tokenMember,
+      body: { name: NAME_ADDED },
+    });
+    expect(add.status).toBe(403);
+
+    const agents = await api(`/cases/${caseId}/agents`, { token: tokenMember });
+    expect(agents.status).toBe(200);
+    const memberRow = agents.json.find((a: { name: string }) => a.name === NAME_MEMBER);
+    expect(memberRow).toBeDefined();
+    const remove = await api(`/cases/${caseId}/agents/${memberRow.id}`, {
+      method: "DELETE",
+      token: tokenMember,
+    });
+    expect(remove.status).toBe(403);
+  });
+
+  it("lets the lead agent add an agent, who then sees the case", async () => {
     const before = await api("/cases", { token: tokenAdded });
     expect(before.status).toBe(200);
     expect(before.json.some((c: { id: number }) => c.id === caseId)).toBe(false);
 
     const added = await api(`/cases/${caseId}/agents`, {
       method: "POST",
-      token: tokenMember,
+      token: tokenLead,
       body: { name: NAME_ADDED },
     });
     expect(added.status).toBe(201);
@@ -177,35 +199,35 @@ describe("case agent management (/cases/:id/agents)", () => {
   it("rejects invalid additions", async () => {
     const unknown = await api(`/cases/${caseId}/agents`, {
       method: "POST",
-      token: tokenMember,
+      token: tokenLead,
       body: { name: `Unbekannt ${RUN_ID}` },
     });
     expect(unknown.status).toBe(400);
 
     const pending = await api(`/cases/${caseId}/agents`, {
       method: "POST",
-      token: tokenMember,
+      token: tokenLead,
       body: { name: NAME_PENDING },
     });
     expect(pending.status).toBe(400);
 
     const lead = await api(`/cases/${caseId}/agents`, {
       method: "POST",
-      token: tokenMember,
+      token: tokenLead,
       body: { name: NAME_LEAD },
     });
     expect(lead.status).toBe(400);
 
     const duplicate = await api(`/cases/${caseId}/agents`, {
       method: "POST",
-      token: tokenMember,
+      token: tokenLead,
       body: { name: NAME_ADDED },
     });
     expect(duplicate.status).toBe(400);
 
     const badRole = await api(`/cases/${caseId}/agents`, {
       method: "POST",
-      token: tokenMember,
+      token: tokenLead,
       body: { name: NAME_OUTSIDER, role: "Leitender Agent" },
     });
     expect(badRole.status).toBe(400);
@@ -219,7 +241,7 @@ describe("case agent management (/cases/:id/agents)", () => {
 
     const removed = await api(`/cases/${caseId}/agents/${addedRow.id}`, {
       method: "DELETE",
-      token: tokenMember,
+      token: tokenLead,
     });
     expect(removed.status).toBe(204);
 
@@ -234,13 +256,13 @@ describe("case agent management (/cases/:id/agents)", () => {
 
     const res = await api(`/cases/${caseId}/agents/${leadRow.id}`, {
       method: "DELETE",
-      token: tokenMember,
+      token: tokenLead,
     });
     expect(res.status).toBe(400);
 
     const missing = await api(`/cases/${caseId}/agents/999999`, {
       method: "DELETE",
-      token: tokenMember,
+      token: tokenLead,
     });
     expect(missing.status).toBe(404);
   });
