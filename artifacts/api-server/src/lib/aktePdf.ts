@@ -1,7 +1,10 @@
 import PDFDocument from "pdfkit";
 
-// Data needed to render a case file ("Akte") as a PDF document modeled after
-// the FIB paper template (DOJ header, Aktenzeichen, Sachbearbeiter, sections).
+// Data needed to render a case file ("Akte") as a PDF document that follows
+// the user's Google-Doc template as closely as possible: DOJ/FIB letterhead
+// with Aktenzeichen/Sachbearbeiter/Datum, plain black typography, sections
+// with colon headings, horizontal rules, plain Straftaten lines, captions
+// above the evidence images and the digital-signature footnote at the end.
 export interface AktePdfData {
   caseNumber: string;
   title: string;
@@ -24,10 +27,7 @@ export interface AktePdfData {
   otherFiles: string[];
 }
 
-const NAVY = "#0b1f3a";
-const GOLD = "#8a6d1d";
-const GRAY = "#444444";
-const LIGHT = "#777777";
+const BLACK = "#000000";
 
 function formatDateDe(d: Date): string {
   return d.toLocaleDateString("de-DE", { day: "numeric", month: "long", year: "numeric" });
@@ -36,70 +36,79 @@ function formatDateDe(d: Date): string {
 export function buildAktePdf(data: AktePdfData): PDFKit.PDFDocument {
   const doc = new PDFDocument({ size: "A4", margins: { top: 56, bottom: 64, left: 56, right: 56 } });
 
+  const left = doc.page.margins.left;
   const pageWidth = doc.page.width - doc.page.margins.left - doc.page.margins.right;
 
-  // ---------- Header (DOJ / FIB) ----------
-  doc.font("Helvetica-Bold").fontSize(11).fillColor(NAVY).text("U.S. Department of Justice");
-  doc.font("Helvetica").fontSize(10).fillColor(NAVY).text("Federal Investigation Bureau");
-  doc.moveDown(0.8);
+  // ---------- Letterhead: DOJ/FIB left, Aktenzeichen/Sachbearbeiter/Datum right ----------
+  const headerTop = doc.y;
+  doc.font("Helvetica-Bold").fontSize(11).fillColor(BLACK)
+    .text("U.S. Department of Justice", left, headerTop);
+  doc.font("Helvetica").fontSize(11)
+    .text("Federal Investigation Bureau", left, doc.y);
 
   const sachbearbeiter = data.leadAgentDienstnummer
     ? `DN-${data.leadAgentDienstnummer} | ${data.leadAgent}`
     : data.leadAgent;
 
+  const metaWidth = 250;
+  const metaX = doc.page.width - doc.page.margins.right - metaWidth;
+  let metaY = headerTop;
   const metaRows: Array<[string, string]> = [
     ["Aktenzeichen:", data.caseNumber],
     ["Sachbearbeiter:", sachbearbeiter],
     ["Datum:", formatDateDe(data.createdAt)],
   ];
   for (const [label, value] of metaRows) {
-    const y = doc.y;
-    doc.font("Helvetica-Bold").fontSize(9).fillColor(GRAY).text(label, doc.page.margins.left, y, { width: 110 });
-    doc.font("Helvetica").fontSize(9).fillColor("#000000").text(value, doc.page.margins.left + 110, y, { width: pageWidth - 110 });
-    doc.moveDown(0.2);
+    doc.font("Helvetica-Bold").fontSize(9).text(label, metaX, metaY, { width: metaWidth, align: "right" });
+    metaY = doc.y;
+    doc.font("Helvetica").fontSize(9).text(value, metaX, metaY, { width: metaWidth, align: "right" });
+    metaY = doc.y + 2;
   }
 
-  doc.moveDown(0.6);
-  doc.moveTo(doc.page.margins.left, doc.y).lineTo(doc.page.width - doc.page.margins.right, doc.y)
-    .lineWidth(1.2).strokeColor(NAVY).stroke();
-  doc.moveDown(1);
+  doc.x = left;
+  doc.y = Math.max(doc.y, metaY) + 10;
+
+  hr(doc);
+  doc.moveDown(1.5);
 
   // ---------- Title ----------
-  doc.font("Helvetica-Bold").fontSize(16).fillColor("#000000").text(data.title, { align: "center" });
-  doc.font("Helvetica").fontSize(9).fillColor(LIGHT)
-    .text(`Kategorie: ${data.category}   ·   Priorität: ${data.priority}   ·   Status: ${data.status}`, { align: "center" });
-  doc.moveDown(1.2);
+  doc.font("Helvetica-Bold").fontSize(20).fillColor(BLACK).text(data.title, left, doc.y, { align: "center", width: pageWidth });
+  doc.moveDown(1.5);
 
-  const section = (heading: string) => {
-    ensureSpace(doc, 60);
-    doc.font("Helvetica-Bold").fontSize(11).fillColor(NAVY).text(heading);
-    doc.moveTo(doc.page.margins.left, doc.y + 1).lineTo(doc.page.margins.left + 120, doc.y + 1)
-      .lineWidth(0.8).strokeColor(GOLD).stroke();
-    doc.moveDown(0.5);
+  const heading = (label: string) => {
+    ensureSpace(doc, 50);
+    doc.font("Helvetica-Bold").fontSize(11).fillColor(BLACK).text(label, left, doc.y);
+    doc.moveDown(0.4);
   };
 
   const bodyText = (text: string) => {
-    doc.font("Helvetica").fontSize(10).fillColor("#111111").text(text, { lineGap: 2 });
-    doc.moveDown(0.8);
+    doc.font("Helvetica").fontSize(11).fillColor(BLACK).text(text, left, doc.y, { width: pageWidth, lineGap: 2 });
+    doc.moveDown(1);
   };
 
   // ---------- Beschreibung ----------
   if (data.description?.trim()) {
-    section("Beschreibung");
+    heading("Beschreibung:");
     bodyText(data.description.trim());
   }
 
   // ---------- Verhandlungsführung ----------
   if (data.verhandlungsfuehrung?.trim()) {
-    section("Verhandlungsführung");
+    heading("Verhandlungsführung:");
     bodyText(data.verhandlungsfuehrung.trim());
   }
 
   // ---------- Details ----------
   const hasTatFacts = data.tatDatum || data.tatWann || data.tatWo || data.tatWer;
   if (data.details?.trim() || hasTatFacts) {
-    section("Details");
-    if (data.details?.trim()) bodyText(data.details.trim());
+    ensureSpace(doc, 80);
+    hr(doc);
+    doc.moveDown(1);
+    heading("Details:");
+    if (data.details?.trim()) {
+      doc.font("Helvetica").fontSize(11).fillColor(BLACK).text(data.details.trim(), left, doc.y, { width: pageWidth, lineGap: 2 });
+      doc.moveDown(0.8);
+    }
     const facts: Array<[string, string | null]> = [
       ["Datum:", data.tatDatum],
       ["Zeit:", data.tatWann],
@@ -108,84 +117,79 @@ export function buildAktePdf(data: AktePdfData): PDFKit.PDFDocument {
     ];
     for (const [label, value] of facts) {
       if (!value?.trim()) continue;
+      ensureSpace(doc, 16);
       const y = doc.y;
-      doc.font("Helvetica-Bold").fontSize(10).fillColor(GRAY).text(label, doc.page.margins.left, y, { width: 80 });
-      doc.font("Helvetica").fontSize(10).fillColor("#111111").text(value.trim(), doc.page.margins.left + 80, y, { width: pageWidth - 80 });
+      doc.font("Helvetica").fontSize(11).fillColor(BLACK).text(label, left, y, { width: 90 });
+      doc.font("Helvetica").fontSize(11).text(value.trim(), left + 90, y, { width: pageWidth - 90 });
       doc.moveDown(0.15);
     }
-    doc.x = doc.page.margins.left;
-    doc.moveDown(0.8);
+    doc.x = left;
+    doc.moveDown(1);
   }
 
   // ---------- Vorgeworfene Straftaten ----------
   if ((data.straftaten?.length ?? 0) > 0) {
-    section("Vorgeworfene Straftaten");
+    heading("Vorgeworfene Straftaten:");
     for (const s of data.straftaten!) {
       ensureSpace(doc, 16);
-      doc.font("Helvetica").fontSize(10).fillColor("#111111").text(`•  ${s}`, { lineGap: 1 });
+      doc.font("Helvetica").fontSize(11).fillColor(BLACK).text(s, left, doc.y, { width: pageWidth, lineGap: 1 });
     }
-    doc.moveDown(0.8);
+    doc.moveDown(1);
   }
 
-  // ---------- Beteiligte Agenten ----------
-  section("Beteiligte Agenten");
-  const leadLine = data.leadAgentDienstnummer
-    ? `${data.leadAgent} (DN-${data.leadAgentDienstnummer})`
-    : data.leadAgent;
-  doc.font("Helvetica").fontSize(10).fillColor("#111111").text(`Leitender Agent: ${leadLine}`);
-  for (const a of data.agents) {
-    if (a.name === data.leadAgent && a.role === "Leitender Agent") continue;
-    ensureSpace(doc, 16);
-    doc.font("Helvetica").fontSize(10).fillColor("#111111").text(`${a.role}: ${a.name}`);
-  }
-  doc.moveDown(0.8);
-
-  // ---------- Beweismittel ----------
-  if (data.images.length > 0 || data.otherFiles.length > 0) {
-    section("Beweismittel");
+  // ---------- Bilder (caption above image, like the template) ----------
+  if (data.images.length > 0) {
     let imgIndex = 0;
     for (const img of data.images) {
       imgIndex += 1;
-      // Reserve the actual rendered height plus caption so an image never
-      // gets clipped at the page bottom.
-      const renderedHeight = imageDisplayHeight(img.data, pageWidth, 300);
-      ensureSpace(doc, renderedHeight + 30);
+      const renderedHeight = imageDisplayHeight(img.data, pageWidth, 320);
+      const caption = `Bild ${imgIndex}: ${img.filename}`;
+      doc.font("Helvetica").fontSize(11);
+      const captionHeight = doc.heightOfString(caption, { width: pageWidth, lineGap: 1 });
+      // Reserve caption + image together so they stay on the same page.
+      ensureSpace(doc, captionHeight + renderedHeight + 20);
+      doc.fillColor(BLACK)
+        .text(caption, left, doc.y, { width: pageWidth, lineGap: 1 });
+      doc.moveDown(0.4);
       try {
-        doc.image(img.data, doc.page.margins.left, doc.y, {
-          fit: [pageWidth, 300],
-        });
+        doc.image(img.data, left, doc.y, { fit: [pageWidth, 320] });
         // pdfkit does not advance y past a fitted image reliably; compute manually.
-        doc.y = doc.y + renderedHeight + 6;
-        doc.font("Helvetica-Oblique").fontSize(8.5).fillColor(LIGHT)
-          .text(`Bild ${imgIndex}: ${img.filename}`, { lineGap: 1 });
-        doc.moveDown(0.8);
+        doc.y = doc.y + renderedHeight;
       } catch {
-        doc.font("Helvetica").fontSize(9).fillColor(LIGHT).text(`Bild ${imgIndex}: ${img.filename} (konnte nicht eingebettet werden)`);
-        doc.moveDown(0.4);
+        doc.font("Helvetica-Oblique").fontSize(10).text("(Bild konnte nicht eingebettet werden)", left, doc.y);
       }
+      doc.moveDown(1);
     }
-    if (data.otherFiles.length > 0) {
-      ensureSpace(doc, 40);
-      doc.font("Helvetica").fontSize(9).fillColor(GRAY).text("Weitere Dateien (nicht eingebettet):");
-      for (const f of data.otherFiles) {
-        ensureSpace(doc, 14);
-        doc.font("Helvetica").fontSize(9).fillColor(LIGHT).text(`•  ${f}`);
-      }
-      doc.moveDown(0.8);
+  }
+
+  if (data.otherFiles.length > 0) {
+    ensureSpace(doc, 40);
+    heading("Weitere Anhänge:");
+    for (const f of data.otherFiles) {
+      ensureSpace(doc, 14);
+      doc.font("Helvetica").fontSize(10).fillColor(BLACK).text(f, left, doc.y);
     }
+    doc.moveDown(1);
   }
 
   // ---------- Footer note ----------
   ensureSpace(doc, 60);
   doc.moveDown(1);
-  doc.moveTo(doc.page.margins.left, doc.y).lineTo(doc.page.width - doc.page.margins.right, doc.y)
-    .lineWidth(0.8).strokeColor("#bbbbbb").stroke();
-  doc.moveDown(0.5);
-  doc.font("Helvetica-Oblique").fontSize(8.5).fillColor(LIGHT)
-    .text("Dieses Dokument wurde elektronisch erstellt und ist auch mit digitaler Unterschrift gültig.");
+  hr(doc);
+  doc.moveDown(0.6);
+  doc.font("Helvetica").fontSize(10).fillColor(BLACK)
+    .text("Dieses Dokument wurde elektronisch erstellt und ist auch mit digitaler Unterschrift gültig.", left, doc.y, { width: pageWidth });
 
   doc.end();
   return doc;
+}
+
+// Plain horizontal rule across the content width, like the template's
+// "________________" separators.
+function hr(doc: PDFKit.PDFDocument) {
+  doc.moveTo(doc.page.margins.left, doc.y)
+    .lineTo(doc.page.width - doc.page.margins.right, doc.y)
+    .lineWidth(1).strokeColor(BLACK).stroke();
 }
 
 // Starts a new page when fewer than `needed` points remain below the cursor.
@@ -193,6 +197,7 @@ function ensureSpace(doc: PDFKit.PDFDocument, needed: number) {
   const bottom = doc.page.height - doc.page.margins.bottom;
   if (doc.y + needed > bottom) {
     doc.addPage();
+    doc.x = doc.page.margins.left;
   }
 }
 
