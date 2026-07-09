@@ -12,6 +12,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Users, Check, Pencil, X, Plus, Trash2, KeyRound, RefreshCw } from "lucide-react";
 import DeleteConfirmModal from "@/components/DeleteConfirmModal";
 import OfficerAvatar from "@/components/OfficerAvatar";
+import { useAuth } from "@/contexts/AuthContext";
+import { hasFullAccess } from "@/lib/ranks";
 
 const CHECKBOX_COLS = [
   { key: "einweisung", label: "Einweisung" },
@@ -113,6 +115,9 @@ const inputCls =
   "bg-[#0a0f1a] border border-[#c9a227]/40 rounded px-1.5 py-1 text-white text-xs outline-none focus:border-[#c9a227]";
 
 export default function Personal() {
+  const { officer: currentOfficer } = useAuth();
+  // Bearbeiten/Anlegen/Löschen/Passwort-Reset nur für Admin/Direktion/Leitung.
+  const canManage = hasFullAccess(currentOfficer?.role);
   const { data: officers, isLoading } = useGetOfficers();
   const updatePermissions = useUpdateOfficerPermissions();
   const createOfficer = useCreateOfficer();
@@ -311,12 +316,14 @@ export default function Personal() {
             <p className="text-xs text-gray-400">Übersicht und Freigaben aller Beamten der Special Investigation Division.</p>
           </div>
         </div>
-        <button
-          onClick={() => { setShowNew(true); setNewError(null); }}
-          className="flex items-center gap-1.5 bg-[#1e3a8a] hover:bg-[#1e40af] text-white px-3 py-1.5 rounded text-xs font-medium transition-colors"
-        >
-          <Plus className="w-3.5 h-3.5" /> Neuer Eintrag
-        </button>
+        {canManage && (
+          <button
+            onClick={() => { setShowNew(true); setNewError(null); }}
+            className="flex items-center gap-1.5 bg-[#1e3a8a] hover:bg-[#1e40af] text-white px-3 py-1.5 rounded text-xs font-medium transition-colors"
+          >
+            <Plus className="w-3.5 h-3.5" /> Neuer Eintrag
+          </button>
+        )}
       </div>
 
       {rowError && (
@@ -340,12 +347,14 @@ export default function Personal() {
                   <span className="block w-20 mx-auto leading-tight whitespace-normal break-words">{c.label}</span>
                 </th>
               ))}
-              <th className="px-3 py-2.5 text-gray-400 font-medium text-center border-l border-[#1e2d4a]">Aktionen</th>
+              {canManage && (
+                <th className="px-3 py-2.5 text-gray-400 font-medium text-center border-l border-[#1e2d4a]">Aktionen</th>
+              )}
             </tr>
           </thead>
           <tbody>
             {isLoading ? (
-              <tr><td colSpan={9 + CHECKBOX_COLS.length} className="text-center py-8 text-gray-500">Laden...</td></tr>
+              <tr><td colSpan={(canManage ? 9 : 8) + CHECKBOX_COLS.length} className="text-center py-8 text-gray-500">Laden...</td></tr>
             ) : sortedOfficers.map(o => {
               const isEditing = editingId === o.id && draft;
               const busy = busyId === o.id;
@@ -437,30 +446,32 @@ export default function Personal() {
                     </td>
                   ))}
 
-                  <td className="px-3 py-2 border-l border-[#1e2d4a] text-center">
-                    {isEditing ? (
-                      <div className="flex items-center justify-center gap-1.5">
-                        <button onClick={saveDraft} disabled={busy} className="p-1 rounded bg-green-600/20 text-green-400 hover:bg-green-600/30 disabled:opacity-50" title="Speichern">
-                          <Check className="w-3.5 h-3.5" />
-                        </button>
-                        <button onClick={cancelEdit} disabled={busy} className="p-1 rounded bg-gray-600/20 text-gray-400 hover:bg-gray-600/30 disabled:opacity-50" title="Abbrechen">
-                          <X className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    ) : (
-                      <div className="flex items-center justify-center gap-1.5">
-                        <button onClick={() => startEdit(o)} disabled={busy} className="p-1 rounded bg-[#1e3a8a]/40 text-blue-300 hover:bg-[#1e3a8a]/60 disabled:opacity-50" title="Bearbeiten">
-                          <Pencil className="w-3.5 h-3.5" />
-                        </button>
-                        <button onClick={() => openReset(o)} disabled={busy} className="p-1 rounded bg-[#c9a227]/20 text-[#c9a227] hover:bg-[#c9a227]/30 disabled:opacity-50" title="Passwort zurücksetzen" data-testid={`reset-password-${o.id}`}>
-                          <KeyRound className="w-3.5 h-3.5" />
-                        </button>
-                        <button onClick={() => { setDeleteError(null); setDeleteTarget(o); }} disabled={busy} className="p-1 rounded bg-red-900/30 text-red-400 hover:bg-red-900/50 disabled:opacity-50" title="Löschen">
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    )}
-                  </td>
+                  {canManage && (
+                    <td className="px-3 py-2 border-l border-[#1e2d4a] text-center">
+                      {isEditing ? (
+                        <div className="flex items-center justify-center gap-1.5">
+                          <button onClick={saveDraft} disabled={busy} className="p-1 rounded bg-green-600/20 text-green-400 hover:bg-green-600/30 disabled:opacity-50" title="Speichern">
+                            <Check className="w-3.5 h-3.5" />
+                          </button>
+                          <button onClick={cancelEdit} disabled={busy} className="p-1 rounded bg-gray-600/20 text-gray-400 hover:bg-gray-600/30 disabled:opacity-50" title="Abbrechen">
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-center gap-1.5">
+                          <button onClick={() => startEdit(o)} disabled={busy} className="p-1 rounded bg-[#1e3a8a]/40 text-blue-300 hover:bg-[#1e3a8a]/60 disabled:opacity-50" title="Bearbeiten">
+                            <Pencil className="w-3.5 h-3.5" />
+                          </button>
+                          <button onClick={() => openReset(o)} disabled={busy} className="p-1 rounded bg-[#c9a227]/20 text-[#c9a227] hover:bg-[#c9a227]/30 disabled:opacity-50" title="Passwort zurücksetzen" data-testid={`reset-password-${o.id}`}>
+                            <KeyRound className="w-3.5 h-3.5" />
+                          </button>
+                          <button onClick={() => { setDeleteError(null); setDeleteTarget(o); }} disabled={busy} className="p-1 rounded bg-red-900/30 text-red-400 hover:bg-red-900/50 disabled:opacity-50" title="Löschen">
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      )}
+                    </td>
+                  )}
                 </tr>
               );
             })}

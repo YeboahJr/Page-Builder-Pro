@@ -362,6 +362,10 @@ router.get("/:id", requirePages("personal", "leitstelle"), async (req, res) => {
 });
 
 router.post("/", requirePages("personal"), async (req, res) => {
+  const current = await resolveOfficer(req);
+  if (!current || !hasFullAccess(current.role)) {
+    return res.status(403).json({ error: "Nur die Leitung darf Officer anlegen" });
+  }
   const body = req.body as Record<string, unknown>;
   const dienstnummer = typeof body.dienstnummer === "string" ? body.dienstnummer.trim() : "";
   const name = typeof body.name === "string" ? body.name.trim() : "";
@@ -491,6 +495,10 @@ router.patch("/:id", async (req, res) => {
 });
 
 router.delete("/:id", requirePages("personal"), async (req, res) => {
+  const current = await resolveOfficer(req);
+  if (!current || !hasFullAccess(current.role)) {
+    return res.status(403).json({ error: "Nur die Leitung darf Officer löschen" });
+  }
   const id = parseInt(String(req.params.id));
   if (!Number.isInteger(id)) {
     return res.status(400).json({ error: "Ungültige ID" });

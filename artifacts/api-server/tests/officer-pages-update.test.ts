@@ -226,3 +226,28 @@ describe("PUT /officers/:id/pages", () => {
     expect(res.status).toBe(400);
   });
 });
+
+describe("officer create/delete require full access", () => {
+  it("rejects POST /officers for non-full-access users", async () => {
+    const res = await api(`/officers`, {
+      method: "POST",
+      token: tokenAgent,
+      body: { dienstnummer: `test-opu-new-${RUN_ID}`, name: "Should Not Exist", rank: "Agent" },
+    });
+    expect([401, 403]).toContain(res.status);
+  });
+
+  it("rejects DELETE /officers/:id for non-full-access users", async () => {
+    const res = await api(`/officers/${targetId}`, {
+      method: "DELETE",
+      token: tokenAgent,
+    });
+    expect([401, 403]).toContain(res.status);
+
+    const [target] = await db
+      .select()
+      .from(officersTable)
+      .where(eq(officersTable.id, targetId));
+    expect(target).toBeDefined();
+  });
+});
