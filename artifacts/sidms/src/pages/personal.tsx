@@ -156,6 +156,10 @@ export default function Personal() {
       );
   }, [officers]);
 
+  // STA-Mitglieder werden in einem eigenen Sektor "Staatsanwaltschaft" gelistet.
+  const fibOfficers = useMemo(() => sortedOfficers.filter(o => o.role !== "STA"), [sortedOfficers]);
+  const staOfficers = useMemo(() => sortedOfficers.filter(o => o.role === "STA"), [sortedOfficers]);
+
   const startEdit = (o: Officer) => {
     setRowError(null);
     setEditingId(o.id);
@@ -353,9 +357,12 @@ export default function Personal() {
             </tr>
           </thead>
           <tbody>
-            {isLoading ? (
-              <tr><td colSpan={(canManage ? 9 : 8) + CHECKBOX_COLS.length} className="text-center py-8 text-gray-500">Laden...</td></tr>
-            ) : sortedOfficers.map(o => {
+            {(() => {
+            const totalCols = (canManage ? 9 : 8) + CHECKBOX_COLS.length;
+            if (isLoading) {
+              return <tr><td colSpan={totalCols} className="text-center py-8 text-gray-500">Laden...</td></tr>;
+            }
+            const renderRow = (o: Officer) => {
               const isEditing = editingId === o.id && draft;
               const busy = busyId === o.id;
               const abgemeldet = !!(o.abmeldungBis && o.abmeldungBis.trim());
@@ -474,7 +481,23 @@ export default function Personal() {
                   )}
                 </tr>
               );
-            })}
+            };
+            return (
+              <>
+                {fibOfficers.map(renderRow)}
+                {staOfficers.length > 0 && (
+                  <>
+                    <tr className="bg-[#0a0f1a] border-y border-[#1e2d4a]">
+                      <td colSpan={totalCols} className="px-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-[#c9a227]" data-testid="section-staatsanwaltschaft">
+                        Staatsanwaltschaft
+                      </td>
+                    </tr>
+                    {staOfficers.map(renderRow)}
+                  </>
+                )}
+              </>
+            );
+            })()}
           </tbody>
         </table>
       </div>
