@@ -7,6 +7,7 @@ interface OfficerData {
   dienstnummer: string;
   name: string;
   rank: string;
+  role?: string;
   division: string;
   status: string;
   radioStatus: string;

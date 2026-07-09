@@ -1034,6 +1034,9 @@ components:
           type: string
         rank:
           type: string
+        role:
+          type: string
+          description: "Unsichtbare Berechtigungsrolle: Admin | Direktion | Leitung | Agent"
         division:
           type: string
         status:
@@ -1076,7 +1079,7 @@ components:
           type: boolean
         allowedPages:
           type: ["array", "null"]
-          description: "Erlaubte Sidebar-Seiten. null = alle Seiten erlaubt."
+          description: "Erlaubte Sidebar-Seiten (nur für Rolle Agent relevant). null = keine Seiten zugewiesen. Admin/Direktion/Leitung sehen unabhängig davon alles."
           items:
             type: string
         freigegeben:
@@ -1121,6 +1124,10 @@ components:
           type: array
           items:
             type: string
+        role:
+          type: string
+          enum: [Direktion, Leitung, Agent]
+          description: "Optionale Rollenänderung (Admin-Rolle ist nicht änderbar)"
 
     ChangePasswordInput:
       type: object

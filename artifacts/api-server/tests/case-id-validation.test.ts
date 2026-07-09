@@ -55,6 +55,7 @@ beforeAll(async () => {
     dienstnummer: LEADER_DN,
     name: NAME_L,
     rank: "Division Chief",
+    role: "Leitung",
     passwortHash: hashPassword(PASSWORD),
     status: "Anwesend",
     freigegeben: true,

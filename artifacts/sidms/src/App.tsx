@@ -4,7 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
-import { isLeadership } from "@/lib/ranks";
+import { hasFullAccess } from "@/lib/ranks";
 import { pageAllowed } from "@/lib/pages";
 import AccessDenied from "@/components/AccessDenied";
 import NotFound from "@/pages/not-found";
@@ -62,8 +62,8 @@ function ProtectedRoute({
     return <BootSequence onComplete={() => setBootCompleted(true)} />;
   }
 
-  const leadership = isLeadership(officer?.rank);
-  const blocked = pageKey !== undefined && !leadership && !pageAllowed(officer?.allowedPages, pageKey);
+  const fullAccess = hasFullAccess(officer?.role);
+  const blocked = pageKey !== undefined && !fullAccess && !pageAllowed(officer?.allowedPages, pageKey);
 
   return (
     <AppLayout>

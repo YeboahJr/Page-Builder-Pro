@@ -6,7 +6,7 @@ import path from "path";
 import { randomUUID } from "crypto";
 import { objectStorageClient } from "../lib/objectStorage";
 import { parsePrivateObjectDir } from "@workspace/object-storage";
-import { hashPassword, resolveOfficer, isLeadership } from "../lib/auth";
+import { hashPassword, resolveOfficer, hasFullAccess } from "../lib/auth";
 import { parseAllowedPages } from "../lib/pages";
 import { requirePages } from "../middlewares/requirePages";
 
@@ -69,7 +69,7 @@ router.get("/names", async (req, res) => {
 
 router.get("/pending", async (req, res) => {
   const current = await resolveOfficer(req);
-  if (!current || !isLeadership(current.rank)) {
+  if (!current || !hasFullAccess(current.role)) {
     return res.status(403).json({ error: "Nur die Leitung darf Registrierungen verwalten" });
   }
   const pending = await db
@@ -85,7 +85,7 @@ router.post("/:id/approve", async (req, res) => {
   if (!current) {
     return res.status(401).json({ error: "Nicht angemeldet" });
   }
-  if (!isLeadership(current.rank)) {
+  if (!hasFullAccess(current.role)) {
     return res.status(403).json({ error: "Nur die Leitung darf Registrierungen freigeben" });
   }
   const id = parseInt(req.params.id);
@@ -115,12 +115,14 @@ router.post("/:id/approve", async (req, res) => {
   return res.json(stripHash(updated));
 });
 
+const ASSIGNABLE_ROLES = new Set<string>(["Direktion", "Leitung", "Agent"]);
+
 router.put("/:id/pages", async (req, res) => {
   const current = await resolveOfficer(req);
   if (!current) {
     return res.status(401).json({ error: "Nicht angemeldet" });
   }
-  if (!isLeadership(current.rank)) {
+  if (!hasFullAccess(current.role)) {
     return res.status(403).json({ error: "Nur die Leitung darf Seitenrechte ändern" });
   }
   const id = parseInt(req.params.id);
@@ -132,9 +134,30 @@ router.put("/:id/pages", async (req, res) => {
   if (allowedPages === undefined || allowedPages === null) {
     return res.status(400).json({ error: "Ungültige Seitenrechte" });
   }
+
+  let role: string | undefined;
+  if ("role" in body && body.role !== undefined && body.role !== null) {
+    if (typeof body.role !== "string" || !ASSIGNABLE_ROLES.has(body.role)) {
+      return res.status(400).json({ error: "Ungültige Rolle" });
+    }
+    role = body.role;
+  }
+
+  const [target] = await db.select().from(officersTable).where(eq(officersTable.id, id));
+  if (!target) return res.status(404).json({ error: "Officer nicht gefunden" });
+
+  if (role !== undefined && role !== target.role) {
+    if (target.role === "Admin") {
+      return res.status(403).json({ error: "Die Admin-Rolle kann nicht geändert werden" });
+    }
+    if (target.id === current.id) {
+      return res.status(403).json({ error: "Sie können Ihre eigene Rolle nicht ändern" });
+    }
+  }
+
   const [updated] = await db
     .update(officersTable)
-    .set({ allowedPages })
+    .set({ allowedPages, ...(role !== undefined && target.role !== "Admin" ? { role } : {}) })
     .where(eq(officersTable.id, id))
     .returning();
   if (!updated) return res.status(404).json({ error: "Officer nicht gefunden" });
@@ -146,7 +169,7 @@ router.post("/:id/reject", async (req, res) => {
   if (!current) {
     return res.status(401).json({ error: "Nicht angemeldet" });
   }
-  if (!isLeadership(current.rank)) {
+  if (!hasFullAccess(current.role)) {
     return res.status(403).json({ error: "Nur die Leitung darf Registrierungen ablehnen" });
   }
   const id = parseInt(req.params.id);
@@ -196,7 +219,7 @@ router.post("/:id/password", async (req, res) => {
 
 router.post("/:id/reset-password", async (req, res) => {
   const current = await resolveOfficer(req);
-  if (!current || !isLeadership(current.rank)) {
+  if (!current || !hasFullAccess(current.role)) {
     return res.status(403).json({ error: "Nur die Leitung darf Passwörter zurücksetzen" });
   }
   const id = parseInt(req.params.id);
@@ -384,7 +407,7 @@ router.patch("/:id", async (req, res) => {
   }
   const body = req.body as Record<string, unknown>;
 
-  if (!isLeadership(current.rank)) {
+  if (!hasFullAccess(current.role)) {
     if (current.id !== id) {
       return res.status(403).json({ error: "Sie können nur Ihr eigenes Profil bearbeiten" });
     }
@@ -393,9 +416,6 @@ router.patch("/:id", async (req, res) => {
       return res.status(403).json({
         error: `Diese Felder dürfen Sie nicht ändern: ${disallowed.join(", ")}`,
       });
-    }
-    if (typeof body.rank === "string" && body.rank.trim() !== current.rank && isLeadership(body.rank.trim())) {
-      return res.status(403).json({ error: "Sie können sich keinen Leitungsrang zuweisen" });
     }
   }
 

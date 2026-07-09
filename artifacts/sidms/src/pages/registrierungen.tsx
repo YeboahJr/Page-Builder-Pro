@@ -8,7 +8,7 @@ import {
   getGetPendingOfficersQueryKey,
 } from "@workspace/api-client-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { RANK_NAMES, isLeadership } from "@/lib/ranks";
+import { RANK_NAMES, hasFullAccess } from "@/lib/ranks";
 import { PAGE_DEFS, ALL_PAGE_KEYS } from "@/lib/pages";
 import { useToast } from "@/hooks/use-toast";
 import OfficerAvatar from "@/components/OfficerAvatar";
@@ -19,7 +19,7 @@ export default function Registrierungen() {
   const { officer } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const leadership = isLeadership(officer?.rank);
+  const leadership = hasFullAccess(officer?.role);
 
   const { data: pending, isLoading, isError } = useGetPendingOfficers({
     query: { enabled: leadership, queryKey: getGetPendingOfficersQueryKey() },

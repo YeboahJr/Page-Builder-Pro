@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { db, casesTable, casePersonsTable, caseAgentsTable, caseStatusHistoryTable, evidenceFilesTable, officersTable } from "@workspace/db";
 import { eq, ilike, and, gte, lte, desc, or, inArray, ne, sql } from "drizzle-orm";
-import { resolveOfficer, isLeadership } from "../lib/auth";
+import { resolveOfficer, hasFullAccess } from "../lib/auth";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
@@ -40,7 +40,7 @@ function parseCaseIdParam(raw: string): number | null {
 // A non-leadership officer may only access cases where they are the lead agent
 // or listed among the case agents. Leadership sees everything.
 async function canAccessCase(officer: Officer, caseId: number, leadAgent: string): Promise<boolean> {
-  if (isLeadership(officer.rank)) return true;
+  if (hasFullAccess(officer.role)) return true;
   if (leadAgent === officer.name) return true;
   const [row] = await db
     .select({ id: caseAgentsTable.id })
@@ -86,7 +86,7 @@ router.get("/", async (req, res) => {
 
   const conditions = [];
 
-  if (!isLeadership(officer.rank)) {
+  if (!hasFullAccess(officer.role)) {
     conditions.push(
       or(
         eq(casesTable.leadAgent, officer.name),

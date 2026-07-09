@@ -11,6 +11,8 @@ export interface Officer {
   dienstnummer: string;
   name: string;
   rank: string;
+  /** Unsichtbare Berechtigungsrolle: Admin | Direktion | Leitung | Agent */
+  role?: string;
   division: string;
   /** Anwesend | In Einsatz | Pause | Abwesend */
   status: string;
@@ -38,7 +40,7 @@ export interface Officer {
   meldeamtLI: boolean;
   idChange: boolean;
   /**
-     * Erlaubte Sidebar-Seiten. null = alle Seiten erlaubt.
+     * Erlaubte Sidebar-Seiten (nur für Rolle Agent relevant). null = keine Seiten zugewiesen. Admin/Direktion/Leitung sehen unabhängig davon alles.
      * @nullable
      */
   allowedPages?: string[] | null;

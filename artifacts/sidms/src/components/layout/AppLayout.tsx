@@ -22,7 +22,7 @@ import {
   Shield,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { isLeadership } from "@/lib/ranks";
+import { hasFullAccess } from "@/lib/ranks";
 import { pageAllowed } from "@/lib/pages";
 import { initials } from "@/lib/initials";
 import { Input } from "@/components/ui/input";
@@ -69,7 +69,7 @@ const quickLinks = [
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [location, setLocation] = useLocation();
   const { logout, officer } = useAuth();
-  const leadership = isLeadership(officer?.rank);
+  const leadership = hasFullAccess(officer?.role);
   const [expanded, setExpanded] = useState<string[]>(["/fallmanagement", "/personal"]);
 
   const toggleExpand = (href: string) => {

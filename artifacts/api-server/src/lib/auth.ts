@@ -10,21 +10,17 @@ export function generateToken(): string {
   return crypto.randomBytes(32).toString("hex");
 }
 
-export const LEADERSHIP_RANKS = new Set<string>([
-  "Director of FIB",
-  "Vize Director of FIB",
-  "Assistant Director of FIB",
-  "Secretary of FIB",
-  "Human Resources Director",
-  "Management Chief",
-  "Division Chief",
-  "Deputy Division Chief",
-  "Unit Commander",
-  "Management Division Chief",
-]);
+// Unsichtbare Berechtigungsrollen (officers.role):
+// Admin, Direktion und Leitung haben alle Rechte; Agent hat nur die ihm
+// per allowedPages zugewiesenen Seitenrechte. Die sichtbaren FIB-Ränge
+// (officers.rank) sind rein kosmetisch und vergeben keine Rechte mehr.
+export const ROLES = ["Admin", "Direktion", "Leitung", "Agent"] as const;
+export type Role = (typeof ROLES)[number];
 
-export function isLeadership(rank: string | null | undefined): boolean {
-  return rank != null && LEADERSHIP_RANKS.has(rank);
+export const FULL_ACCESS_ROLES = new Set<string>(["Admin", "Direktion", "Leitung"]);
+
+export function hasFullAccess(role: string | null | undefined): boolean {
+  return role != null && FULL_ACCESS_ROLES.has(role);
 }
 
 type AuthRequest = {

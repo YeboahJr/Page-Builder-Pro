@@ -72,9 +72,9 @@ beforeAll(async () => {
     freigegeben: true,
   };
   await db.insert(officersTable).values([
-    { ...base, dienstnummer: OFFICER_A_DN, name: NAME_A, rank: "Special Agent" },
-    { ...base, dienstnummer: OFFICER_B_DN, name: NAME_B, rank: "Special Agent" },
-    { ...base, dienstnummer: LEADER_DN, name: NAME_L, rank: "Division Chief" },
+    { ...base, dienstnummer: OFFICER_A_DN, name: NAME_A, rank: "Special Agent", allowedPages: ["dashboard", "fallmanagement"] },
+    { ...base, dienstnummer: OFFICER_B_DN, name: NAME_B, rank: "Special Agent", allowedPages: ["dashboard", "fallmanagement"] },
+    { ...base, dienstnummer: LEADER_DN, name: NAME_L, rank: "Division Chief", role: "Leitung" },
   ]);
 
   await new Promise<void>((resolve) => {

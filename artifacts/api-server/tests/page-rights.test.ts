@@ -67,7 +67,7 @@ beforeAll(async () => {
     { ...base, dienstnummer: LEIT_DN, name: `Test PR Leit ${RUN_ID}`, rank: "Special Agent", allowedPages: ["leitstelle"] },
     { ...base, dienstnummer: NULL_DN, name: `Test PR Null ${RUN_ID}`, rank: "Special Agent", allowedPages: null },
     // Leadership with an (irrelevant) restriction — must still see everything.
-    { ...base, dienstnummer: LEAD_DN, name: `Test PR Lead ${RUN_ID}`, rank: "Division Chief", allowedPages: ["dashboard"] },
+    { ...base, dienstnummer: LEAD_DN, name: `Test PR Lead ${RUN_ID}`, rank: "Division Chief", role: "Leitung", allowedPages: ["dashboard"] },
   ]);
 
   await new Promise<void>((resolve) => {
@@ -150,10 +150,10 @@ describe("page rights enforcement on data routes", () => {
     expect(officers.status).toBe(200);
   });
 
-  it("treats allowedPages null as full access", async () => {
+  it("treats allowedPages null as no pages for agents", async () => {
     for (const path of ["/dashboard/stats", "/cases", "/reports", "/patrols", "/officers", "/idchanges", "/evidence"]) {
       const res = await api(path, { token: tokenNull });
-      expect(res.status, `null → ${path}`).toBe(200);
+      expect(res.status, `null → ${path}`).toBe(403);
     }
   });
 

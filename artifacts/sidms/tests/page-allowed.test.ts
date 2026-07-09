@@ -2,9 +2,9 @@ import { describe, expect, it } from "vitest";
 import { ALL_PAGE_KEYS, PAGE_DEFS, pageAllowed } from "../src/lib/pages";
 
 describe("pageAllowed", () => {
-  it("treats null as full access to every page", () => {
+  it("treats null as no pages assigned", () => {
     for (const key of ALL_PAGE_KEYS) {
-      expect(pageAllowed(null, key), key).toBe(true);
+      expect(pageAllowed(null, key), key).toBe(false);
     }
   });
 

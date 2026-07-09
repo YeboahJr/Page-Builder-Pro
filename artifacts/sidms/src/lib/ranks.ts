@@ -31,6 +31,9 @@ export const RANK_NAMES: string[] = [
   "Suspended",
 ];
 
+// Rein kosmetisch: Leitungsränge werden z. B. golden hervorgehoben.
+// Rechte werden NICHT mehr über den Rang vergeben, sondern über die
+// unsichtbare Rolle (siehe hasFullAccess unten).
 export const LEADERSHIP_RANKS = new Set<string>([
   "Director of FIB",
   "Vize Director of FIB",
@@ -46,4 +49,15 @@ export const LEADERSHIP_RANKS = new Set<string>([
 
 export function isLeadership(rank: string | null | undefined): boolean {
   return rank != null && LEADERSHIP_RANKS.has(rank);
+}
+
+// Unsichtbare Berechtigungsrollen (officer.role):
+// Admin, Direktion und Leitung haben alle Rechte; Agent hat nur die per
+// Seitenrechte (allowedPages) zugewiesenen Seiten.
+export const ASSIGNABLE_ROLES = ["Direktion", "Leitung", "Agent"] as const;
+
+export const FULL_ACCESS_ROLES = new Set<string>(["Admin", "Direktion", "Leitung"]);
+
+export function hasFullAccess(role: string | null | undefined): boolean {
+  return role != null && FULL_ACCESS_ROLES.has(role);
 }

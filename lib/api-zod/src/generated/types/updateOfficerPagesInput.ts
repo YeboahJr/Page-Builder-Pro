@@ -5,7 +5,10 @@
  * SIDMS – FIB Special Investigation Division Management System API
  * OpenAPI spec version: 0.1.0
  */
+import type { UpdateOfficerPagesInputRole } from './updateOfficerPagesInputRole';
 
 export interface UpdateOfficerPagesInput {
   allowedPages: string[];
+  /** Optionale Rollenänderung (Admin-Rolle ist nicht änderbar) */
+  role?: UpdateOfficerPagesInputRole;
 }

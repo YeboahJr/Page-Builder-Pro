@@ -1,5 +1,5 @@
 import type { Request, Response, NextFunction, RequestHandler } from "express";
-import { resolveOfficer, isLeadership } from "../lib/auth";
+import { resolveOfficer, hasFullAccess } from "../lib/auth";
 import type { PageKey } from "../lib/pages";
 
 /**
@@ -7,9 +7,11 @@ import type { PageKey } from "../lib/pages";
  *
  * A data route is tied to the page(s) it backs. Access is granted when the
  * requesting officer:
- *  - has a leadership rank (leadership always sees everything), or
- *  - has allowedPages = null (null means "all pages allowed"), or
+ *  - has a full-access role (Admin/Direktion/Leitung see everything), or
  *  - has at least one of the given page keys in allowedPages.
+ *
+ * Agents without explicit allowedPages (null) get NO pages — page rights
+ * must be assigned explicitly.
  *
  * Unauthenticated requests get 401; authenticated officers without the
  * required page right get 403.
@@ -21,12 +23,12 @@ export function requirePages(...keys: PageKey[]): RequestHandler {
       res.status(401).json({ error: "Nicht angemeldet" });
       return;
     }
-    if (isLeadership(officer.rank)) {
+    if (hasFullAccess(officer.role)) {
       next();
       return;
     }
     const allowedPages = officer.allowedPages;
-    if (allowedPages == null || keys.some((k) => allowedPages.includes(k))) {
+    if (allowedPages != null && keys.some((k) => allowedPages.includes(k))) {
       next();
       return;
     }

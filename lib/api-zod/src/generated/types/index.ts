@@ -45,6 +45,7 @@ export * from './resetPasswordInput';
 export * from './statusHistoryEntry';
 export * from './updateIdChange';
 export * from './updateOfficerPagesInput';
+export * from './updateOfficerPagesInputRole';
 export * from './updateOfficerPermissions';
 export * from './uploadUrlRequest';
 export * from './uploadUrlResponse';

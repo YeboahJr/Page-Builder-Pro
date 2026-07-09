@@ -30,6 +30,7 @@ export const LoginResponse = zod.object({
   "dienstnummer": zod.string(),
   "name": zod.string(),
   "rank": zod.string(),
+  "role": zod.string().optional().describe('Unsichtbare Berechtigungsrolle: Admin | Direktion | Leitung | Agent'),
   "division": zod.string(),
   "status": zod.string().describe('Anwesend | In Einsatz | Pause | Abwesend'),
   "radioStatus": zod.string().optional().describe('Aktiv | Ausgeschaltet'),
@@ -49,7 +50,7 @@ export const LoginResponse = zod.object({
   "meldeamtPD": zod.boolean(),
   "meldeamtLI": zod.boolean(),
   "idChange": zod.boolean(),
-  "allowedPages": zod.array(zod.string()).nullish().describe('Erlaubte Sidebar-Seiten. null = alle Seiten erlaubt.'),
+  "allowedPages": zod.array(zod.string()).nullish().describe('Erlaubte Sidebar-Seiten (nur für Rolle Agent relevant). null = keine Seiten zugewiesen. Admin\/Direktion\/Leitung sehen unabhängig davon alles.'),
   "freigegeben": zod.boolean()
 }),
   "token": zod.string()
@@ -79,6 +80,7 @@ export const GetMeResponse = zod.object({
   "dienstnummer": zod.string(),
   "name": zod.string(),
   "rank": zod.string(),
+  "role": zod.string().optional().describe('Unsichtbare Berechtigungsrolle: Admin | Direktion | Leitung | Agent'),
   "division": zod.string(),
   "status": zod.string().describe('Anwesend | In Einsatz | Pause | Abwesend'),
   "radioStatus": zod.string().optional().describe('Aktiv | Ausgeschaltet'),
@@ -98,7 +100,7 @@ export const GetMeResponse = zod.object({
   "meldeamtPD": zod.boolean(),
   "meldeamtLI": zod.boolean(),
   "idChange": zod.boolean(),
-  "allowedPages": zod.array(zod.string()).nullish().describe('Erlaubte Sidebar-Seiten. null = alle Seiten erlaubt.'),
+  "allowedPages": zod.array(zod.string()).nullish().describe('Erlaubte Sidebar-Seiten (nur für Rolle Agent relevant). null = keine Seiten zugewiesen. Admin\/Direktion\/Leitung sehen unabhängig davon alles.'),
   "freigegeben": zod.boolean()
 })
 
@@ -596,6 +598,7 @@ export const GetOfficersResponseItem = zod.object({
   "dienstnummer": zod.string(),
   "name": zod.string(),
   "rank": zod.string(),
+  "role": zod.string().optional().describe('Unsichtbare Berechtigungsrolle: Admin | Direktion | Leitung | Agent'),
   "division": zod.string(),
   "status": zod.string().describe('Anwesend | In Einsatz | Pause | Abwesend'),
   "radioStatus": zod.string().optional().describe('Aktiv | Ausgeschaltet'),
@@ -615,7 +618,7 @@ export const GetOfficersResponseItem = zod.object({
   "meldeamtPD": zod.boolean(),
   "meldeamtLI": zod.boolean(),
   "idChange": zod.boolean(),
-  "allowedPages": zod.array(zod.string()).nullish().describe('Erlaubte Sidebar-Seiten. null = alle Seiten erlaubt.'),
+  "allowedPages": zod.array(zod.string()).nullish().describe('Erlaubte Sidebar-Seiten (nur für Rolle Agent relevant). null = keine Seiten zugewiesen. Admin\/Direktion\/Leitung sehen unabhängig davon alles.'),
   "freigegeben": zod.boolean()
 })
 export const GetOfficersResponse = zod.array(GetOfficersResponseItem)
@@ -640,6 +643,7 @@ export const CreateOfficerResponse = zod.object({
   "dienstnummer": zod.string(),
   "name": zod.string(),
   "rank": zod.string(),
+  "role": zod.string().optional().describe('Unsichtbare Berechtigungsrolle: Admin | Direktion | Leitung | Agent'),
   "division": zod.string(),
   "status": zod.string().describe('Anwesend | In Einsatz | Pause | Abwesend'),
   "radioStatus": zod.string().optional().describe('Aktiv | Ausgeschaltet'),
@@ -659,7 +663,7 @@ export const CreateOfficerResponse = zod.object({
   "meldeamtPD": zod.boolean(),
   "meldeamtLI": zod.boolean(),
   "idChange": zod.boolean(),
-  "allowedPages": zod.array(zod.string()).nullish().describe('Erlaubte Sidebar-Seiten. null = alle Seiten erlaubt.'),
+  "allowedPages": zod.array(zod.string()).nullish().describe('Erlaubte Sidebar-Seiten (nur für Rolle Agent relevant). null = keine Seiten zugewiesen. Admin\/Direktion\/Leitung sehen unabhängig davon alles.'),
   "freigegeben": zod.boolean()
 })
 
@@ -672,6 +676,7 @@ export const GetPendingOfficersResponseItem = zod.object({
   "dienstnummer": zod.string(),
   "name": zod.string(),
   "rank": zod.string(),
+  "role": zod.string().optional().describe('Unsichtbare Berechtigungsrolle: Admin | Direktion | Leitung | Agent'),
   "division": zod.string(),
   "status": zod.string().describe('Anwesend | In Einsatz | Pause | Abwesend'),
   "radioStatus": zod.string().optional().describe('Aktiv | Ausgeschaltet'),
@@ -691,7 +696,7 @@ export const GetPendingOfficersResponseItem = zod.object({
   "meldeamtPD": zod.boolean(),
   "meldeamtLI": zod.boolean(),
   "idChange": zod.boolean(),
-  "allowedPages": zod.array(zod.string()).nullish().describe('Erlaubte Sidebar-Seiten. null = alle Seiten erlaubt.'),
+  "allowedPages": zod.array(zod.string()).nullish().describe('Erlaubte Sidebar-Seiten (nur für Rolle Agent relevant). null = keine Seiten zugewiesen. Admin\/Direktion\/Leitung sehen unabhängig davon alles.'),
   "freigegeben": zod.boolean()
 })
 export const GetPendingOfficersResponse = zod.array(GetPendingOfficersResponseItem)
@@ -714,6 +719,7 @@ export const ApproveOfficerResponse = zod.object({
   "dienstnummer": zod.string(),
   "name": zod.string(),
   "rank": zod.string(),
+  "role": zod.string().optional().describe('Unsichtbare Berechtigungsrolle: Admin | Direktion | Leitung | Agent'),
   "division": zod.string(),
   "status": zod.string().describe('Anwesend | In Einsatz | Pause | Abwesend'),
   "radioStatus": zod.string().optional().describe('Aktiv | Ausgeschaltet'),
@@ -733,7 +739,7 @@ export const ApproveOfficerResponse = zod.object({
   "meldeamtPD": zod.boolean(),
   "meldeamtLI": zod.boolean(),
   "idChange": zod.boolean(),
-  "allowedPages": zod.array(zod.string()).nullish().describe('Erlaubte Sidebar-Seiten. null = alle Seiten erlaubt.'),
+  "allowedPages": zod.array(zod.string()).nullish().describe('Erlaubte Sidebar-Seiten (nur für Rolle Agent relevant). null = keine Seiten zugewiesen. Admin\/Direktion\/Leitung sehen unabhängig davon alles.'),
   "freigegeben": zod.boolean()
 })
 
@@ -746,7 +752,8 @@ export const UpdateOfficerPagesParams = zod.object({
 })
 
 export const UpdateOfficerPagesBody = zod.object({
-  "allowedPages": zod.array(zod.string())
+  "allowedPages": zod.array(zod.string()),
+  "role": zod.enum(['Direktion', 'Leitung', 'Agent']).optional().describe('Optionale Rollenänderung (Admin-Rolle ist nicht änderbar)')
 })
 
 export const UpdateOfficerPagesResponse = zod.object({
@@ -754,6 +761,7 @@ export const UpdateOfficerPagesResponse = zod.object({
   "dienstnummer": zod.string(),
   "name": zod.string(),
   "rank": zod.string(),
+  "role": zod.string().optional().describe('Unsichtbare Berechtigungsrolle: Admin | Direktion | Leitung | Agent'),
   "division": zod.string(),
   "status": zod.string().describe('Anwesend | In Einsatz | Pause | Abwesend'),
   "radioStatus": zod.string().optional().describe('Aktiv | Ausgeschaltet'),
@@ -773,7 +781,7 @@ export const UpdateOfficerPagesResponse = zod.object({
   "meldeamtPD": zod.boolean(),
   "meldeamtLI": zod.boolean(),
   "idChange": zod.boolean(),
-  "allowedPages": zod.array(zod.string()).nullish().describe('Erlaubte Sidebar-Seiten. null = alle Seiten erlaubt.'),
+  "allowedPages": zod.array(zod.string()).nullish().describe('Erlaubte Sidebar-Seiten (nur für Rolle Agent relevant). null = keine Seiten zugewiesen. Admin\/Direktion\/Leitung sehen unabhängig davon alles.'),
   "freigegeben": zod.boolean()
 })
 
@@ -800,6 +808,7 @@ export const GetOfficerResponse = zod.object({
   "dienstnummer": zod.string(),
   "name": zod.string(),
   "rank": zod.string(),
+  "role": zod.string().optional().describe('Unsichtbare Berechtigungsrolle: Admin | Direktion | Leitung | Agent'),
   "division": zod.string(),
   "status": zod.string().describe('Anwesend | In Einsatz | Pause | Abwesend'),
   "radioStatus": zod.string().optional().describe('Aktiv | Ausgeschaltet'),
@@ -819,7 +828,7 @@ export const GetOfficerResponse = zod.object({
   "meldeamtPD": zod.boolean(),
   "meldeamtLI": zod.boolean(),
   "idChange": zod.boolean(),
-  "allowedPages": zod.array(zod.string()).nullish().describe('Erlaubte Sidebar-Seiten. null = alle Seiten erlaubt.'),
+  "allowedPages": zod.array(zod.string()).nullish().describe('Erlaubte Sidebar-Seiten (nur für Rolle Agent relevant). null = keine Seiten zugewiesen. Admin\/Direktion\/Leitung sehen unabhängig davon alles.'),
   "freigegeben": zod.boolean()
 })
 
@@ -860,6 +869,7 @@ export const UpdateOfficerPermissionsResponse = zod.object({
   "dienstnummer": zod.string(),
   "name": zod.string(),
   "rank": zod.string(),
+  "role": zod.string().optional().describe('Unsichtbare Berechtigungsrolle: Admin | Direktion | Leitung | Agent'),
   "division": zod.string(),
   "status": zod.string().describe('Anwesend | In Einsatz | Pause | Abwesend'),
   "radioStatus": zod.string().optional().describe('Aktiv | Ausgeschaltet'),
@@ -879,7 +889,7 @@ export const UpdateOfficerPermissionsResponse = zod.object({
   "meldeamtPD": zod.boolean(),
   "meldeamtLI": zod.boolean(),
   "idChange": zod.boolean(),
-  "allowedPages": zod.array(zod.string()).nullish().describe('Erlaubte Sidebar-Seiten. null = alle Seiten erlaubt.'),
+  "allowedPages": zod.array(zod.string()).nullish().describe('Erlaubte Sidebar-Seiten (nur für Rolle Agent relevant). null = keine Seiten zugewiesen. Admin\/Direktion\/Leitung sehen unabhängig davon alles.'),
   "freigegeben": zod.boolean()
 })
 
@@ -939,6 +949,7 @@ export const RemoveOfficerAvatarResponse = zod.object({
   "dienstnummer": zod.string(),
   "name": zod.string(),
   "rank": zod.string(),
+  "role": zod.string().optional().describe('Unsichtbare Berechtigungsrolle: Admin | Direktion | Leitung | Agent'),
   "division": zod.string(),
   "status": zod.string().describe('Anwesend | In Einsatz | Pause | Abwesend'),
   "radioStatus": zod.string().optional().describe('Aktiv | Ausgeschaltet'),
@@ -958,7 +969,7 @@ export const RemoveOfficerAvatarResponse = zod.object({
   "meldeamtPD": zod.boolean(),
   "meldeamtLI": zod.boolean(),
   "idChange": zod.boolean(),
-  "allowedPages": zod.array(zod.string()).nullish().describe('Erlaubte Sidebar-Seiten. null = alle Seiten erlaubt.'),
+  "allowedPages": zod.array(zod.string()).nullish().describe('Erlaubte Sidebar-Seiten (nur für Rolle Agent relevant). null = keine Seiten zugewiesen. Admin\/Direktion\/Leitung sehen unabhängig davon alles.'),
   "freigegeben": zod.boolean()
 })
 

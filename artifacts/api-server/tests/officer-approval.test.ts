@@ -68,7 +68,7 @@ beforeAll(async () => {
   const inserted = await db
     .insert(officersTable)
     .values([
-      { ...base, dienstnummer: LEAD_DN, name: `Test APR Lead ${RUN_ID}`, rank: "Division Chief" },
+      { ...base, dienstnummer: LEAD_DN, name: `Test APR Lead ${RUN_ID}`, rank: "Division Chief", role: "Leitung" },
       { ...base, dienstnummer: AGENT_DN, name: `Test APR Agent ${RUN_ID}`, rank: "Special Agent" },
       { ...base, dienstnummer: APPROVED_DN, name: `Test APR Approved ${RUN_ID}`, rank: "Special Agent" },
       {
