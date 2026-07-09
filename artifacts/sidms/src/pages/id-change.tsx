@@ -10,6 +10,7 @@ import {
 import { useQueryClient } from "@tanstack/react-query";
 import { CreditCard, Check, Pencil, X, Plus, Trash2 } from "lucide-react";
 import DeleteConfirmModal from "@/components/DeleteConfirmModal";
+import { useAuth } from "@/contexts/AuthContext";
 
 const RANKS: { level: number; name: string }[] = [
   { level: 30, name: "Director of FIB" },
@@ -98,6 +99,9 @@ const inputCls =
   "bg-[#0a0f1a] border border-[#c9a227]/40 rounded px-1.5 py-1 text-white text-xs outline-none focus:border-[#c9a227]";
 
 export default function IdChangePage() {
+  const { officer } = useAuth();
+  // Offiziere mit Systemrang "Agent" haben nur Lesezugriff — keine Aktionen-Spalte.
+  const canEdit = officer?.role !== "Agent";
   const { data: rows, isLoading } = useGetIdChanges();
   const createRow = useCreateIdChange();
   const updateRow = useUpdateIdChange();
@@ -260,14 +264,16 @@ export default function IdChangePage() {
               <th className="text-left px-3 py-2.5 text-gray-400 font-medium">Datum</th>
               <th className="text-left px-3 py-2.5 text-gray-400 font-medium">Uhrzeit Anfang</th>
               <th className="text-left px-3 py-2.5 text-gray-400 font-medium">Uhrzeit Ende</th>
-              <th className="px-3 py-2.5 text-gray-400 font-medium text-center border-l border-[#1e2d4a]">Aktionen</th>
+              {canEdit && (
+                <th className="px-3 py-2.5 text-gray-400 font-medium text-center border-l border-[#1e2d4a]">Aktionen</th>
+              )}
             </tr>
           </thead>
           <tbody>
             {isLoading ? (
-              <tr><td colSpan={9} className="text-center py-8 text-gray-500">Laden...</td></tr>
+              <tr><td colSpan={canEdit ? 9 : 8} className="text-center py-8 text-gray-500">Laden...</td></tr>
             ) : sortedRows.length === 0 ? (
-              <tr><td colSpan={9} className="text-center py-8 text-gray-500">Keine Einträge vorhanden.</td></tr>
+              <tr><td colSpan={canEdit ? 9 : 8} className="text-center py-8 text-gray-500">Keine Einträge vorhanden.</td></tr>
             ) : sortedRows.map(r => {
               const isEditing = editingId === r.id && draft;
               const busy = busyId === r.id;
@@ -326,6 +332,7 @@ export default function IdChangePage() {
                       ? <input type="time" className={`${inputCls} w-28`} value={draft.uhrzeitEnde} onChange={e => setDraftField("uhrzeitEnde", e.target.value)} />
                       : <span className="text-gray-300">{r.uhrzeitEnde || <span className="text-gray-600">—</span>}</span>}
                   </td>
+                  {canEdit && (
                   <td className="px-3 py-2 border-l border-[#1e2d4a] text-center">
                     {isEditing ? (
                       <div className="flex items-center justify-center gap-1.5">
@@ -347,6 +354,7 @@ export default function IdChangePage() {
                       </div>
                     )}
                   </td>
+                  )}
                 </tr>
               );
             })}
@@ -355,7 +363,7 @@ export default function IdChangePage() {
       </div>
 
       <div className="text-[10px] text-gray-600 space-y-0.5">
-        <p>Zeile über den Bearbeiten-Button (Stift) bearbeiten · Sortiert nach Dienstnummer</p>
+        <p>{canEdit ? "Zeile über den Bearbeiten-Button (Stift) bearbeiten · Sortiert nach Dienstnummer" : "Sortiert nach Dienstnummer"}</p>
       </div>
 
       {showNew && (
