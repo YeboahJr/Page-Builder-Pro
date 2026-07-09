@@ -8,9 +8,9 @@ export const officersTable = pgTable("officers", {
   passwortHash: text("passwort_hash").notNull(),
   name: text("name").notNull(),
   rank: text("rank").notNull(),
-  // Unsichtbare Berechtigungsrolle: "Admin" | "Direktion" | "Leitung" | "Agent".
-  // Admin/Direktion/Leitung haben alle Rechte; Agent nur die per allowedPages
-  // zugewiesenen Seiten. Wird nirgends in der UI als Rang angezeigt.
+  // Unsichtbare Berechtigungsrolle: "Admin" | "Direktion" | "Leitung" | "Agent" | "STA".
+  // Admin/Direktion/Leitung haben alle Rechte; Agent und STA nur die per
+  // allowedPages zugewiesenen Seiten. Wird nirgends in der UI als Rang angezeigt.
   role: text("role").notNull().default("Agent"),
   division: text("division").notNull().default("Special Investigation Division"),
   status: text("status").notNull().default("Anwesend"),

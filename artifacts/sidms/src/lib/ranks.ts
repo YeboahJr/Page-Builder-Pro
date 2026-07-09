@@ -27,6 +27,7 @@ export const RANK_NAMES: string[] = [
   "Junior Agent",
   "Agent in Education",
   "Facility Manager",
+  "STA",
   "Bewerber",
   "Suspended",
 ];
@@ -52,9 +53,9 @@ export function isLeadership(rank: string | null | undefined): boolean {
 }
 
 // Unsichtbare Berechtigungsrollen (officer.role):
-// Admin, Direktion und Leitung haben alle Rechte; Agent hat nur die per
-// Seitenrechte (allowedPages) zugewiesenen Seiten.
-export const ASSIGNABLE_ROLES = ["Direktion", "Leitung", "Agent"] as const;
+// Admin, Direktion und Leitung haben alle Rechte; Agent und STA haben nur
+// die per Seitenrechte (allowedPages) zugewiesenen Seiten.
+export const ASSIGNABLE_ROLES = ["Direktion", "Leitung", "Agent", "STA"] as const;
 
 export const FULL_ACCESS_ROLES = new Set<string>(["Admin", "Direktion", "Leitung"]);
 

@@ -5,9 +5,9 @@ description: Unsichtbare Berechtigungsrollen (officers.role) — Rechte hängen 
 
 # Unsichtbares Rollensystem
 
-Regel: `officers.role` ("Admin" | "Direktion" | "Leitung" | "Agent", default "Agent")
+Regel: `officers.role` ("Admin" | "Direktion" | "Leitung" | "Agent" | "STA", default "Agent")
 vergibt die Rechte. Admin/Direktion/Leitung = Vollzugriff (`hasFullAccess(role)`,
-dupliziert in api-server lib/auth.ts und sidms lib/ranks.ts). Agent = nur allowedPages.
+dupliziert in api-server lib/auth.ts und sidms lib/ranks.ts). Agent und STA = nur allowedPages.
 Der sichtbare FIB-Rang (`officers.rank`) ist rein kosmetisch (goldene Hervorhebung via
 `isLeadership(rank)`) und vergibt KEINE Rechte mehr.
 
@@ -17,8 +17,11 @@ sein; Rollen erscheinen nirgends als Rang in der UI. Vorher hingen alle Rechte a
 
 **How to apply:** Neue Rechtechecks immer über `hasFullAccess(officer.role)`, nie über
 den Rang. Rollen ändern nur über PUT /officers/:id/pages (optionales `role`-Feld;
-nur Direktion/Leitung/Agent zuweisbar; Admin-Rolle unveränderbar; eigene Rolle nicht
+alle Rollen außer Admin zuweisbar; Admin-Rolle unveränderbar; eigene Rolle nicht
 änderbar → Lockout-Schutz). UI: Rollen-Dropdown auf der Administration-Seite.
+Neue eingeschränkte Rollen (wie STA): in ROLES/ASSIGNABLE_ROLES (Server + Client),
+OpenAPI-role-enum + codegen eintragen; NICHT in FULL_ACCESS_ROLES — dann greift
+allowedPages automatisch. "STA" existiert zusätzlich als kosmetischer Rang in RANK_NAMES.
 
 ## Admin-User
 

@@ -16,4 +16,5 @@ export const UpdateOfficerPagesInputRole = {
   Direktion: 'Direktion',
   Leitung: 'Leitung',
   Agent: 'Agent',
+  STA: 'STA',
 } as const;

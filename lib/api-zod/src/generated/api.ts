@@ -760,7 +760,7 @@ export const UpdateOfficerPagesParams = zod.object({
 
 export const UpdateOfficerPagesBody = zod.object({
   "allowedPages": zod.array(zod.string()),
-  "role": zod.enum(['Direktion', 'Leitung', 'Agent']).optional().describe('Optionale Rollenänderung (Admin-Rolle ist nicht änderbar)')
+  "role": zod.enum(['Direktion', 'Leitung', 'Agent', 'STA']).optional().describe('Optionale Rollenänderung (Admin-Rolle ist nicht änderbar)')
 })
 
 export const UpdateOfficerPagesResponse = zod.object({
