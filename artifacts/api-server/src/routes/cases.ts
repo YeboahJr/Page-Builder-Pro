@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db, casesTable, casePersonsTable, caseAgentsTable, caseStatusHistoryTable, evidenceFilesTable, officersTable } from "@workspace/db";
-import { eq, ilike, and, gte, lte, desc, or, inArray, ne } from "drizzle-orm";
+import { eq, ilike, and, gte, lte, desc, or, inArray, ne, sql } from "drizzle-orm";
 import { resolveOfficer, isLeadership } from "../lib/auth";
 import multer from "multer";
 import path from "path";
@@ -133,9 +133,20 @@ router.post("/", async (req, res) => {
     return;
   }
 
-  const allCases = await db.select({ id: casesTable.id }).from(casesTable);
-  const nextNum = String(allCases.length + 1).padStart(4, "0");
-  const caseNumber = `SID-2026-${nextNum}`;
+  // Fallnummer: SID-JJJJ/MM/TT - Wer - Agenten-ID (aus Personal) - laufende Nr.
+  // Die laufende Nummer kommt aus einer DB-Sequenz und zählt auch nach dem
+  // Löschen von Akten weiter.
+  const now = new Date();
+  const datePart = `SID-${now.getFullYear()}/${String(now.getMonth() + 1).padStart(2, "0")}/${String(now.getDate()).padStart(2, "0")}`;
+  const werPart = typeof tatWer === "string" && tatWer.trim() ? tatWer.trim() : "Unbekannt";
+  const leadName = typeof leadAgent === "string" ? leadAgent.trim() : "";
+  const [leadOfficer] = leadName
+    ? await db.select({ id: officersTable.id }).from(officersTable).where(eq(officersTable.name, leadName))
+    : [];
+  const agentId = leadOfficer?.id ?? officer.id;
+  const seqResult = await db.execute(sql`SELECT nextval('case_number_seq') AS n`);
+  const seqNum = String((seqResult.rows[0] as { n: string | number }).n).padStart(2, "0");
+  const caseNumber = `${datePart} - ${werPart} - ${agentId} - ${seqNum}`;
 
   const [newCase] = await db.insert(casesTable).values({
     caseNumber,

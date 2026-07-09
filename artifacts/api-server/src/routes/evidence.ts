@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { db, evidenceTable } from "@workspace/db";
+import { db, evidenceTable, casesTable } from "@workspace/db";
 import { eq, desc } from "drizzle-orm";
 
 const router = Router();
@@ -17,12 +17,17 @@ router.get("/", async (req, res) => {
 
 router.post("/", async (req, res) => {
   const { title, type, description, caseId } = req.body;
+  const [parentCase] = await db.select({ caseNumber: casesTable.caseNumber }).from(casesTable).where(eq(casesTable.id, caseId));
+  if (!parentCase) {
+    res.status(400).json({ error: "Fall nicht gefunden" });
+    return;
+  }
   const [e] = await db.insert(evidenceTable).values({
     title,
     type,
     description,
     caseId,
-    caseNumber: `SID-2026-${String(caseId).padStart(4, "0")}`,
+    caseNumber: parentCase.caseNumber,
     addedBy: "SA System",
   }).returning();
   res.status(201).json({ ...e, addedAt: e.addedAt.toISOString(), description: e.description ?? null });

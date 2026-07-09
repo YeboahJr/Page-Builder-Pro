@@ -1,6 +1,10 @@
-import { pgTable, text, serial, timestamp, integer } from "drizzle-orm/pg-core";
+import { pgTable, pgSequence, text, serial, timestamp, integer } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
+
+// Persistent counter for case numbers: keeps counting up even when cases are
+// deleted, so each new case gets a fresh sequential number starting at 01.
+export const caseNumberSeq = pgSequence("case_number_seq", { startWith: 1 });
 
 export const casesTable = pgTable("cases", {
   id: serial("id").primaryKey(),

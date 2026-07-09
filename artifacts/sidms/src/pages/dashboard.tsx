@@ -660,7 +660,7 @@ export default function Dashboard() {
                 <input
                   value={filters.caseNumber}
                   onChange={e => setFilters(f => ({ ...f, caseNumber: e.target.value }))}
-                  placeholder="z.B. SID-2026-0001"
+                  placeholder="z.B. SID-2026/07/09"
                   className="w-full bg-[#0a0f1a] border border-[#1e2d4a] text-xs text-white px-2 py-1.5 rounded focus:outline-none focus:border-[#c9a227]/50"
                   data-testid="input-filter-casenumber"
                 />
