@@ -170,7 +170,13 @@ export const GetCasesResponseItem = zod.object({
   "lastModified": zod.string(),
   "createdAt": zod.string(),
   "description": zod.string().nullish(),
-  "closedAt": zod.string().nullish()
+  "closedAt": zod.string().nullish(),
+  "verhandlungsfuehrung": zod.string().nullish(),
+  "straftaten": zod.array(zod.string()).nullish(),
+  "tatDatum": zod.string().nullish(),
+  "tatWann": zod.string().nullish(),
+  "tatWo": zod.string().nullish(),
+  "tatWer": zod.string().nullish()
 })
 export const GetCasesResponse = zod.array(GetCasesResponseItem)
 
@@ -184,7 +190,13 @@ export const CreateCaseBody = zod.object({
   "priority": zod.string(),
   "status": zod.string(),
   "leadAgent": zod.string(),
-  "description": zod.string().optional()
+  "description": zod.string().optional(),
+  "verhandlungsfuehrung": zod.string().optional(),
+  "straftaten": zod.array(zod.string()).optional(),
+  "tatDatum": zod.string().optional(),
+  "tatWann": zod.string().optional(),
+  "tatWo": zod.string().optional(),
+  "tatWer": zod.string().optional()
 })
 
 export const CreateCaseResponse = zod.object({
@@ -198,7 +210,13 @@ export const CreateCaseResponse = zod.object({
   "lastModified": zod.string(),
   "createdAt": zod.string(),
   "description": zod.string().nullish(),
-  "closedAt": zod.string().nullish()
+  "closedAt": zod.string().nullish(),
+  "verhandlungsfuehrung": zod.string().nullish(),
+  "straftaten": zod.array(zod.string()).nullish(),
+  "tatDatum": zod.string().nullish(),
+  "tatWann": zod.string().nullish(),
+  "tatWo": zod.string().nullish(),
+  "tatWer": zod.string().nullish()
 })
 
 
@@ -222,7 +240,13 @@ export const GetCaseResponse = zod.object({
   "lastModified": zod.string(),
   "createdAt": zod.string(),
   "closedAt": zod.string().nullish(),
-  "description": zod.string().nullish()
+  "description": zod.string().nullish(),
+  "verhandlungsfuehrung": zod.string().nullish(),
+  "straftaten": zod.array(zod.string()).nullish(),
+  "tatDatum": zod.string().nullish(),
+  "tatWann": zod.string().nullish(),
+  "tatWo": zod.string().nullish(),
+  "tatWer": zod.string().nullish()
 })
 
 
@@ -253,7 +277,13 @@ export const UpdateCaseResponse = zod.object({
   "lastModified": zod.string(),
   "createdAt": zod.string(),
   "description": zod.string().nullish(),
-  "closedAt": zod.string().nullish()
+  "closedAt": zod.string().nullish(),
+  "verhandlungsfuehrung": zod.string().nullish(),
+  "straftaten": zod.array(zod.string()).nullish(),
+  "tatDatum": zod.string().nullish(),
+  "tatWann": zod.string().nullish(),
+  "tatWo": zod.string().nullish(),
+  "tatWer": zod.string().nullish()
 })
 
 

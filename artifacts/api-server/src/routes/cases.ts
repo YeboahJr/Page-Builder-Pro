@@ -126,7 +126,12 @@ router.post("/", async (req, res) => {
     return;
   }
 
-  const { title, category, priority, status, leadAgent, description } = req.body;
+  const { title, category, priority, status, leadAgent, description, verhandlungsfuehrung, straftaten, tatDatum, tatWann, tatWo, tatWer } = req.body;
+
+  if (straftaten !== undefined && straftaten !== null && (!Array.isArray(straftaten) || straftaten.some((s: unknown) => typeof s !== "string"))) {
+    res.status(400).json({ error: "straftaten muss eine Liste von Zeichenketten sein" });
+    return;
+  }
 
   const allCases = await db.select({ id: casesTable.id }).from(casesTable);
   const nextNum = String(allCases.length + 1).padStart(4, "0");
@@ -140,6 +145,12 @@ router.post("/", async (req, res) => {
     status: status || "Offen",
     leadAgent,
     description,
+    verhandlungsfuehrung: verhandlungsfuehrung ?? null,
+    straftaten: straftaten ?? null,
+    tatDatum: tatDatum ?? null,
+    tatWann: tatWann ?? null,
+    tatWo: tatWo ?? null,
+    tatWer: tatWer ?? null,
   }).returning();
 
   await db.insert(caseAgentsTable).values({ caseId: newCase.id, name: leadAgent, role: "Leitender Agent" });

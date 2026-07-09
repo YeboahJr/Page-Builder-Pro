@@ -18,11 +18,20 @@ import {
 } from "lucide-react";
 import EvidenceUpload, { type UploadFile, uploadEvidenceFiles } from "@/components/EvidenceUpload";
 import DeleteConfirmModal from "@/components/DeleteConfirmModal";
+import { STRAFTATEN } from "@/lib/straftaten";
 
-const CATEGORIES_NEW = ["Drogenkriminalität", "Waffendelikte", "Korruption", "Finanzkriminalität", "Gewaltdelikte", "Cyberkriminalität"];
+const CATEGORIES_NEW = ["Gang", "Familie"];
 const PRIORITIES_NEW = ["Hoch", "Mittel", "Niedrig"];
-const STATUSES_NEW = ["Aktiv", "Offen", "Ermittlungen pausiert", "Observation", "An STA übergeben", "Abgeschlossen"];
-interface NewCaseForm { title: string; category: string; priority: string; status: string; leadAgent: string; description: string; }
+const STATUSES_NEW = ["Aktiv", "Offen", "Ermittlungen pausiert", "An STA übergeben", "Abgeschlossen"];
+const VERHANDLUNGSFUEHRUNG_OPTIONS = ["Federal Investigation Bureau", "San Andreas Highway Patrol", "Los Santos Police Department"];
+interface NewCaseForm {
+  title: string; category: string; priority: string; status: string; leadAgent: string; description: string;
+  verhandlungsfuehrung: string; straftaten: string[]; tatDatum: string; tatWann: string; tatWo: string; tatWer: string;
+}
+const EMPTY_NEW_CASE: NewCaseForm = {
+  title: "", category: "Gang", priority: "Mittel", status: "Offen", leadAgent: "", description: "",
+  verhandlungsfuehrung: "Federal Investigation Bureau", straftaten: [], tatDatum: "", tatWann: "", tatWo: "", tatWer: "",
+};
 
 const PRIORITIES = ["Alle Prioritäten", "Hoch", "Mittel", "Niedrig"];
 const STATUSES = ["Alle Status", "Aktiv", "Offen", "Ermittlungen pausiert", "Observation", "An STA übergeben", "Abgeschlossen"];
@@ -54,9 +63,10 @@ export default function Dashboard() {
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState("Übersicht");
   const [showNewCase, setShowNewCase] = useState(false);
-  const [newCaseForm, setNewCaseForm] = useState<NewCaseForm>({ title: "", category: "Drogenkriminalität", priority: "Mittel", status: "Offen", leadAgent: "", description: "" });
+  const [newCaseForm, setNewCaseForm] = useState<NewCaseForm>(EMPTY_NEW_CASE);
   const [newCaseFiles, setNewCaseFiles] = useState<UploadFile[]>([]);
   const [newCaseSubmitting, setNewCaseSubmitting] = useState(false);
+  const [straftatenOpen, setStraftatenOpen] = useState(false);
 
   const [evidenceFiles, setEvidenceFiles] = useState<Array<{ filename: string; url: string; type: string; size: number; uploadedAt: string; uploadedBy: string | null }>>([]);
   const [evidenceLoading, setEvidenceLoading] = useState(false);
@@ -170,7 +180,8 @@ export default function Dashboard() {
       }
       qc.invalidateQueries({ queryKey: getGetCasesQueryKey() });
       setShowNewCase(false);
-      setNewCaseForm({ title: "", category: "Drogenkriminalität", priority: "Mittel", status: "Offen", leadAgent: "", description: "" });
+      setNewCaseForm(EMPTY_NEW_CASE);
+      setStraftatenOpen(false);
       setNewCaseFiles([]);
     } finally { setNewCaseSubmitting(false); }
   };
@@ -238,7 +249,7 @@ export default function Dashboard() {
           <div className="bg-[#0d1526] border border-[#1e2d4a] rounded-lg w-full max-w-lg max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between px-5 py-4 border-b border-[#1e2d4a] sticky top-0 bg-[#0d1526]">
               <h2 className="text-sm font-semibold text-white">Neuer Fall anlegen</h2>
-              <button onClick={() => setShowNewCase(false)} className="text-gray-400 hover:text-white"><X className="w-5 h-5" /></button>
+              <button onClick={() => { setShowNewCase(false); setStraftatenOpen(false); }} className="text-gray-400 hover:text-white"><X className="w-5 h-5" /></button>
             </div>
             <form onSubmit={handleNewCase} className="p-5 space-y-4">
               <div className="grid grid-cols-2 gap-3">
@@ -272,16 +283,80 @@ export default function Dashboard() {
                     {officerNames.map(n => <option key={n} value={n}>{n}</option>)}
                   </select>
                 </div>
+                <div>
+                  <label className="text-xs text-gray-400 block mb-1">Verhandlungsführung</label>
+                  <select value={newCaseForm.verhandlungsfuehrung} onChange={e => setNewCaseForm(f => ({ ...f, verhandlungsfuehrung: e.target.value }))} className="w-full bg-[#0a0f1a] border border-[#1e2d4a] text-white text-sm px-3 py-2 rounded focus:outline-none" data-testid="select-verhandlungsfuehrung">
+                    {VERHANDLUNGSFUEHRUNG_OPTIONS.map(v => <option key={v}>{v}</option>)}
+                  </select>
+                </div>
+                <div className="relative">
+                  <label className="text-xs text-gray-400 block mb-1">Vorgeworfene Straftaten</label>
+                  <button
+                    type="button"
+                    onClick={() => setStraftatenOpen(v => !v)}
+                    className="w-full bg-[#0a0f1a] border border-[#1e2d4a] text-white text-sm px-3 py-2 rounded focus:outline-none text-left flex items-center justify-between gap-2"
+                    data-testid="button-straftaten-dropdown"
+                  >
+                    <span className={`truncate ${newCaseForm.straftaten.length === 0 ? "text-gray-500" : ""}`}>
+                      {newCaseForm.straftaten.length === 0 ? "Auswählen…" : `${newCaseForm.straftaten.length} ausgewählt`}
+                    </span>
+                    <span className="text-gray-500 flex-shrink-0">▾</span>
+                  </button>
+                  {straftatenOpen && (
+                    <div className="absolute z-20 mt-1 w-[28rem] max-w-[80vw] max-h-64 overflow-y-auto bg-[#0a0f1a] border border-[#1e2d4a] rounded shadow-2xl p-2 space-y-0.5" data-testid="dropdown-straftaten">
+                      {STRAFTATEN.map(s => (
+                        <label key={s} className="flex items-start gap-2 px-2 py-1 rounded hover:bg-[#1a2744]/60 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={newCaseForm.straftaten.includes(s)}
+                            onChange={e => setNewCaseForm(f => ({
+                              ...f,
+                              straftaten: e.target.checked ? [...f.straftaten, s] : f.straftaten.filter(x => x !== s),
+                            }))}
+                            className="mt-0.5 accent-[#c9a227]"
+                          />
+                          <span className="text-xs text-gray-300">{s}</span>
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                  {newCaseForm.straftaten.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mt-1.5">
+                      {newCaseForm.straftaten.map(s => (
+                        <span key={s} className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-[#1a2744] border border-[#1e2d4a] rounded text-[10px] text-gray-300">
+                          {s.split(" – ")[0]}
+                          <button type="button" onClick={() => setNewCaseForm(f => ({ ...f, straftaten: f.straftaten.filter(x => x !== s) }))} className="text-gray-500 hover:text-red-400">×</button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <label className="text-xs text-gray-400 block mb-1">Datum</label>
+                  <input type="date" value={newCaseForm.tatDatum} onChange={e => setNewCaseForm(f => ({ ...f, tatDatum: e.target.value }))} className="w-full bg-[#0a0f1a] border border-[#1e2d4a] text-white text-sm px-3 py-2 rounded focus:outline-none focus:border-[#c9a227]/50" data-testid="input-tat-datum" />
+                </div>
+                <div>
+                  <label className="text-xs text-gray-400 block mb-1">Wann</label>
+                  <input value={newCaseForm.tatWann} onChange={e => setNewCaseForm(f => ({ ...f, tatWann: e.target.value }))} placeholder="z. B. 21:30 Uhr" className="w-full bg-[#0a0f1a] border border-[#1e2d4a] text-white text-sm px-3 py-2 rounded focus:outline-none focus:border-[#c9a227]/50" data-testid="input-tat-wann" />
+                </div>
+                <div>
+                  <label className="text-xs text-gray-400 block mb-1">Wo</label>
+                  <input value={newCaseForm.tatWo} onChange={e => setNewCaseForm(f => ({ ...f, tatWo: e.target.value }))} placeholder="Ort" className="w-full bg-[#0a0f1a] border border-[#1e2d4a] text-white text-sm px-3 py-2 rounded focus:outline-none focus:border-[#c9a227]/50" data-testid="input-tat-wo" />
+                </div>
+                <div>
+                  <label className="text-xs text-gray-400 block mb-1">Wer</label>
+                  <input value={newCaseForm.tatWer} onChange={e => setNewCaseForm(f => ({ ...f, tatWer: e.target.value }))} placeholder="Beteiligte Personen" className="w-full bg-[#0a0f1a] border border-[#1e2d4a] text-white text-sm px-3 py-2 rounded focus:outline-none focus:border-[#c9a227]/50" data-testid="input-tat-wer" />
+                </div>
                 <div className="col-span-2">
-                  <label className="text-xs text-gray-400 block mb-1">Beschreibung</label>
-                  <textarea value={newCaseForm.description} onChange={e => setNewCaseForm(f => ({ ...f, description: e.target.value }))} rows={3} className="w-full bg-[#0a0f1a] border border-[#1e2d4a] text-white text-sm px-3 py-2 rounded focus:outline-none focus:border-[#c9a227]/50 resize-none" />
+                  <label className="text-xs text-gray-400 block mb-1">Details</label>
+                  <textarea value={newCaseForm.description} onChange={e => setNewCaseForm(f => ({ ...f, description: e.target.value }))} rows={3} className="w-full bg-[#0a0f1a] border border-[#1e2d4a] text-white text-sm px-3 py-2 rounded focus:outline-none focus:border-[#c9a227]/50 resize-none" data-testid="textarea-details" />
                 </div>
                 <div className="col-span-2">
                   <EvidenceUpload files={newCaseFiles} onChange={setNewCaseFiles} />
                 </div>
               </div>
               <div className="flex gap-3 pt-2">
-                <button type="button" onClick={() => setShowNewCase(false)} className="flex-1 py-2 bg-[#1e2d4a] text-gray-300 text-sm rounded transition-colors hover:bg-[#253650]">Abbrechen</button>
+                <button type="button" onClick={() => { setShowNewCase(false); setStraftatenOpen(false); }} className="flex-1 py-2 bg-[#1e2d4a] text-gray-300 text-sm rounded transition-colors hover:bg-[#253650]">Abbrechen</button>
                 <button type="submit" disabled={newCaseSubmitting} className="flex-1 py-2 bg-[#1a3d7c] hover:bg-[#1e4a94] text-white text-sm font-medium rounded transition-colors disabled:opacity-60">
                   {newCaseSubmitting ? "Anlegen..." : "Fall anlegen"}
                 </button>
@@ -396,6 +471,11 @@ export default function Dashboard() {
                         ["Priorität", caseDetail.priority],
                         ["Status", caseDetail.status],
                         ["Zuständiger Agent", caseDetail.leadAgent],
+                        ["Verhandlungsführung", caseDetail.verhandlungsfuehrung ?? "–"],
+                        ["Datum", caseDetail.tatDatum ?? "–"],
+                        ["Wann", caseDetail.tatWann ?? "–"],
+                        ["Wo", caseDetail.tatWo ?? "–"],
+                        ["Wer", caseDetail.tatWer ?? "–"],
                         ["Erstellungsdatum", caseDetail.createdAt],
                         ["Letzte Änderung", caseDetail.lastModified],
                         ["Abschlussdatum", caseDetail.closedAt ?? "–"],
@@ -411,9 +491,19 @@ export default function Dashboard() {
                           </span>
                         </div>
                       ))}
+                      {(caseDetail.straftaten?.length ?? 0) > 0 && (
+                        <div>
+                          <p className="text-gray-500 text-xs mb-1">Vorgeworfene Straftaten</p>
+                          <div className="flex flex-wrap gap-1">
+                            {caseDetail.straftaten?.map(s => (
+                              <span key={s} className="px-1.5 py-0.5 bg-[#1a2744] border border-[#1e2d4a] rounded text-[10px] text-gray-300">{s}</span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                       {caseDetail.description && (
                         <div>
-                          <p className="text-gray-500 text-xs mb-1">Beschreibung</p>
+                          <p className="text-gray-500 text-xs mb-1">Details</p>
                           <p className="text-xs text-gray-300">{caseDetail.description}</p>
                         </div>
                       )}

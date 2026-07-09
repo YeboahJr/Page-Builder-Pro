@@ -227,6 +227,18 @@ export interface Case {
   description?: string | null;
   /** @nullable */
   closedAt?: string | null;
+  /** @nullable */
+  verhandlungsfuehrung?: string | null;
+  /** @nullable */
+  straftaten?: string[] | null;
+  /** @nullable */
+  tatDatum?: string | null;
+  /** @nullable */
+  tatWann?: string | null;
+  /** @nullable */
+  tatWo?: string | null;
+  /** @nullable */
+  tatWer?: string | null;
 }
 
 export interface CaseInput {
@@ -236,6 +248,12 @@ export interface CaseInput {
   status: string;
   leadAgent: string;
   description?: string;
+  verhandlungsfuehrung?: string;
+  straftaten?: string[];
+  tatDatum?: string;
+  tatWann?: string;
+  tatWo?: string;
+  tatWer?: string;
 }
 
 export interface CaseUpdate {
@@ -264,6 +282,18 @@ export interface CaseDetail {
   closedAt?: string | null;
   /** @nullable */
   description?: string | null;
+  /** @nullable */
+  verhandlungsfuehrung?: string | null;
+  /** @nullable */
+  straftaten?: string[] | null;
+  /** @nullable */
+  tatDatum?: string | null;
+  /** @nullable */
+  tatWann?: string | null;
+  /** @nullable */
+  tatWo?: string | null;
+  /** @nullable */
+  tatWer?: string | null;
 }
 
 export interface StatusHistoryEntry {

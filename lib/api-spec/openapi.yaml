@@ -1352,6 +1352,20 @@ components:
           type: ["string", "null"]
         closedAt:
           type: ["string", "null"]
+        verhandlungsfuehrung:
+          type: ["string", "null"]
+        straftaten:
+          type: ["array", "null"]
+          items:
+            type: string
+        tatDatum:
+          type: ["string", "null"]
+        tatWann:
+          type: ["string", "null"]
+        tatWo:
+          type: ["string", "null"]
+        tatWer:
+          type: ["string", "null"]
 
     CaseInput:
       type: object
@@ -1368,6 +1382,20 @@ components:
         leadAgent:
           type: string
         description:
+          type: string
+        verhandlungsfuehrung:
+          type: string
+        straftaten:
+          type: array
+          items:
+            type: string
+        tatDatum:
+          type: string
+        tatWann:
+          type: string
+        tatWo:
+          type: string
+        tatWer:
           type: string
 
     CaseUpdate:
@@ -1417,6 +1445,20 @@ components:
         closedAt:
           type: ["string", "null"]
         description:
+          type: ["string", "null"]
+        verhandlungsfuehrung:
+          type: ["string", "null"]
+        straftaten:
+          type: ["array", "null"]
+          items:
+            type: string
+        tatDatum:
+          type: ["string", "null"]
+        tatWann:
+          type: ["string", "null"]
+        tatWo:
+          type: ["string", "null"]
+        tatWer:
           type: ["string", "null"]
 
     StatusHistoryEntry:

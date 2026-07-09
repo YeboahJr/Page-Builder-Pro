@@ -13,4 +13,10 @@ export interface CaseInput {
   status: string;
   leadAgent: string;
   description?: string;
+  verhandlungsfuehrung?: string;
+  straftaten?: string[];
+  tatDatum?: string;
+  tatWann?: string;
+  tatWo?: string;
+  tatWer?: string;
 }

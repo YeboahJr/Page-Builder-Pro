@@ -23,4 +23,16 @@ export interface CaseDetail {
   closedAt?: string | null;
   /** @nullable */
   description?: string | null;
+  /** @nullable */
+  verhandlungsfuehrung?: string | null;
+  /** @nullable */
+  straftaten?: string[] | null;
+  /** @nullable */
+  tatDatum?: string | null;
+  /** @nullable */
+  tatWann?: string | null;
+  /** @nullable */
+  tatWo?: string | null;
+  /** @nullable */
+  tatWer?: string | null;
 }
