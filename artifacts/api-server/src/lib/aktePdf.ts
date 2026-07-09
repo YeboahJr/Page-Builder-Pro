@@ -1,5 +1,8 @@
 import PDFDocument from "pdfkit";
 import fibEmblem from "../assets/fib-emblem-gray.png";
+import fibStampBlue from "../assets/fib-stamp-blue.png";
+import fibBadgeColor from "../assets/fib-badge-color.png";
+import signatureFont from "../assets/signature-font.ttf";
 
 // Data needed to render a case file ("Akte") as a PDF document that follows
 // the user's Google-Doc template as closely as possible: DOJ/FIB letterhead
@@ -14,6 +17,7 @@ export interface AktePdfData {
   status: string;
   leadAgent: string;
   leadAgentDienstnummer: string | null;
+  leadAgentRank: string | null;
   description: string | null;
   details: string | null;
   verhandlungsfuehrung: string | null;
@@ -186,6 +190,60 @@ export function buildAktePdf(data: AktePdfData): PDFKit.PDFDocument {
     }
     doc.moveDown(1);
   }
+
+  // ---------- Signature stamp block (per template screenshot): centered bold
+  // "Federal Investigation Bureau" heading, translucent blue FIB stamp left,
+  // cursive signature over a rule with name + rank/dienstnummer beneath in the
+  // middle, colored FIB badge right. Personalized to the Sachbearbeiter. ----------
+  const stampBlockHeight = 160;
+  ensureSpace(doc, stampBlockHeight + 40);
+  doc.moveDown(1.5);
+  const blockTop = doc.y;
+  doc.font("Helvetica-Bold").fontSize(13).fillColor(BLACK)
+    .text("Federal Investigation Bureau", left, blockTop, { width: pageWidth, align: "center" });
+
+  const rowTop = doc.y + 6;
+  try {
+    doc.image(Buffer.from(fibStampBlue, "base64"), left + 4, rowTop - 6, { fit: [125, 125] });
+  } catch {
+    // Stamp is decorative; the PDF is still valid without it.
+  }
+  try {
+    doc.image(Buffer.from(fibBadgeColor, "base64"), left + pageWidth - 105, rowTop, { fit: [100, 100] });
+  } catch {
+    // Badge is decorative; the PDF is still valid without it.
+  }
+
+  const sigWidth = 210;
+  const sigX = left + (pageWidth - sigWidth) / 2;
+  let hasScriptFont = false;
+  try {
+    doc.registerFont("Signature", Buffer.from(signatureFont, "base64"));
+    hasScriptFont = true;
+  } catch {
+    // Fall back to italic if the script font cannot be loaded.
+  }
+  if (hasScriptFont) {
+    doc.font("Signature").fontSize(30);
+  } else {
+    doc.font("Helvetica-Oblique").fontSize(20);
+  }
+  doc.fillColor("#1f3a93").text(data.leadAgent, sigX, rowTop + 28, { width: sigWidth, align: "center" });
+
+  const sigLineY = doc.y + 2;
+  doc.moveTo(sigX, sigLineY).lineTo(sigX + sigWidth, sigLineY).lineWidth(0.8).strokeColor(BLACK).stroke();
+  doc.font("Helvetica").fontSize(11).fillColor(BLACK)
+    .text(data.leadAgent, sigX, sigLineY + 5, { width: sigWidth });
+  const rangZeile = [
+    data.leadAgentRank?.trim() || null,
+    data.leadAgentDienstnummer ? `DN-${data.leadAgentDienstnummer}` : null,
+  ].filter(Boolean).join(" | ");
+  if (rangZeile) {
+    doc.text(rangZeile, sigX, doc.y, { width: sigWidth });
+  }
+
+  doc.x = left;
+  doc.y = Math.max(doc.y, rowTop + 125);
 
   // ---------- Footer note ----------
   ensureSpace(doc, 60);

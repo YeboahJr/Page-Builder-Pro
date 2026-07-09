@@ -25,7 +25,7 @@ async function buildAll() {
     // Embed small binary assets (e.g. the FIB emblem for the Akte PDF header)
     // directly into the bundle as base64 strings. (The "binary" loader emits
     // Uint8Array.fromBase64, which Node 24 does not support yet.)
-    loader: { ".png": "base64" },
+    loader: { ".png": "base64", ".ttf": "base64" },
     // Some packages may not be bundleable, so we externalize them, we can add more here as needed.
     // Some of the packages below may not be imported or installed, but we're adding them in case they are in the future.
     // Examples of unbundleable packages:

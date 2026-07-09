@@ -641,7 +641,7 @@ router.get("/:id/akte", async (req, res) => {
   const c = access.case;
 
   const [leadOfficer] = await db
-    .select({ dienstnummer: officersTable.dienstnummer })
+    .select({ dienstnummer: officersTable.dienstnummer, rank: officersTable.rank })
     .from(officersTable)
     .where(eq(officersTable.name, c.leadAgent));
 
@@ -693,7 +693,13 @@ router.get("/:id/akte", async (req, res) => {
       const ext = path.extname(name).toLowerCase();
       if (embeddable.has(ext) && images.length < MAX_EMBEDDED_IMAGES && embeddedBytes < MAX_EMBEDDED_BYTES) {
         try {
-          const buf = fs.readFileSync(path.join(localDir, name));
+          const filePath = path.join(localDir, name);
+          const size = fs.statSync(filePath).size;
+          if (embeddedBytes + size > MAX_EMBEDDED_BYTES) {
+            otherFiles.push(name);
+            continue;
+          }
+          const buf = fs.readFileSync(filePath);
           embeddedBytes += buf.length;
           images.push({ filename: name, data: buf });
         } catch {
@@ -717,6 +723,7 @@ router.get("/:id/akte", async (req, res) => {
     status: c.status,
     leadAgent: c.leadAgent,
     leadAgentDienstnummer: leadOfficer?.dienstnummer ?? null,
+    leadAgentRank: leadOfficer?.rank ?? null,
     description: c.description,
     details: c.details,
     verhandlungsfuehrung: c.verhandlungsfuehrung,
