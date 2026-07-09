@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db, officersTable, sessionsTable } from "@workspace/db";
-import { eq, asc, and } from "drizzle-orm";
+import { eq, ne, asc, and } from "drizzle-orm";
 import multer from "multer";
 import path from "path";
 import { randomUUID } from "crypto";
@@ -53,7 +53,8 @@ router.get("/", requirePages("personal", "leitstelle"), async (req, res) => {
 
 // Minimal name directory for dropdowns (lead agent, case agents). Case access
 // is independent of the personal/leitstelle page rights, so this only requires
-// being logged in and exposes nothing beyond id + name of approved officers.
+// being logged in and exposes nothing beyond id + name. Mirrors the Personal
+// list: all officers (auch noch nicht freigegebene), ohne den Admin-Account.
 router.get("/names", async (req, res) => {
   const current = await resolveOfficer(req);
   if (!current) {
@@ -62,7 +63,7 @@ router.get("/names", async (req, res) => {
   const officers = await db
     .select({ id: officersTable.id, name: officersTable.name })
     .from(officersTable)
-    .where(eq(officersTable.freigegeben, true))
+    .where(ne(officersTable.role, "Admin"))
     .orderBy(asc(officersTable.name));
   return res.json(officers);
 });

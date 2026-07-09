@@ -133,12 +133,12 @@ describe("officer name directory (/officers/names)", () => {
     expect(res.status).toBe(401);
   });
 
-  it("is accessible without personal/leitstelle page rights and only exposes id + name of approved officers", async () => {
+  it("is accessible without personal/leitstelle page rights and only exposes id + name of all officers (incl. pending)", async () => {
     const res = await api("/officers/names", { token: tokenMember });
     expect(res.status).toBe(200);
     const names = res.json.map((o: { name: string }) => o.name);
     expect(names).toContain(NAME_ADDED);
-    expect(names).not.toContain(NAME_PENDING);
+    expect(names).toContain(NAME_PENDING);
     for (const entry of res.json) {
       expect(Object.keys(entry).sort()).toEqual(["id", "name"]);
     }
@@ -204,13 +204,6 @@ describe("case agent management (/cases/:id/agents)", () => {
     });
     expect(unknown.status).toBe(400);
 
-    const pending = await api(`/cases/${caseId}/agents`, {
-      method: "POST",
-      token: tokenLead,
-      body: { name: NAME_PENDING },
-    });
-    expect(pending.status).toBe(400);
-
     const lead = await api(`/cases/${caseId}/agents`, {
       method: "POST",
       token: tokenLead,
@@ -231,6 +224,21 @@ describe("case agent management (/cases/:id/agents)", () => {
       body: { name: NAME_OUTSIDER, role: "Leitender Agent" },
     });
     expect(badRole.status).toBe(400);
+  });
+
+  it("allows adding a not-yet-approved officer from the Personal list", async () => {
+    const pending = await api(`/cases/${caseId}/agents`, {
+      method: "POST",
+      token: tokenLead,
+      body: { name: NAME_PENDING },
+    });
+    expect(pending.status).toBe(201);
+
+    const removed = await api(`/cases/${caseId}/agents/${pending.json.id}`, {
+      method: "DELETE",
+      token: tokenLead,
+    });
+    expect(removed.status).toBe(204);
   });
 
   it("removes an agent (204) and revokes their case visibility", async () => {

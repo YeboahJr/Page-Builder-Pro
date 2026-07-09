@@ -11,12 +11,6 @@ import {
   Search,
   ChevronDown,
   ChevronRight,
-  AlertCircle,
-  Car,
-  Package,
-  CreditCard,
-  Plus,
-  FileText,
   UserCog,
   UserPlus,
   Shield,
@@ -60,12 +54,6 @@ const navItems: NavItem[] = [
     ],
   },
   { icon: Archive, label: "Archiv", href: "/archiv", pageKey: "archiv" },
-];
-
-const quickLinks = [
-  { icon: Plus, label: "Neuer Fall", href: "/fallmanagement?new=1" },
-  { icon: Car, label: "Neuer Streifen", href: "/leitstelle" },
-  { icon: Package, label: "Neues Beweismittel", href: "/beweismittel?new=1" },
 ];
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
@@ -198,20 +186,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             )}
           </nav>
 
-          {/* Schnellzugriff */}
-          <div className="mt-6 px-2">
-            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-widest px-3 mb-2">Schnellzugriff</p>
-            {quickLinks.map(q => (
-              <Link
-                key={q.href}
-                href={q.href}
-                className="flex items-center gap-2.5 px-3 py-1.5 rounded text-xs text-muted-foreground hover:text-primary transition-colors"
-              >
-                <q.icon className="w-3.5 h-3.5" />
-                {q.label}
-              </Link>
-            ))}
-          </div>
         </div>
 
       </aside>

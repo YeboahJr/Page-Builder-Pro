@@ -41,12 +41,14 @@ Gating der Datenroute. Tests: artifacts/api-server/tests/page-rights.test.ts.
 ## Officer-Dropdowns nie über GET /officers befüllen
 
 Regel: Namens-Dropdowns (Lead-Agent, Fall-Agenten) nutzen `GET /officers/names` —
-auth-only, liefert nur id+name freigegebener Officer. `GET /officers` bleibt
-personal|leitstelle-gegated.
+auth-only, liefert id+name aller Officer außer Rolle Admin (auch noch nicht
+freigegebene, spiegelt die Personal-Liste). `GET /officers` bleibt
+personal|leitstelle-gegated. Lead-/Agenten-Validierung serverseitig: Officer muss
+existieren, freigegeben ist keine Voraussetzung.
 
 **Why:** Fall-Zugriff ist unabhängig von Seitenrechten; ein fallberechtigter Officer
-ohne personal/leitstelle bekam sonst leere Dropdowns (Architect-Finding bei
-Agenten-Verwaltung).
+ohne personal/leitstelle bekam sonst leere Dropdowns. Nutzerwunsch (Juli 2026):
+alle Einträge der Personal-Liste sollen als Leitender Agent wählbar sein.
 
 **How to apply:** Neue UI, die Officer-Namen zur Auswahl braucht, immer über
 useGetOfficerNames anbinden, nicht useGetOfficers. Regressionstest:

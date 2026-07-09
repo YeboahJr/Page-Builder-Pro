@@ -282,9 +282,9 @@ router.patch("/:id", async (req, res) => {
     const [officerRow] = await db
       .select({ id: officersTable.id })
       .from(officersTable)
-      .where(and(eq(officersTable.name, name), eq(officersTable.freigegeben, true)));
+      .where(eq(officersTable.name, name));
     if (!officerRow) {
-      res.status(400).json({ error: "Leitender Agent muss ein freigegebener Officer sein" });
+      res.status(400).json({ error: "Leitender Agent muss ein Officer aus der Personalliste sein" });
       return;
     }
     updates.leadAgent = name;
@@ -467,14 +467,14 @@ router.post("/:id/agents", async (req, res) => {
     return;
   }
 
-  // The visibility check matches by exact officer name, so only registered
-  // (approved) officers may be added — otherwise the entry is useless.
+  // The visibility check matches by exact officer name, so only officers from
+  // the Personal list may be added — otherwise the entry is useless.
   const [officerRow] = await db
     .select({ id: officersTable.id })
     .from(officersTable)
-    .where(and(eq(officersTable.name, name), eq(officersTable.freigegeben, true)));
+    .where(eq(officersTable.name, name));
   if (!officerRow) {
-    res.status(400).json({ error: "Kein freigegebener Officer mit diesem Namen" });
+    res.status(400).json({ error: "Kein Officer mit diesem Namen in der Personalliste" });
     return;
   }
 
