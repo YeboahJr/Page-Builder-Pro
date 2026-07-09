@@ -8,6 +8,7 @@ import { objectStorageClient } from "../lib/objectStorage";
 import { parsePrivateObjectDir } from "@workspace/object-storage";
 import { hashPassword, resolveOfficer, isLeadership } from "../lib/auth";
 import { parseAllowedPages } from "../lib/pages";
+import { requirePages } from "../middlewares/requirePages";
 
 const router = Router();
 
@@ -43,7 +44,9 @@ const stripHash = (o: typeof officersTable.$inferSelect) => {
   return data;
 };
 
-router.get("/", async (req, res) => {
+// The officer list backs both the Personal page and the Leitstelle patrol
+// assignment, so either page right grants access.
+router.get("/", requirePages("personal", "leitstelle"), async (req, res) => {
   const officers = await db.select().from(officersTable).orderBy(asc(officersTable.dienstnummer));
   res.json(officers.map(stripHash));
 });
@@ -306,14 +309,14 @@ router.delete("/:id/avatar", async (req, res) => {
   return res.json(stripHash(updated));
 });
 
-router.get("/:id", async (req, res) => {
-  const id = parseInt(req.params.id);
+router.get("/:id", requirePages("personal", "leitstelle"), async (req, res) => {
+  const id = parseInt(String(req.params.id));
   const [officer] = await db.select().from(officersTable).where(eq(officersTable.id, id));
   if (!officer) return res.status(404).json({ error: "Officer nicht gefunden" });
   return res.json(stripHash(officer));
 });
 
-router.post("/", async (req, res) => {
+router.post("/", requirePages("personal"), async (req, res) => {
   const body = req.body as Record<string, unknown>;
   const dienstnummer = typeof body.dienstnummer === "string" ? body.dienstnummer.trim() : "";
   const name = typeof body.name === "string" ? body.name.trim() : "";
@@ -445,8 +448,8 @@ router.patch("/:id", async (req, res) => {
   return res.json(stripHash(updated));
 });
 
-router.delete("/:id", async (req, res) => {
-  const id = parseInt(req.params.id);
+router.delete("/:id", requirePages("personal"), async (req, res) => {
+  const id = parseInt(String(req.params.id));
   if (!Number.isInteger(id)) {
     return res.status(400).json({ error: "Ungültige ID" });
   }

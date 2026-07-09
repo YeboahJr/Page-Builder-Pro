@@ -15,6 +15,21 @@ ohne Backfill — null=alles ist rückwärtskompatibel. Leitung darf nie ausgesp
 
 **How to apply:** Neue Sidebar-Seiten brauchen einen neuen Key an beiden Stellen
 (api-server lib/pages.ts + sidms lib/pages.ts — bewusst dupliziert, kein Shared-Lib).
-Wichtig: Seitenrechte sind bisher nur UI-Gating; Daten-API-Routen sind NICHT danach
-gefiltert (nur Leitungs-Checks). Rechteänderungen greifen ohne Re-Login, weil der
-AuthContext den Officer über /auth/me nachlädt.
+Rechteänderungen greifen ohne Re-Login, weil der AuthContext den Officer über /auth/me nachlädt.
+
+## Serverseitige Durchsetzung
+
+Daten-API-Routen sind per `requirePages(...keys)`-Middleware (api-server) nach Seitenrechten
+gefiltert: 401 ohne Login, 403 ohne passendes Seitenrecht; Leitung und allowedPages=null
+passieren immer. Mapping (mehrere Keys = "eine der Seiten reicht"):
+- `/dashboard` → dashboard; `/reports` + `/patrols` → leitstelle; `/evidence` → fallmanagement;
+  `/idchanges` → personal; `/cases` → dashboard|fallmanagement|archiv (Fall-Involvement-Checks
+  bleiben zusätzlich bestehen).
+- `/officers`: nur GET-Liste/GET-Detail (personal|leitstelle — Leitstelle braucht die Liste für
+  Streifen-Besetzung) und POST/DELETE (personal) sind seitengegated; Self-Service-Routen
+  (eigenes Passwort/Avatar/Profil) und Leitungs-Routen behalten ihre eigenen Checks.
+
+**How to apply:** Neue Datenrouten immer mit `requirePages` an die Seite(n) binden, die sie
+befüllen — Routen, die mehrere Seiten bedienen, alle Keys angeben. Frontend-Seiten ohne
+eigenen Seiten-Key (z. B. Audit-Log nutzt /dashboard/recent-activity) erben faktisch das
+Gating der Datenroute. Tests: artifacts/api-server/tests/page-rights.test.ts.
