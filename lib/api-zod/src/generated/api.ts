@@ -265,13 +265,20 @@ export const UpdateCaseParams = zod.object({
 })
 
 export const UpdateCaseBody = zod.object({
+  "caseNumber": zod.string().optional().describe('Neue Fallnummer; leer lassen, um die bestehende zu behalten'),
   "title": zod.string().optional(),
   "category": zod.string().optional(),
   "priority": zod.string().optional(),
   "status": zod.string().optional(),
   "leadAgent": zod.string().optional(),
   "description": zod.string().optional(),
-  "details": zod.string().optional()
+  "details": zod.string().optional(),
+  "verhandlungsfuehrung": zod.string().optional(),
+  "straftaten": zod.array(zod.string()).optional(),
+  "tatDatum": zod.string().optional(),
+  "tatWann": zod.string().optional(),
+  "tatWo": zod.string().optional(),
+  "tatWer": zod.string().optional()
 })
 
 export const UpdateCaseResponse = zod.object({

@@ -1,9 +1,11 @@
 import React, { useState } from "react";
 import { useGetCases, useCreateCase, useUpdateCase, useDeleteCase, getGetCasesQueryKey, getGetCaseQueryKey, getGetCaseAgentsQueryKey, useGetOfficerNames } from "@workspace/api-client-react";
+import type { Case } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Plus, Trash2, Edit3, X } from "lucide-react";
 import EvidenceUpload, { type UploadFile, uploadEvidenceFiles } from "@/components/EvidenceUpload";
 import DeleteConfirmModal from "@/components/DeleteConfirmModal";
+import { STRAFTATEN } from "@/lib/straftaten";
 
 type CaseRow = { id: number; caseNumber: string; title: string };
 
@@ -16,11 +18,20 @@ function statusBadge(s: string) {
   return map[s] ?? "bg-gray-800 text-gray-400";
 }
 
-const CATEGORIES = ["Drogenkriminalität", "Waffendelikte", "Korruption", "Finanzkriminalität", "Gewaltdelikte", "Cyberkriminalität"];
+const CATEGORIES = ["Gang", "Familie"];
 const PRIORITIES = ["Hoch", "Mittel", "Niedrig"];
-const STATUSES = ["Aktiv", "Offen", "Ermittlungen pausiert", "Observation", "An STA übergeben", "Abgeschlossen"];
+const STATUSES = ["Aktiv", "Offen", "Ermittlungen pausiert", "An STA übergeben", "Abgeschlossen"];
+const VERHANDLUNGSFUEHRUNG_OPTIONS = ["Federal Investigation Bureau", "San Andreas Highway Patrol", "Los Santos Police Department"];
 
-interface CaseForm { title: string; category: string; priority: string; status: string; leadAgent: string; description: string; }
+interface CaseForm {
+  caseNumber: string; title: string; category: string; priority: string; status: string; leadAgent: string;
+  description: string; details: string;
+  verhandlungsfuehrung: string; straftaten: string[]; tatDatum: string; tatWann: string; tatWo: string; tatWer: string;
+}
+const EMPTY_FORM: CaseForm = {
+  caseNumber: "", title: "", category: "Gang", priority: "Mittel", status: "Offen", leadAgent: "", description: "", details: "",
+  verhandlungsfuehrung: "Federal Investigation Bureau", straftaten: [], tatDatum: "", tatWann: "", tatWo: "", tatWer: "",
+};
 
 export default function Fallmanagement() {
   const qc = useQueryClient();
@@ -32,9 +43,10 @@ export default function Fallmanagement() {
   const deleteCase = useDeleteCase();
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
-  const [form, setForm] = useState<CaseForm>({ title: "", category: "Drogenkriminalität", priority: "Mittel", status: "Offen", leadAgent: "", description: "" });
+  const [form, setForm] = useState<CaseForm>(EMPTY_FORM);
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [straftatenOpen, setStraftatenOpen] = useState(false);
   const [uploadFiles, setUploadFiles] = useState<UploadFile[]>([]);
   const [deleteTarget, setDeleteTarget] = useState<CaseRow | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -44,20 +56,30 @@ export default function Fallmanagement() {
     setShowForm(false);
     setEditingId(null);
     setFormError(null);
-    setForm({ title: "", category: "Drogenkriminalität", priority: "Mittel", status: "Offen", leadAgent: "", description: "" });
+    setStraftatenOpen(false);
+    setForm(EMPTY_FORM);
     setUploadFiles([]);
   };
 
-  const openEdit = (c: { id: number; title: string; category: string; priority: string; status: string; leadAgent: string; description?: string | null }) => {
+  const openEdit = (c: Case) => {
     setEditingId(c.id);
     setFormError(null);
+    setStraftatenOpen(false);
     setForm({
+      caseNumber: c.caseNumber,
       title: c.title,
       category: c.category,
       priority: c.priority,
       status: c.status,
       leadAgent: c.leadAgent,
       description: c.description ?? "",
+      details: c.details ?? "",
+      verhandlungsfuehrung: c.verhandlungsfuehrung ?? "Federal Investigation Bureau",
+      straftaten: c.straftaten ?? [],
+      tatDatum: c.tatDatum ?? "",
+      tatWann: c.tatWann ?? "",
+      tatWo: c.tatWo ?? "",
+      tatWer: c.tatWer ?? "",
     });
     setUploadFiles([]);
     setShowForm(true);
@@ -113,16 +135,20 @@ export default function Fallmanagement() {
         </button>
       </div>
 
-      {/* Create form modal */}
+      {/* Create / edit form modal */}
       {showForm && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-          <div className="bg-[#0d1526] border border-[#1e2d4a] rounded-lg w-full max-w-lg">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-[#1e2d4a]">
+          <div className="bg-[#0d1526] border border-[#1e2d4a] rounded-lg w-full max-w-lg max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-[#1e2d4a] sticky top-0 bg-[#0d1526]">
               <h2 className="text-sm font-semibold text-white">{editingId !== null ? "Fall bearbeiten" : "Neuer Fall anlegen"}</h2>
               <button onClick={closeForm} className="text-gray-400 hover:text-white"><X className="w-5 h-5" /></button>
             </div>
             <form onSubmit={handleSubmit} className="p-5 space-y-4">
               <div className="grid grid-cols-2 gap-3">
+                <div className="col-span-2">
+                  <label className="text-xs text-gray-400 block mb-1">Fallnummer</label>
+                  <input value={form.caseNumber} onChange={e => setForm(f => ({ ...f, caseNumber: e.target.value }))} placeholder={editingId !== null ? "" : "Leer lassen für automatische Vergabe"} className="w-full bg-[#0a0f1a] border border-[#1e2d4a] text-white text-sm px-3 py-2 rounded focus:outline-none focus:border-[#c9a227]/50 font-mono" data-testid="input-case-number" />
+                </div>
                 <div className="col-span-2">
                   <label className="text-xs text-gray-400 block mb-1">Titel *</label>
                   <input required value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} className="w-full bg-[#0a0f1a] border border-[#1e2d4a] text-white text-sm px-3 py-2 rounded focus:outline-none focus:border-[#c9a227]/50" />
@@ -130,6 +156,7 @@ export default function Fallmanagement() {
                 <div>
                   <label className="text-xs text-gray-400 block mb-1">Kategorie</label>
                   <select value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))} className="w-full bg-[#0a0f1a] border border-[#1e2d4a] text-white text-sm px-3 py-2 rounded focus:outline-none">
+                    {form.category && !CATEGORIES.includes(form.category) && <option value={form.category}>{form.category}</option>}
                     {CATEGORIES.map(c => <option key={c}>{c}</option>)}
                   </select>
                 </div>
@@ -142,6 +169,7 @@ export default function Fallmanagement() {
                 <div>
                   <label className="text-xs text-gray-400 block mb-1">Status</label>
                   <select value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value }))} className="w-full bg-[#0a0f1a] border border-[#1e2d4a] text-white text-sm px-3 py-2 rounded focus:outline-none">
+                    {form.status && !STATUSES.includes(form.status) && <option value={form.status}>{form.status}</option>}
                     {STATUSES.map(s => <option key={s}>{s}</option>)}
                   </select>
                 </div>
@@ -153,9 +181,78 @@ export default function Fallmanagement() {
                     {officerNames.map(n => <option key={n} value={n}>{n}</option>)}
                   </select>
                 </div>
+                <div>
+                  <label className="text-xs text-gray-400 block mb-1">Verhandlungsführung</label>
+                  <select value={form.verhandlungsfuehrung} onChange={e => setForm(f => ({ ...f, verhandlungsfuehrung: e.target.value }))} className="w-full bg-[#0a0f1a] border border-[#1e2d4a] text-white text-sm px-3 py-2 rounded focus:outline-none" data-testid="select-verhandlungsfuehrung">
+                    {form.verhandlungsfuehrung && !VERHANDLUNGSFUEHRUNG_OPTIONS.includes(form.verhandlungsfuehrung) && <option value={form.verhandlungsfuehrung}>{form.verhandlungsfuehrung}</option>}
+                    {VERHANDLUNGSFUEHRUNG_OPTIONS.map(v => <option key={v}>{v}</option>)}
+                  </select>
+                </div>
+                <div className="relative">
+                  <label className="text-xs text-gray-400 block mb-1">Vorgeworfene Straftaten</label>
+                  <button
+                    type="button"
+                    onClick={() => setStraftatenOpen(v => !v)}
+                    className="w-full bg-[#0a0f1a] border border-[#1e2d4a] text-white text-sm px-3 py-2 rounded focus:outline-none text-left flex items-center justify-between gap-2"
+                    data-testid="button-straftaten-dropdown"
+                  >
+                    <span className={`truncate ${form.straftaten.length === 0 ? "text-gray-500" : ""}`}>
+                      {form.straftaten.length === 0 ? "Auswählen…" : `${form.straftaten.length} ausgewählt`}
+                    </span>
+                    <span className="text-gray-500 flex-shrink-0">▾</span>
+                  </button>
+                  {straftatenOpen && (
+                    <div className="absolute z-20 mt-1 w-[28rem] max-w-[80vw] max-h-64 overflow-y-auto bg-[#0a0f1a] border border-[#1e2d4a] rounded shadow-2xl p-2 space-y-0.5" data-testid="dropdown-straftaten">
+                      {STRAFTATEN.map(s => (
+                        <label key={s} className="flex items-start gap-2 px-2 py-1 rounded hover:bg-[#1a2744]/60 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={form.straftaten.includes(s)}
+                            onChange={e => setForm(f => ({
+                              ...f,
+                              straftaten: e.target.checked ? [...f.straftaten, s] : f.straftaten.filter(x => x !== s),
+                            }))}
+                            className="mt-0.5 accent-[#c9a227]"
+                          />
+                          <span className="text-xs text-gray-300">{s}</span>
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                  {form.straftaten.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mt-1.5">
+                      {form.straftaten.map(s => (
+                        <span key={s} className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-[#1a2744] border border-[#1e2d4a] rounded text-[10px] text-gray-300">
+                          {s.split(" – ")[0]}
+                          <button type="button" onClick={() => setForm(f => ({ ...f, straftaten: f.straftaten.filter(x => x !== s) }))} className="text-gray-500 hover:text-red-400">×</button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <label className="text-xs text-gray-400 block mb-1">Datum</label>
+                  <input type="date" value={form.tatDatum} onChange={e => setForm(f => ({ ...f, tatDatum: e.target.value }))} className="w-full bg-[#0a0f1a] border border-[#1e2d4a] text-white text-sm px-3 py-2 rounded focus:outline-none focus:border-[#c9a227]/50" data-testid="input-tat-datum" />
+                </div>
+                <div>
+                  <label className="text-xs text-gray-400 block mb-1">Wann</label>
+                  <input value={form.tatWann} onChange={e => setForm(f => ({ ...f, tatWann: e.target.value }))} placeholder="z. B. 21:30 Uhr" className="w-full bg-[#0a0f1a] border border-[#1e2d4a] text-white text-sm px-3 py-2 rounded focus:outline-none focus:border-[#c9a227]/50" data-testid="input-tat-wann" />
+                </div>
+                <div>
+                  <label className="text-xs text-gray-400 block mb-1">Wo</label>
+                  <input value={form.tatWo} onChange={e => setForm(f => ({ ...f, tatWo: e.target.value }))} placeholder="Ort" className="w-full bg-[#0a0f1a] border border-[#1e2d4a] text-white text-sm px-3 py-2 rounded focus:outline-none focus:border-[#c9a227]/50" data-testid="input-tat-wo" />
+                </div>
+                <div>
+                  <label className="text-xs text-gray-400 block mb-1">Wer</label>
+                  <input value={form.tatWer} onChange={e => setForm(f => ({ ...f, tatWer: e.target.value }))} placeholder="Beteiligte Personen" className="w-full bg-[#0a0f1a] border border-[#1e2d4a] text-white text-sm px-3 py-2 rounded focus:outline-none focus:border-[#c9a227]/50" data-testid="input-tat-wer" />
+                </div>
                 <div className="col-span-2">
                   <label className="text-xs text-gray-400 block mb-1">Beschreibung</label>
-                  <textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} rows={3} className="w-full bg-[#0a0f1a] border border-[#1e2d4a] text-white text-sm px-3 py-2 rounded focus:outline-none focus:border-[#c9a227]/50 resize-none" />
+                  <textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} rows={3} className="w-full bg-[#0a0f1a] border border-[#1e2d4a] text-white text-sm px-3 py-2 rounded focus:outline-none focus:border-[#c9a227]/50 resize-none" data-testid="textarea-beschreibung" />
+                </div>
+                <div className="col-span-2">
+                  <label className="text-xs text-gray-400 block mb-1">Details</label>
+                  <textarea value={form.details} onChange={e => setForm(f => ({ ...f, details: e.target.value }))} rows={3} className="w-full bg-[#0a0f1a] border border-[#1e2d4a] text-white text-sm px-3 py-2 rounded focus:outline-none focus:border-[#c9a227]/50 resize-none" data-testid="textarea-details" />
                 </div>
                 {editingId === null && (
                   <div className="col-span-2">

@@ -236,7 +236,13 @@ router.patch("/:id", async (req, res) => {
   if (!access) return;
   const existing = access.case;
 
-  const { title, category, priority, status, leadAgent, description, details } = req.body;
+  const { title, category, priority, status, leadAgent, description, details, verhandlungsfuehrung, straftaten, tatDatum, tatWann, tatWo, tatWer } = req.body;
+
+  if (straftaten !== undefined && straftaten !== null && (!Array.isArray(straftaten) || straftaten.some((s: unknown) => typeof s !== "string"))) {
+    res.status(400).json({ error: "straftaten muss eine Liste von Zeichenketten sein" });
+    return;
+  }
+
   const updates: Partial<typeof casesTable.$inferInsert> = {};
   if (title !== undefined) updates.title = title;
   if (category !== undefined) updates.category = category;
@@ -245,6 +251,26 @@ router.patch("/:id", async (req, res) => {
   if (leadAgent !== undefined) updates.leadAgent = leadAgent;
   if (description !== undefined) updates.description = description;
   if (details !== undefined) updates.details = details;
+  if (verhandlungsfuehrung !== undefined) updates.verhandlungsfuehrung = verhandlungsfuehrung;
+  if (straftaten !== undefined) updates.straftaten = straftaten;
+  if (tatDatum !== undefined) updates.tatDatum = tatDatum;
+  if (tatWann !== undefined) updates.tatWann = tatWann;
+  if (tatWo !== undefined) updates.tatWo = tatWo;
+  if (tatWer !== undefined) updates.tatWer = tatWer;
+
+  // Fallnummer: nur ändern, wenn eine neue, nicht-leere Nummer angegeben wurde.
+  const newCaseNumber = typeof req.body.caseNumber === "string" ? req.body.caseNumber.trim() : "";
+  if (newCaseNumber && newCaseNumber !== existing.caseNumber) {
+    const [taken] = await db
+      .select({ id: casesTable.id })
+      .from(casesTable)
+      .where(eq(casesTable.caseNumber, newCaseNumber));
+    if (taken) {
+      res.status(400).json({ error: "Diese Fallnummer ist bereits vergeben" });
+      return;
+    }
+    updates.caseNumber = newCaseNumber;
+  }
 
   const leadChanged = leadAgent !== undefined && leadAgent !== existing.leadAgent;
   if (leadChanged) {

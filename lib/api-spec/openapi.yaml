@@ -1415,6 +1415,9 @@ components:
     CaseUpdate:
       type: object
       properties:
+        caseNumber:
+          type: string
+          description: "Neue Fallnummer; leer lassen, um die bestehende zu behalten"
         title:
           type: string
         category:
@@ -1428,6 +1431,20 @@ components:
         description:
           type: string
         details:
+          type: string
+        verhandlungsfuehrung:
+          type: string
+        straftaten:
+          type: array
+          items:
+            type: string
+        tatDatum:
+          type: string
+        tatWann:
+          type: string
+        tatWo:
+          type: string
+        tatWer:
           type: string
 
     CaseDetail:

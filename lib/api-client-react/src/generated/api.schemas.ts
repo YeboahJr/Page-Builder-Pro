@@ -279,6 +279,8 @@ export interface CaseInput {
 }
 
 export interface CaseUpdate {
+  /** Neue Fallnummer; leer lassen, um die bestehende zu behalten */
+  caseNumber?: string;
   title?: string;
   category?: string;
   priority?: string;
@@ -286,6 +288,12 @@ export interface CaseUpdate {
   leadAgent?: string;
   description?: string;
   details?: string;
+  verhandlungsfuehrung?: string;
+  straftaten?: string[];
+  tatDatum?: string;
+  tatWann?: string;
+  tatWo?: string;
+  tatWer?: string;
 }
 
 export interface CaseDetail {
