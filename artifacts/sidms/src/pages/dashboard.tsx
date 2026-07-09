@@ -17,8 +17,8 @@ import {
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
-  Activity, FolderOpen, CheckCircle, Eye, Package, AlertTriangle,
-  Plus, RotateCcw, Download, X, Film, ImageIcon, ZoomIn, Trash2
+  Activity, FolderOpen, CheckCircle, Package, AlertTriangle,
+  Plus, X, Film, ImageIcon, ZoomIn, Trash2
 } from "lucide-react";
 import EvidenceUpload, { type UploadFile, uploadEvidenceFiles } from "@/components/EvidenceUpload";
 import DeleteConfirmModal from "@/components/DeleteConfirmModal";
@@ -40,9 +40,6 @@ const EMPTY_NEW_CASE: NewCaseForm = {
   verhandlungsfuehrung: "Federal Investigation Bureau", straftaten: [], tatDatum: "", tatWann: "", tatWo: "", tatWer: "",
 };
 
-const PRIORITIES = ["Alle Prioritäten", "Hoch", "Mittel", "Niedrig"];
-const STATUSES = ["Alle Status", "Aktiv", "Offen", "Ermittlungen pausiert", "Observation", "An STA übergeben", "Abgeschlossen"];
-const CATEGORIES = ["Alle Kategorien", "Drogenkriminalität", "Waffendelikte", "Korruption", "Finanzkriminalität", "Gewaltdelikte", "Cyberkriminalität"];
 
 function priorityBadge(p: string) {
   const map: Record<string, string> = {
@@ -87,15 +84,8 @@ export default function Dashboard() {
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
-  const [filters, setFilters] = useState({
-    caseNumber: "", title: "", category: "", status: "", agentId: "", priority: "",
-    suspectName: "", vehiclePlate: "", missionNumber: "", dateFrom: "", dateTo: "",
-  });
-
   const { data: stats } = useGetDashboardStats();
-  const { data: cases, isLoading: casesLoading } = useGetCases(
-    Object.fromEntries(Object.entries(filters).filter(([, v]) => v && !v.startsWith("Alle"))) as Record<string, string>
-  );
+  const { data: cases, isLoading: casesLoading } = useGetCases();
   const { data: caseDetail } = useGetCase(selectedId!, {
     query: { enabled: !!selectedId, queryKey: getGetCaseQueryKey(selectedId ?? 0) }
   });
@@ -252,20 +242,11 @@ export default function Dashboard() {
     { label: "Aktive Fälle", value: stats?.aktiveFaelle ?? 0, delta: stats?.aktiveFaelleDelta, icon: Activity, color: "text-yellow-400", border: "border-yellow-600/30" },
     { label: "Offene Fälle", value: stats?.offeneFaelle ?? 0, delta: stats?.offeneFaelleDelta, icon: FolderOpen, color: "text-blue-400", border: "border-blue-600/30" },
     { label: "Abgeschlossene Fälle", value: stats?.abgeschlosseneFaelle ?? 0, delta: stats?.abgeschlosseneFaelleDelta, icon: CheckCircle, color: "text-green-400", border: "border-green-600/30" },
-    { label: "Observationen", value: stats?.observationen ?? 0, delta: stats?.observationenDelta, icon: Eye, color: "text-purple-400", border: "border-purple-600/30" },
     { label: "Neue Beweismittel", value: stats?.neueBeweismittel ?? 0, delta: stats?.neueBeweismittelDelta, icon: Package, color: "text-cyan-400", border: "border-cyan-600/30" },
     { label: "Hohe Priorität", value: stats?.hohePrioritaet ?? 0, delta: stats?.hohePrioritaetDelta, icon: AlertTriangle, color: "text-red-400", border: "border-red-600/30" },
   ];
 
   const TABS = ["Übersicht", "Agenten", "Beweismittel", "Dokumente"];
-
-  const applyFilters = () => {
-    qc.invalidateQueries({ queryKey: getGetCasesQueryKey() });
-  };
-
-  const resetFilters = () => {
-    setFilters({ caseNumber: "", title: "", category: "", status: "", agentId: "", priority: "", suspectName: "", vehiclePlate: "", missionNumber: "", dateFrom: "", dateTo: "" });
-  };
 
   const selectedCase = cases?.find(c => c.id === selectedId);
 
@@ -440,7 +421,7 @@ export default function Dashboard() {
       )}
 
       {/* Stats row */}
-      <div className="grid grid-cols-6 gap-3 flex-shrink-0">
+      <div className="grid grid-cols-5 gap-3 flex-shrink-0">
         {statCards.map((s, i) => (
           <div key={i} className={`bg-[#0d1526] border ${s.border} rounded p-3 flex items-start gap-3`} data-testid={`stat-card-${i}`}>
             <div className={`p-2 rounded bg-[#0a0f1a] ${s.color}`}>
@@ -799,127 +780,9 @@ export default function Dashboard() {
           )}
         </div>
 
-        {/* Right: Search & Filter */}
-        <div className="w-72 flex-shrink-0 space-y-3">
-          <div className="bg-[#0d1526] border border-[#1e2d4a] rounded p-4">
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-sm font-semibold text-white">Suche & Filter</h2>
-              <button onClick={resetFilters} className="text-xs text-gray-400 hover:text-white flex items-center gap-1">
-                <RotateCcw className="w-3 h-3" /> Zurücksetzen
-              </button>
-            </div>
-            <div className="space-y-3">
-              <div>
-                <label className="text-xs text-gray-400 block mb-1">Fallnummer</label>
-                <input
-                  value={filters.caseNumber}
-                  onChange={e => setFilters(f => ({ ...f, caseNumber: e.target.value }))}
-                  placeholder="z.B. SID-2026/07/09"
-                  className="w-full bg-[#0a0f1a] border border-[#1e2d4a] text-xs text-white px-2 py-1.5 rounded focus:outline-none focus:border-[#c9a227]/50"
-                  data-testid="input-filter-casenumber"
-                />
-              </div>
-              <div>
-                <label className="text-xs text-gray-400 block mb-1">Titel</label>
-                <input
-                  value={filters.title}
-                  onChange={e => setFilters(f => ({ ...f, title: e.target.value }))}
-                  placeholder="Stichwort eingeben"
-                  className="w-full bg-[#0a0f1a] border border-[#1e2d4a] text-xs text-white px-2 py-1.5 rounded focus:outline-none focus:border-[#c9a227]/50"
-                  data-testid="input-filter-title"
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="text-xs text-gray-400 block mb-1">Kategorie</label>
-                  <select
-                    value={filters.category}
-                    onChange={e => setFilters(f => ({ ...f, category: e.target.value }))}
-                    className="w-full bg-[#0a0f1a] border border-[#1e2d4a] text-xs text-white px-2 py-1.5 rounded focus:outline-none"
-                    data-testid="select-filter-category"
-                  >
-                    {CATEGORIES.map(c => <option key={c} value={c.startsWith("Alle") ? "" : c}>{c}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="text-xs text-gray-400 block mb-1">Status</label>
-                  <select
-                    value={filters.status}
-                    onChange={e => setFilters(f => ({ ...f, status: e.target.value }))}
-                    className="w-full bg-[#0a0f1a] border border-[#1e2d4a] text-xs text-white px-2 py-1.5 rounded focus:outline-none"
-                    data-testid="select-filter-status"
-                  >
-                    {STATUSES.map(s => <option key={s} value={s.startsWith("Alle") ? "" : s}>{s}</option>)}
-                  </select>
-                </div>
-              </div>
-              <div>
-                <label className="text-xs text-gray-400 block mb-1">Priorität</label>
-                <select
-                  value={filters.priority}
-                  onChange={e => setFilters(f => ({ ...f, priority: e.target.value }))}
-                  className="w-full bg-[#0a0f1a] border border-[#1e2d4a] text-xs text-white px-2 py-1.5 rounded focus:outline-none"
-                  data-testid="select-filter-priority"
-                >
-                  {PRIORITIES.map(p => <option key={p} value={p.startsWith("Alle") ? "" : p}>{p}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="text-xs text-gray-400 block mb-1">Verdächtiger / Person</label>
-                <input
-                  value={filters.suspectName}
-                  onChange={e => setFilters(f => ({ ...f, suspectName: e.target.value }))}
-                  placeholder="Name oder ID eingeben"
-                  className="w-full bg-[#0a0f1a] border border-[#1e2d4a] text-xs text-white px-2 py-1.5 rounded focus:outline-none focus:border-[#c9a227]/50"
-                />
-              </div>
-              <div>
-                <label className="text-xs text-gray-400 block mb-1">Fahrzeug / Kennzeichen</label>
-                <input
-                  value={filters.vehiclePlate}
-                  onChange={e => setFilters(f => ({ ...f, vehiclePlate: e.target.value }))}
-                  placeholder="Kennzeichen eingeben"
-                  className="w-full bg-[#0a0f1a] border border-[#1e2d4a] text-xs text-white px-2 py-1.5 rounded focus:outline-none focus:border-[#c9a227]/50"
-                />
-              </div>
-              <div>
-                <label className="text-xs text-gray-400 block mb-1">Einsatznummer</label>
-                <input
-                  value={filters.missionNumber}
-                  onChange={e => setFilters(f => ({ ...f, missionNumber: e.target.value }))}
-                  placeholder="Einsatznummer eingeben"
-                  className="w-full bg-[#0a0f1a] border border-[#1e2d4a] text-xs text-white px-2 py-1.5 rounded focus:outline-none focus:border-[#c9a227]/50"
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="text-xs text-gray-400 block mb-1">Datum von</label>
-                  <input type="date" value={filters.dateFrom} onChange={e => setFilters(f => ({ ...f, dateFrom: e.target.value }))}
-                    className="w-full bg-[#0a0f1a] border border-[#1e2d4a] text-xs text-white px-2 py-1.5 rounded focus:outline-none" />
-                </div>
-                <div>
-                  <label className="text-xs text-gray-400 block mb-1">Datum bis</label>
-                  <input type="date" value={filters.dateTo} onChange={e => setFilters(f => ({ ...f, dateTo: e.target.value }))}
-                    className="w-full bg-[#0a0f1a] border border-[#1e2d4a] text-xs text-white px-2 py-1.5 rounded focus:outline-none" />
-                </div>
-              </div>
-              <div className="flex gap-2 pt-1">
-                <button
-                  onClick={applyFilters}
-                  className="flex-1 bg-[#1a3d7c] hover:bg-[#1e4a94] text-white text-xs py-2 rounded font-medium transition-colors"
-                  data-testid="button-apply-filters"
-                >
-                  Filter anwenden
-                </button>
-                <button className="flex items-center gap-1 px-2 py-2 bg-[#1e2d4a] hover:bg-[#253650] text-gray-300 text-xs rounded transition-colors">
-                  <Download className="w-3 h-3" /> Exportieren
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* Links / Verknüpfungen */}
-          {selectedId && (
+        {/* Right: Verknüpfungen */}
+        {selectedId && (
+          <div className="w-72 flex-shrink-0 space-y-3">
             <div className="bg-[#0d1526] border border-[#1e2d4a] rounded p-4">
               <h3 className="text-xs font-semibold text-white mb-2">Verknüpfungen</h3>
               {[
@@ -935,8 +798,8 @@ export default function Dashboard() {
                 </div>
               ))}
             </div>
-          )}
-        </div>
+          </div>
+        )}
       </div>
     </div>
   );
