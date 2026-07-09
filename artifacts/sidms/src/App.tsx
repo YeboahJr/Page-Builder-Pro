@@ -24,6 +24,7 @@ import Einstellungen from "@/pages/einstellungen";
 import ProfilBearbeiten from "@/pages/profil-bearbeiten";
 import Administration from "@/pages/administration";
 import AppLayout from "@/components/layout/AppLayout";
+import BootSequence from "@/components/BootSequence";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -34,6 +35,8 @@ const queryClient = new QueryClient({
   },
 });
 
+const BOOT_FLAG_KEY = "sidms_boot_played";
+
 function ProtectedRoute({
   component: Component,
   pageKey,
@@ -43,6 +46,9 @@ function ProtectedRoute({
 }) {
   const { isAuthenticated, officer } = useAuth();
   const [, setLocation] = useLocation();
+  const [bootCompleted, setBootCompleted] = React.useState(
+    () => sessionStorage.getItem(BOOT_FLAG_KEY) === "true"
+  );
 
   React.useEffect(() => {
     if (!isAuthenticated) {
@@ -51,6 +57,10 @@ function ProtectedRoute({
   }, [isAuthenticated, setLocation]);
 
   if (!isAuthenticated) return null;
+
+  if (!bootCompleted) {
+    return <BootSequence onComplete={() => setBootCompleted(true)} />;
+  }
 
   const leadership = isLeadership(officer?.rank);
   const blocked = pageKey !== undefined && !leadership && !pageAllowed(officer?.allowedPages, pageKey);

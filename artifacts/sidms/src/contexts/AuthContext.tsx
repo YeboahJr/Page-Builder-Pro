@@ -113,6 +113,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setOfficer(null);
     sessionStorage.removeItem(STORAGE_KEY);
     sessionStorage.removeItem(TOKEN_KEY);
+    sessionStorage.removeItem("sidms_boot_played");
     setLocation("/login");
   };
 
