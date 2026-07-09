@@ -9,7 +9,7 @@ Regel: `officers.allowedPages` (text[], nullable) — `null` bedeutet seit Einf�
 Rollensystems (Juli 2026) "KEINE Seiten zugewiesen" (vorher: alle). Agenten brauchen
 explizite Seitenrechte. Voll-Rollen (Admin/Direktion/Leitung, siehe sidms-roles.md)
 sehen immer alles, unabhängig von allowedPages.
-Gültige Seiten-Keys: `dashboard`, `leitstelle`, `fallmanagement`, `personal`, `archiv`
+Gültige Seiten-Keys: `dashboard`, `leitstelle`, `fallmanagement`, `staatsanwaltschaft`, `personal`, `archiv`
 (Backend-Validierung via `parseAllowedPages`, Frontend-Definitionen mit Labels in der sidms-App).
 
 **Why:** Architect-Finding: null=alles war für Agenten ein Broken-Access-Control-Risiko

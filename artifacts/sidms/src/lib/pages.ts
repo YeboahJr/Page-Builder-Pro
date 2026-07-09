@@ -7,6 +7,7 @@ export const PAGE_DEFS: PageDef[] = [
   { key: "dashboard", label: "Dashboard" },
   { key: "leitstelle", label: "Leitstelle" },
   { key: "fallmanagement", label: "Fallmanagement" },
+  { key: "staatsanwaltschaft", label: "Staatsanwaltschaft" },
   { key: "personal", label: "Personal" },
   { key: "archiv", label: "Archiv" },
 ];

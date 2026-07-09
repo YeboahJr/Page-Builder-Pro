@@ -91,7 +91,7 @@ function Router() {
       <Route path="/dashboard" component={() => <ProtectedRoute component={Dashboard} pageKey="dashboard" />} />
       <Route path="/leitstelle" component={() => <ProtectedRoute component={Leitstelle} pageKey="leitstelle" />} />
       <Route path="/fallmanagement" component={() => <ProtectedRoute component={Fallmanagement} pageKey="fallmanagement" />} />
-      <Route path="/fallmanagement/staatsanwaltschaft" component={() => <ProtectedRoute component={Staatsanwaltschaft} pageKey="fallmanagement" />} />
+      <Route path="/staatsanwaltschaft" component={() => <ProtectedRoute component={Staatsanwaltschaft} pageKey="staatsanwaltschaft" />} />
       <Route path="/beweismittel" component={() => <ProtectedRoute component={Beweismittel} pageKey="fallmanagement" />} />
       <Route path="/personal" component={() => <ProtectedRoute component={Personal} pageKey="personal" />} />
       <Route path="/personal/id-change" component={() => <ProtectedRoute component={IdChange} pageKey="personal" />} />

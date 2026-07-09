@@ -2,6 +2,7 @@ export const PAGE_KEYS = [
   "dashboard",
   "leitstelle",
   "fallmanagement",
+  "staatsanwaltschaft",
   "personal",
   "archiv",
 ] as const;

@@ -20,6 +20,7 @@ import {
   UserCog,
   UserPlus,
   Shield,
+  Scale,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { hasFullAccess } from "@/lib/ranks";
@@ -47,15 +48,8 @@ interface NavItem {
 const navItems: NavItem[] = [
   { icon: LayoutDashboard, label: "Dashboard", href: "/dashboard", pageKey: "dashboard" },
   { icon: Radio, label: "Leitstelle", href: "/leitstelle", pageKey: "leitstelle" },
-  {
-    icon: Briefcase,
-    label: "Fallmanagement",
-    href: "/fallmanagement",
-    pageKey: "fallmanagement",
-    children: [
-      { label: "Staatsanwaltschaft", href: "/fallmanagement/staatsanwaltschaft" },
-    ],
-  },
+  { icon: Briefcase, label: "Fallmanagement", href: "/fallmanagement", pageKey: "fallmanagement" },
+  { icon: Scale, label: "Staatsanwaltschaft", href: "/staatsanwaltschaft", pageKey: "staatsanwaltschaft" },
   {
     icon: Users,
     label: "Personal",
