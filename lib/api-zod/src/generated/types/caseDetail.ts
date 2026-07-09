@@ -24,6 +24,8 @@ export interface CaseDetail {
   /** @nullable */
   description?: string | null;
   /** @nullable */
+  details?: string | null;
+  /** @nullable */
   verhandlungsfuehrung?: string | null;
   /** @nullable */
   straftaten?: string[] | null;

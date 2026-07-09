@@ -172,6 +172,7 @@ export const GetCasesResponseItem = zod.object({
   "lastModified": zod.string(),
   "createdAt": zod.string(),
   "description": zod.string().nullish(),
+  "details": zod.string().nullish(),
   "closedAt": zod.string().nullish(),
   "verhandlungsfuehrung": zod.string().nullish(),
   "straftaten": zod.array(zod.string()).nullish(),
@@ -187,12 +188,14 @@ export const GetCasesResponse = zod.array(GetCasesResponseItem)
  * @summary Create a new case
  */
 export const CreateCaseBody = zod.object({
+  "caseNumber": zod.string().optional().describe('Optionale eigene Fallnummer; wenn leer, wird automatisch eine generiert'),
   "title": zod.string(),
   "category": zod.string(),
   "priority": zod.string(),
   "status": zod.string(),
   "leadAgent": zod.string(),
   "description": zod.string().optional(),
+  "details": zod.string().optional(),
   "verhandlungsfuehrung": zod.string().optional(),
   "straftaten": zod.array(zod.string()).optional(),
   "tatDatum": zod.string().optional(),
@@ -212,6 +215,7 @@ export const CreateCaseResponse = zod.object({
   "lastModified": zod.string(),
   "createdAt": zod.string(),
   "description": zod.string().nullish(),
+  "details": zod.string().nullish(),
   "closedAt": zod.string().nullish(),
   "verhandlungsfuehrung": zod.string().nullish(),
   "straftaten": zod.array(zod.string()).nullish(),
@@ -243,6 +247,7 @@ export const GetCaseResponse = zod.object({
   "createdAt": zod.string(),
   "closedAt": zod.string().nullish(),
   "description": zod.string().nullish(),
+  "details": zod.string().nullish(),
   "verhandlungsfuehrung": zod.string().nullish(),
   "straftaten": zod.array(zod.string()).nullish(),
   "tatDatum": zod.string().nullish(),
@@ -265,7 +270,8 @@ export const UpdateCaseBody = zod.object({
   "priority": zod.string().optional(),
   "status": zod.string().optional(),
   "leadAgent": zod.string().optional(),
-  "description": zod.string().optional()
+  "description": zod.string().optional(),
+  "details": zod.string().optional()
 })
 
 export const UpdateCaseResponse = zod.object({
@@ -279,6 +285,7 @@ export const UpdateCaseResponse = zod.object({
   "lastModified": zod.string(),
   "createdAt": zod.string(),
   "description": zod.string().nullish(),
+  "details": zod.string().nullish(),
   "closedAt": zod.string().nullish(),
   "verhandlungsfuehrung": zod.string().nullish(),
   "straftaten": zod.array(zod.string()).nullish(),

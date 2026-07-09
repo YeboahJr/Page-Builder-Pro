@@ -13,4 +13,5 @@ export interface CaseUpdate {
   status?: string;
   leadAgent?: string;
   description?: string;
+  details?: string;
 }

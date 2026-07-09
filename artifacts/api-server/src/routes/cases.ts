@@ -115,6 +115,7 @@ router.get("/", async (req, res) => {
     lastModified: c.updatedAt.toISOString().split("T")[0],
     createdAt: c.createdAt.toISOString().split("T")[0],
     description: c.description ?? null,
+    details: c.details ?? null,
     closedAt: c.closedAt?.toISOString() ?? null,
   })));
 });
@@ -126,27 +127,42 @@ router.post("/", async (req, res) => {
     return;
   }
 
-  const { title, category, priority, status, leadAgent, description, verhandlungsfuehrung, straftaten, tatDatum, tatWann, tatWo, tatWer } = req.body;
+  const { title, category, priority, status, leadAgent, description, details, verhandlungsfuehrung, straftaten, tatDatum, tatWann, tatWo, tatWer } = req.body;
 
   if (straftaten !== undefined && straftaten !== null && (!Array.isArray(straftaten) || straftaten.some((s: unknown) => typeof s !== "string"))) {
     res.status(400).json({ error: "straftaten muss eine Liste von Zeichenketten sein" });
     return;
   }
 
-  // Fallnummer: SID-JJJJ/MM/TT - Wer - Agenten-ID (aus Personal) - laufende Nr.
+  // Fallnummer: entweder vom Nutzer eingegeben (muss eindeutig sein) oder
+  // automatisch generiert: SID-JJJJ/MM/TT - Wer - Agenten-ID - laufende Nr.
   // Die laufende Nummer kommt aus einer DB-Sequenz und zählt auch nach dem
   // Löschen von Akten weiter.
-  const now = new Date();
-  const datePart = `SID-${now.getFullYear()}/${String(now.getMonth() + 1).padStart(2, "0")}/${String(now.getDate()).padStart(2, "0")}`;
-  const werPart = typeof tatWer === "string" && tatWer.trim() ? tatWer.trim() : "Unbekannt";
-  const leadName = typeof leadAgent === "string" ? leadAgent.trim() : "";
-  const [leadOfficer] = leadName
-    ? await db.select({ id: officersTable.id }).from(officersTable).where(eq(officersTable.name, leadName))
-    : [];
-  const agentId = leadOfficer?.id ?? officer.id;
-  const seqResult = await db.execute(sql`SELECT nextval('case_number_seq') AS n`);
-  const seqNum = String((seqResult.rows[0] as { n: string | number }).n).padStart(2, "0");
-  const caseNumber = `${datePart} - ${werPart} - ${agentId} - ${seqNum}`;
+  const customCaseNumber = typeof req.body.caseNumber === "string" ? req.body.caseNumber.trim() : "";
+  let caseNumber: string;
+  if (customCaseNumber) {
+    const [existing] = await db
+      .select({ id: casesTable.id })
+      .from(casesTable)
+      .where(eq(casesTable.caseNumber, customCaseNumber));
+    if (existing) {
+      res.status(400).json({ error: "Diese Fallnummer ist bereits vergeben" });
+      return;
+    }
+    caseNumber = customCaseNumber;
+  } else {
+    const now = new Date();
+    const datePart = `SID-${now.getFullYear()}/${String(now.getMonth() + 1).padStart(2, "0")}/${String(now.getDate()).padStart(2, "0")}`;
+    const werPart = typeof tatWer === "string" && tatWer.trim() ? tatWer.trim() : "Unbekannt";
+    const leadName = typeof leadAgent === "string" ? leadAgent.trim() : "";
+    const [leadOfficer] = leadName
+      ? await db.select({ id: officersTable.id }).from(officersTable).where(eq(officersTable.name, leadName))
+      : [];
+    const agentId = leadOfficer?.id ?? officer.id;
+    const seqResult = await db.execute(sql`SELECT nextval('case_number_seq') AS n`);
+    const seqNum = String((seqResult.rows[0] as { n: string | number }).n).padStart(2, "0");
+    caseNumber = `${datePart} - ${werPart} - ${agentId} - ${seqNum}`;
+  }
 
   const [newCase] = await db.insert(casesTable).values({
     caseNumber,
@@ -156,6 +172,7 @@ router.post("/", async (req, res) => {
     status: status || "Offen",
     leadAgent,
     description,
+    details: details ?? null,
     verhandlungsfuehrung: verhandlungsfuehrung ?? null,
     straftaten: straftaten ?? null,
     tatDatum: tatDatum ?? null,
@@ -177,6 +194,7 @@ router.post("/", async (req, res) => {
     lastModified: newCase.updatedAt.toISOString().split("T")[0],
     createdAt: newCase.createdAt.toISOString().split("T")[0],
     description: newCase.description ?? null,
+    details: newCase.details ?? null,
     closedAt: null,
   });
 });
@@ -203,6 +221,7 @@ router.get("/:id", async (req, res) => {
     supportingAgents: supporting,
     supervisor,
     description: c.description ?? null,
+    details: c.details ?? null,
     closedAt: c.closedAt?.toISOString() ?? null,
   });
 });
@@ -217,7 +236,7 @@ router.patch("/:id", async (req, res) => {
   if (!access) return;
   const existing = access.case;
 
-  const { title, category, priority, status, leadAgent, description } = req.body;
+  const { title, category, priority, status, leadAgent, description, details } = req.body;
   const updates: Partial<typeof casesTable.$inferInsert> = {};
   if (title !== undefined) updates.title = title;
   if (category !== undefined) updates.category = category;
@@ -225,6 +244,7 @@ router.patch("/:id", async (req, res) => {
   if (status !== undefined) updates.status = status;
   if (leadAgent !== undefined) updates.leadAgent = leadAgent;
   if (description !== undefined) updates.description = description;
+  if (details !== undefined) updates.details = details;
 
   const leadChanged = leadAgent !== undefined && leadAgent !== existing.leadAgent;
   if (leadChanged) {
@@ -291,6 +311,7 @@ router.patch("/:id", async (req, res) => {
     lastModified: updated.updatedAt.toISOString().split("T")[0],
     createdAt: updated.createdAt.toISOString().split("T")[0],
     description: updated.description ?? null,
+    details: updated.details ?? null,
     closedAt: updated.closedAt?.toISOString() ?? null,
   });
 });

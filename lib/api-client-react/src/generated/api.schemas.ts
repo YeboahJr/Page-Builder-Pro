@@ -242,6 +242,8 @@ export interface Case {
   /** @nullable */
   description?: string | null;
   /** @nullable */
+  details?: string | null;
+  /** @nullable */
   closedAt?: string | null;
   /** @nullable */
   verhandlungsfuehrung?: string | null;
@@ -258,12 +260,15 @@ export interface Case {
 }
 
 export interface CaseInput {
+  /** Optionale eigene Fallnummer; wenn leer, wird automatisch eine generiert */
+  caseNumber?: string;
   title: string;
   category: string;
   priority: string;
   status: string;
   leadAgent: string;
   description?: string;
+  details?: string;
   verhandlungsfuehrung?: string;
   straftaten?: string[];
   tatDatum?: string;
@@ -279,6 +284,7 @@ export interface CaseUpdate {
   status?: string;
   leadAgent?: string;
   description?: string;
+  details?: string;
 }
 
 export interface CaseDetail {
@@ -298,6 +304,8 @@ export interface CaseDetail {
   closedAt?: string | null;
   /** @nullable */
   description?: string | null;
+  /** @nullable */
+  details?: string | null;
   /** @nullable */
   verhandlungsfuehrung?: string | null;
   /** @nullable */

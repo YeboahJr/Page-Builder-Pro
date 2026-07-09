@@ -15,6 +15,7 @@ export const casesTable = pgTable("cases", {
   status: text("status").notNull().default("Offen"),
   leadAgent: text("lead_agent").notNull(),
   description: text("description"),
+  details: text("details"),
   verhandlungsfuehrung: text("verhandlungsfuehrung"),
   straftaten: text("straftaten").array(),
   tatDatum: text("tat_datum"),

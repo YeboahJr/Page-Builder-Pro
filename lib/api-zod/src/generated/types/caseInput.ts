@@ -7,12 +7,15 @@
  */
 
 export interface CaseInput {
+  /** Optionale eigene Fallnummer; wenn leer, wird automatisch eine generiert */
+  caseNumber?: string;
   title: string;
   category: string;
   priority: string;
   status: string;
   leadAgent: string;
   description?: string;
+  details?: string;
   verhandlungsfuehrung?: string;
   straftaten?: string[];
   tatDatum?: string;

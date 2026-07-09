@@ -21,6 +21,8 @@ export interface Case {
   /** @nullable */
   description?: string | null;
   /** @nullable */
+  details?: string | null;
+  /** @nullable */
   closedAt?: string | null;
   /** @nullable */
   verhandlungsfuehrung?: string | null;

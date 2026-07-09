@@ -1357,6 +1357,8 @@ components:
           type: string
         description:
           type: ["string", "null"]
+        details:
+          type: ["string", "null"]
         closedAt:
           type: ["string", "null"]
         verhandlungsfuehrung:
@@ -1378,6 +1380,9 @@ components:
       type: object
       required: [title, category, priority, status, leadAgent]
       properties:
+        caseNumber:
+          type: string
+          description: "Optionale eigene Fallnummer; wenn leer, wird automatisch eine generiert"
         title:
           type: string
         category:
@@ -1389,6 +1394,8 @@ components:
         leadAgent:
           type: string
         description:
+          type: string
+        details:
           type: string
         verhandlungsfuehrung:
           type: string
@@ -1419,6 +1426,8 @@ components:
         leadAgent:
           type: string
         description:
+          type: string
+        details:
           type: string
 
     CaseDetail:
@@ -1452,6 +1461,8 @@ components:
         closedAt:
           type: ["string", "null"]
         description:
+          type: ["string", "null"]
+        details:
           type: ["string", "null"]
         verhandlungsfuehrung:
           type: ["string", "null"]

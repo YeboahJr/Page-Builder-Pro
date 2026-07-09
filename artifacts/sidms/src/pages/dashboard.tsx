@@ -31,11 +31,12 @@ const PRIORITIES_NEW = ["Hoch", "Mittel", "Niedrig"];
 const STATUSES_NEW = ["Aktiv", "Offen", "Ermittlungen pausiert", "An STA übergeben", "Abgeschlossen"];
 const VERHANDLUNGSFUEHRUNG_OPTIONS = ["Federal Investigation Bureau", "San Andreas Highway Patrol", "Los Santos Police Department"];
 interface NewCaseForm {
-  title: string; category: string; priority: string; status: string; leadAgent: string; description: string;
+  caseNumber: string; title: string; category: string; priority: string; status: string; leadAgent: string;
+  description: string; details: string;
   verhandlungsfuehrung: string; straftaten: string[]; tatDatum: string; tatWann: string; tatWo: string; tatWer: string;
 }
 const EMPTY_NEW_CASE: NewCaseForm = {
-  title: "", category: "Gang", priority: "Mittel", status: "Offen", leadAgent: "", description: "",
+  caseNumber: "", title: "", category: "Gang", priority: "Mittel", status: "Offen", leadAgent: "", description: "", details: "",
   verhandlungsfuehrung: "Federal Investigation Bureau", straftaten: [], tatDatum: "", tatWann: "", tatWo: "", tatWer: "",
 };
 
@@ -72,6 +73,7 @@ export default function Dashboard() {
   const [newCaseForm, setNewCaseForm] = useState<NewCaseForm>(EMPTY_NEW_CASE);
   const [newCaseFiles, setNewCaseFiles] = useState<UploadFile[]>([]);
   const [newCaseSubmitting, setNewCaseSubmitting] = useState(false);
+  const [newCaseError, setNewCaseError] = useState<string | null>(null);
   const [straftatenOpen, setStraftatenOpen] = useState(false);
 
   const [evidenceFiles, setEvidenceFiles] = useState<Array<{ filename: string; url: string; type: string; size: number; uploadedAt: string; uploadedBy: string | null }>>([]);
@@ -229,6 +231,7 @@ export default function Dashboard() {
   const handleNewCase = async (e: React.FormEvent) => {
     e.preventDefault();
     setNewCaseSubmitting(true);
+    setNewCaseError(null);
     try {
       const created = await createCase.mutateAsync({ data: newCaseForm });
       if (newCaseFiles.length > 0) {
@@ -239,6 +242,9 @@ export default function Dashboard() {
       setNewCaseForm(EMPTY_NEW_CASE);
       setStraftatenOpen(false);
       setNewCaseFiles([]);
+    } catch (err: unknown) {
+      const e2 = err as { response?: { data?: { error?: string } } };
+      setNewCaseError(e2?.response?.data?.error ?? "Fall konnte nicht angelegt werden");
     } finally { setNewCaseSubmitting(false); }
   };
 
@@ -309,6 +315,10 @@ export default function Dashboard() {
             </div>
             <form onSubmit={handleNewCase} className="p-5 space-y-4">
               <div className="grid grid-cols-2 gap-3">
+                <div className="col-span-2">
+                  <label className="text-xs text-gray-400 block mb-1">Fallnummer</label>
+                  <input value={newCaseForm.caseNumber} onChange={e => setNewCaseForm(f => ({ ...f, caseNumber: e.target.value }))} placeholder="Leer lassen für automatische Vergabe" className="w-full bg-[#0a0f1a] border border-[#1e2d4a] text-white text-sm px-3 py-2 rounded focus:outline-none focus:border-[#c9a227]/50 font-mono" data-testid="input-case-number" />
+                </div>
                 <div className="col-span-2">
                   <label className="text-xs text-gray-400 block mb-1">Titel *</label>
                   <input required value={newCaseForm.title} onChange={e => setNewCaseForm(f => ({ ...f, title: e.target.value }))} className="w-full bg-[#0a0f1a] border border-[#1e2d4a] text-white text-sm px-3 py-2 rounded focus:outline-none focus:border-[#c9a227]/50" />
@@ -404,15 +414,22 @@ export default function Dashboard() {
                   <input value={newCaseForm.tatWer} onChange={e => setNewCaseForm(f => ({ ...f, tatWer: e.target.value }))} placeholder="Beteiligte Personen" className="w-full bg-[#0a0f1a] border border-[#1e2d4a] text-white text-sm px-3 py-2 rounded focus:outline-none focus:border-[#c9a227]/50" data-testid="input-tat-wer" />
                 </div>
                 <div className="col-span-2">
+                  <label className="text-xs text-gray-400 block mb-1">Beschreibung</label>
+                  <textarea value={newCaseForm.description} onChange={e => setNewCaseForm(f => ({ ...f, description: e.target.value }))} rows={3} className="w-full bg-[#0a0f1a] border border-[#1e2d4a] text-white text-sm px-3 py-2 rounded focus:outline-none focus:border-[#c9a227]/50 resize-none" data-testid="textarea-beschreibung" />
+                </div>
+                <div className="col-span-2">
                   <label className="text-xs text-gray-400 block mb-1">Details</label>
-                  <textarea value={newCaseForm.description} onChange={e => setNewCaseForm(f => ({ ...f, description: e.target.value }))} rows={3} className="w-full bg-[#0a0f1a] border border-[#1e2d4a] text-white text-sm px-3 py-2 rounded focus:outline-none focus:border-[#c9a227]/50 resize-none" data-testid="textarea-details" />
+                  <textarea value={newCaseForm.details} onChange={e => setNewCaseForm(f => ({ ...f, details: e.target.value }))} rows={3} className="w-full bg-[#0a0f1a] border border-[#1e2d4a] text-white text-sm px-3 py-2 rounded focus:outline-none focus:border-[#c9a227]/50 resize-none" data-testid="textarea-details" />
                 </div>
                 <div className="col-span-2">
                   <EvidenceUpload files={newCaseFiles} onChange={setNewCaseFiles} />
                 </div>
               </div>
+              {newCaseError && (
+                <p className="text-xs text-red-400" data-testid="text-new-case-error">{newCaseError}</p>
+              )}
               <div className="flex gap-3 pt-2">
-                <button type="button" onClick={() => { setShowNewCase(false); setStraftatenOpen(false); }} className="flex-1 py-2 bg-[#1e2d4a] text-gray-300 text-sm rounded transition-colors hover:bg-[#253650]">Abbrechen</button>
+                <button type="button" onClick={() => { setShowNewCase(false); setStraftatenOpen(false); setNewCaseError(null); }} className="flex-1 py-2 bg-[#1e2d4a] text-gray-300 text-sm rounded transition-colors hover:bg-[#253650]">Abbrechen</button>
                 <button type="submit" disabled={newCaseSubmitting} className="flex-1 py-2 bg-[#1a3d7c] hover:bg-[#1e4a94] text-white text-sm font-medium rounded transition-colors disabled:opacity-60">
                   {newCaseSubmitting ? "Anlegen..." : "Fall anlegen"}
                 </button>
@@ -559,8 +576,14 @@ export default function Dashboard() {
                       )}
                       {caseDetail.description && (
                         <div>
+                          <p className="text-gray-500 text-xs mb-1">Beschreibung</p>
+                          <p className="text-xs text-gray-300 whitespace-pre-wrap">{caseDetail.description}</p>
+                        </div>
+                      )}
+                      {caseDetail.details && (
+                        <div>
                           <p className="text-gray-500 text-xs mb-1">Details</p>
-                          <p className="text-xs text-gray-300">{caseDetail.description}</p>
+                          <p className="text-xs text-gray-300 whitespace-pre-wrap">{caseDetail.details}</p>
                         </div>
                       )}
                     </div>
@@ -768,7 +791,7 @@ export default function Dashboard() {
                     )}
                   </div>
                 )}
-                {!["Übersicht", "Beweismittel"].includes(activeTab) && (
+                {!["Übersicht", "Agenten", "Beweismittel"].includes(activeTab) && (
                   <p className="text-xs text-gray-500 py-4 text-center">Keine Daten für diesen Bereich vorhanden.</p>
                 )}
               </div>
