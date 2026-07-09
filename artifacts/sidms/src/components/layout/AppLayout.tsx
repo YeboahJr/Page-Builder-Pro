@@ -47,7 +47,15 @@ interface NavItem {
 const navItems: NavItem[] = [
   { icon: LayoutDashboard, label: "Dashboard", href: "/dashboard", pageKey: "dashboard" },
   { icon: Radio, label: "Leitstelle", href: "/leitstelle", pageKey: "leitstelle" },
-  { icon: Briefcase, label: "Fallmanagement", href: "/fallmanagement", pageKey: "fallmanagement" },
+  {
+    icon: Briefcase,
+    label: "Fallmanagement",
+    href: "/fallmanagement",
+    pageKey: "fallmanagement",
+    children: [
+      { label: "Staatsanwaltschaft", href: "/fallmanagement/staatsanwaltschaft" },
+    ],
+  },
   {
     icon: Users,
     label: "Personal",
