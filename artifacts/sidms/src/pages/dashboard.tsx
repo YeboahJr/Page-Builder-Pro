@@ -1,29 +1,22 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import {
   useGetDashboardStats,
   useGetCases,
   useGetCase,
-  useGetCasePersons,
-  useGetCaseAgents,
   useGetCaseStatusHistory,
   useCreateCase,
   useGetOfficerNames,
-  useAddCaseAgent,
-  useRemoveCaseAgent,
   getGetCasesQueryKey,
   getGetDashboardStatsQueryKey,
   getGetCaseQueryKey,
-  getGetCasePersonsQueryKey,
-  getGetCaseAgentsQueryKey,
   getGetCaseStatusHistoryQueryKey,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   Activity, FolderOpen, CheckCircle, Eye, Package, AlertTriangle,
-  Plus, ChevronRight, RotateCcw, Download, Search, X, Film, ImageIcon, ZoomIn, Trash2
+  Plus, RotateCcw, Download, X
 } from "lucide-react";
 import EvidenceUpload, { type UploadFile, uploadEvidenceFiles } from "@/components/EvidenceUpload";
-import DeleteConfirmModal from "@/components/DeleteConfirmModal";
 
 const CATEGORIES_NEW = ["Drogenkriminalität", "Waffendelikte", "Korruption", "Finanzkriminalität", "Gewaltdelikte", "Cyberkriminalität"];
 const PRIORITIES_NEW = ["Hoch", "Mittel", "Niedrig"];
@@ -64,17 +57,6 @@ export default function Dashboard() {
   const [newCaseFiles, setNewCaseFiles] = useState<UploadFile[]>([]);
   const [newCaseSubmitting, setNewCaseSubmitting] = useState(false);
 
-  const [evidenceFiles, setEvidenceFiles] = useState<Array<{ filename: string; url: string; type: string; size: number; uploadedAt: string; uploadedBy: string | null }>>([]);
-  const [evidenceLoading, setEvidenceLoading] = useState(false);
-  const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
-  const [videoUrl, setVideoUrl] = useState<string | null>(null);
-  const [showAddEvidence, setShowAddEvidence] = useState(false);
-  const [addEvidenceFiles, setAddEvidenceFiles] = useState<UploadFile[]>([]);
-  const [addEvidenceUploading, setAddEvidenceUploading] = useState(false);
-  const [deletingFile, setDeletingFile] = useState<string | null>(null);
-  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
-  const [deleteError, setDeleteError] = useState<string | null>(null);
-
   const [filters, setFilters] = useState({
     caseNumber: "", title: "", category: "", status: "", agentId: "", priority: "",
     suspectName: "", vehiclePlate: "", missionNumber: "", dateFrom: "", dateTo: "",
@@ -87,12 +69,6 @@ export default function Dashboard() {
   const { data: caseDetail } = useGetCase(selectedId!, {
     query: { enabled: !!selectedId, queryKey: getGetCaseQueryKey(selectedId ?? 0) }
   });
-  const { data: casePersons } = useGetCasePersons(selectedId!, {
-    query: { enabled: !!selectedId && activeTab === "Personen", queryKey: getGetCasePersonsQueryKey(selectedId ?? 0) }
-  });
-  const { data: caseAgents } = useGetCaseAgents(selectedId!, {
-    query: { enabled: !!selectedId && activeTab === "Agenten", queryKey: getGetCaseAgentsQueryKey(selectedId ?? 0) }
-  });
   const { data: statusHistory } = useGetCaseStatusHistory(selectedId!, {
     query: { enabled: !!selectedId && activeTab === "Übersicht", queryKey: getGetCaseStatusHistoryQueryKey(selectedId ?? 0) }
   });
@@ -100,129 +76,6 @@ export default function Dashboard() {
   const createCase = useCreateCase();
   const { data: allOfficers } = useGetOfficerNames();
   const officerNames = [...new Set((allOfficers ?? []).map(o => o.name))].sort((a, b) => a.localeCompare(b, "de"));
-
-  const addCaseAgent = useAddCaseAgent();
-  const removeCaseAgent = useRemoveCaseAgent();
-  const [newAgentName, setNewAgentName] = useState("");
-  const [newAgentRole, setNewAgentRole] = useState("Unterstützender Agent");
-  const [agentError, setAgentError] = useState<string | null>(null);
-  const [agentSubmitting, setAgentSubmitting] = useState(false);
-  const [removingAgentId, setRemovingAgentId] = useState<number | null>(null);
-
-  const invalidateAgents = (caseId: number) => {
-    qc.invalidateQueries({ queryKey: getGetCaseAgentsQueryKey(caseId) });
-    qc.invalidateQueries({ queryKey: getGetCaseQueryKey(caseId) });
-    qc.invalidateQueries({ queryKey: getGetCasesQueryKey() });
-  };
-
-  const handleAddAgent = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedId || !newAgentName) return;
-    setAgentSubmitting(true);
-    setAgentError(null);
-    try {
-      await addCaseAgent.mutateAsync({ id: selectedId, data: { name: newAgentName, role: newAgentRole } });
-      setNewAgentName("");
-      invalidateAgents(selectedId);
-    } catch (err) {
-      const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error;
-      setAgentError(msg ?? "Agent konnte nicht hinzugefügt werden.");
-    } finally {
-      setAgentSubmitting(false);
-    }
-  };
-
-  const handleRemoveAgent = async (agentId: number) => {
-    if (!selectedId) return;
-    setRemovingAgentId(agentId);
-    setAgentError(null);
-    try {
-      await removeCaseAgent.mutateAsync({ id: selectedId, agentId });
-      invalidateAgents(selectedId);
-    } catch (err) {
-      const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error;
-      setAgentError(msg ?? "Agent konnte nicht entfernt werden.");
-    } finally {
-      setRemovingAgentId(null);
-    }
-  };
-
-  useEffect(() => {
-    setNewAgentName("");
-    setNewAgentRole("Unterstützender Agent");
-    setAgentError(null);
-  }, [selectedId]);
-
-  useEffect(() => {
-    if (activeTab !== "Beweismittel" || !selectedId) return;
-    setEvidenceLoading(true);
-    fetch(`/api/cases/${selectedId}/evidence/files`, {
-      headers: { Authorization: `Bearer ${sessionStorage.getItem("sidms_token") ?? ""}` },
-    })
-      .then(r => r.json())
-      .then(d => setEvidenceFiles(d.files ?? []))
-      .catch(() => setEvidenceFiles([]))
-      .finally(() => setEvidenceLoading(false));
-  }, [activeTab, selectedId]);
-
-  const fetchEvidenceFiles = (caseId: number) => {
-    setEvidenceLoading(true);
-    fetch(`/api/cases/${caseId}/evidence/files`, {
-      headers: { Authorization: `Bearer ${sessionStorage.getItem("sidms_token") ?? ""}` },
-    })
-      .then(r => r.json())
-      .then(d => setEvidenceFiles(d.files ?? []))
-      .catch(() => setEvidenceFiles([]))
-      .finally(() => setEvidenceLoading(false));
-  };
-
-  const requestDeleteEvidence = (filename: string) => {
-    setDeleteError(null);
-    setDeleteTarget(filename);
-  };
-
-  const confirmDeleteEvidence = async () => {
-    if (!selectedId || !deleteTarget) return;
-    const filename = deleteTarget;
-    setDeletingFile(filename);
-    setDeleteError(null);
-    try {
-      const res = await fetch(`/api/cases/${selectedId}/evidence/${encodeURIComponent(filename)}`, {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${sessionStorage.getItem("sidms_token") ?? ""}` },
-      });
-      if (!res.ok) {
-        let message = `Löschen fehlgeschlagen (Status ${res.status}).`;
-        try {
-          const body = await res.json();
-          if (body?.error) message = body.error;
-        } catch {
-          // response had no JSON body; keep the status-based message
-        }
-        setDeleteError(message);
-        return;
-      }
-      setEvidenceFiles(prev => prev.filter(f => f.filename !== filename));
-      setDeleteTarget(null);
-    } catch {
-      setDeleteError("Netzwerkfehler – die Datei konnte nicht gelöscht werden.");
-    } finally {
-      setDeletingFile(null);
-    }
-  };
-
-  const handleAddEvidence = async () => {
-    if (!selectedId || addEvidenceFiles.length === 0) return;
-    setAddEvidenceUploading(true);
-    try {
-      await uploadEvidenceFiles(selectedId, addEvidenceFiles);
-      setAddEvidenceFiles([]);
-      setShowAddEvidence(false);
-      fetchEvidenceFiles(selectedId);
-    } finally {
-      setAddEvidenceUploading(false);
-    }
-  };
 
   const handleNewCase = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -248,7 +101,7 @@ export default function Dashboard() {
     { label: "Hohe Priorität", value: stats?.hohePrioritaet ?? 0, delta: stats?.hohePrioritaetDelta, icon: AlertTriangle, color: "text-red-400", border: "border-red-600/30" },
   ];
 
-  const TABS = ["Übersicht", "Personen", "Agenten", "Einsätze", "Observationen", "Beweismittel", "Fahrzeuge", "ID-Changes", "Dokumente", "Chronologie"];
+  const TABS = ["Übersicht", "Einsätze", "Observationen", "Fahrzeuge", "ID-Changes", "Chronologie"];
 
   const applyFilters = () => {
     qc.invalidateQueries({ queryKey: getGetCasesQueryKey() });
@@ -262,40 +115,6 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-4 h-full flex flex-col">
-      {/* Image Lightbox */}
-      {lightboxUrl && (
-        <div className="fixed inset-0 bg-black/90 z-[100] flex items-center justify-center p-4" onClick={() => setLightboxUrl(null)}>
-          <button className="absolute top-4 right-4 text-white hover:text-gray-300 z-10" onClick={() => setLightboxUrl(null)}>
-            <X className="w-7 h-7" />
-          </button>
-          <img src={lightboxUrl} alt="Beweismittel" className="max-w-full max-h-full object-contain rounded shadow-2xl" onClick={e => e.stopPropagation()} />
-        </div>
-      )}
-      {/* Video Player */}
-      {videoUrl && (
-        <div className="fixed inset-0 bg-black/90 z-[100] flex items-center justify-center p-4" onClick={() => setVideoUrl(null)}>
-          <button className="absolute top-4 right-4 text-white hover:text-gray-300 z-10" onClick={() => setVideoUrl(null)}>
-            <X className="w-7 h-7" />
-          </button>
-          <video src={videoUrl} controls autoPlay className="max-w-full max-h-full rounded shadow-2xl" onClick={e => e.stopPropagation()} />
-        </div>
-      )}
-      {/* Delete Evidence Confirmation Modal */}
-      <DeleteConfirmModal
-        open={!!deleteTarget}
-        title="Beweismittel löschen"
-        description={deleteTarget ? (
-          <>
-            Diese Aktion kann nicht rückgängig gemacht werden. Die Datei{" "}
-            <span className="text-white font-medium break-all">"{deleteTarget}"</span>{" "}
-            wird dauerhaft gelöscht.
-          </>
-        ) : null}
-        busy={!!deletingFile}
-        error={deleteError}
-        onConfirm={confirmDeleteEvidence}
-        onCancel={() => { if (!deletingFile) setDeleteTarget(null); }}
-      />
       {/* New Case Modal */}
       {showNewCase && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
@@ -407,7 +226,7 @@ export default function Dashboard() {
                   ) : cases?.map(c => (
                     <tr
                       key={c.id}
-                      onClick={() => { setSelectedId(c.id); setActiveTab("Übersicht"); setShowAddEvidence(false); setAddEvidenceFiles([]); }}
+                      onClick={() => { setSelectedId(c.id); setActiveTab("Übersicht"); }}
                       className={`border-b border-[#1e2d4a]/50 cursor-pointer transition-colors hover:bg-[#1a2744]/50 ${selectedId === c.id ? "bg-[#1a2744]" : ""}`}
                       data-testid={`row-case-${c.id}`}
                     >
@@ -514,208 +333,7 @@ export default function Dashboard() {
                     </div>
                   </div>
                 )}
-                {activeTab === "Personen" && (
-                  <div>
-                    <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Beteiligte Personen</h3>
-                    {!casePersons?.length ? (
-                      <p className="text-xs text-gray-500">Keine Personen erfasst.</p>
-                    ) : (
-                      <table className="w-full text-xs">
-                        <thead>
-                          <tr className="border-b border-[#1e2d4a]">
-                            {["Name", "Aktuelle ID", "Frühere IDs", "Rolle", "Letzter Aufenthaltsort"].map(h => (
-                              <th key={h} className="text-left px-2 py-1.5 text-gray-400">{h}</th>
-                            ))}
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {casePersons.map(p => (
-                            <tr key={p.id} className="border-b border-[#1e2d4a]/30">
-                              <td className="px-2 py-2 text-gray-200">{p.name}</td>
-                              <td className="px-2 py-2 text-gray-400 font-mono">{p.currentId}</td>
-                              <td className="px-2 py-2 text-gray-500">{p.formerIds ?? "–"}</td>
-                              <td className="px-2 py-2 text-gray-400">{p.role}</td>
-                              <td className="px-2 py-2 text-gray-500">{p.lastLocation ?? "–"}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    )}
-                  </div>
-                )}
-                {activeTab === "Agenten" && (
-                  <div>
-                    <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Beteiligte Agenten</h3>
-                    <form onSubmit={handleAddAgent} className="flex flex-wrap items-end gap-2 mb-4 p-3 bg-[#0a0f1a] border border-[#1e2d4a] rounded-lg">
-                      <div className="flex-1 min-w-[180px]">
-                        <label className="text-xs text-gray-400 block mb-1">Officer</label>
-                        <select
-                          value={newAgentName}
-                          onChange={e => setNewAgentName(e.target.value)}
-                          className="w-full bg-[#0d1526] border border-[#1e2d4a] text-white text-xs px-2 py-1.5 rounded focus:outline-none focus:border-[#c9a227]/50"
-                          data-testid="select-add-agent-name"
-                        >
-                          <option value="">Officer auswählen…</option>
-                          {officerNames
-                            .filter(n => n !== caseDetail?.leadAgent && !caseAgents?.some(a => a.name === n && a.role !== "Ersteller"))
-                            .map(n => <option key={n} value={n}>{n}</option>)}
-                        </select>
-                      </div>
-                      <div>
-                        <label className="text-xs text-gray-400 block mb-1">Rolle</label>
-                        <select
-                          value={newAgentRole}
-                          onChange={e => setNewAgentRole(e.target.value)}
-                          className="bg-[#0d1526] border border-[#1e2d4a] text-white text-xs px-2 py-1.5 rounded focus:outline-none"
-                          data-testid="select-add-agent-role"
-                        >
-                          {["Unterstützender Agent", "Supervisor"].map(r => <option key={r} value={r}>{r}</option>)}
-                        </select>
-                      </div>
-                      <button
-                        type="submit"
-                        disabled={!newAgentName || agentSubmitting}
-                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-[#1a3d7c] hover:bg-[#1e4a94] border border-[#2a5bb0] text-white rounded transition-colors disabled:opacity-50"
-                        data-testid="button-add-agent"
-                      >
-                        <Plus className="w-3 h-3" /> {agentSubmitting ? "Hinzufügen..." : "Hinzufügen"}
-                      </button>
-                      {agentError && <p className="w-full text-xs text-red-400" data-testid="text-agent-error">{agentError}</p>}
-                    </form>
-                    {!caseAgents?.length ? (
-                      <p className="text-xs text-gray-500">Keine Agenten zugewiesen.</p>
-                    ) : (
-                      <table className="w-full text-xs">
-                        <thead>
-                          <tr className="border-b border-[#1e2d4a]">
-                            {["Name", "Rolle", ""].map((h, i) => (
-                              <th key={i} className="text-left px-2 py-1.5 text-gray-400">{h}</th>
-                            ))}
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {caseAgents.map(a => (
-                            <tr key={a.id} className="border-b border-[#1e2d4a]/30">
-                              <td className="px-2 py-2 text-gray-200">{a.name}</td>
-                              <td className="px-2 py-2 text-gray-400">{a.role}</td>
-                              <td className="px-2 py-2 text-right">
-                                {a.role !== "Leitender Agent" && (
-                                  <button
-                                    onClick={() => handleRemoveAgent(a.id)}
-                                    disabled={removingAgentId === a.id}
-                                    title="Agent entfernen"
-                                    className="text-gray-500 hover:text-red-400 transition-colors disabled:opacity-50"
-                                    data-testid={`button-remove-agent-${a.id}`}
-                                  >
-                                    <Trash2 className="w-3.5 h-3.5" />
-                                  </button>
-                                )}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    )}
-                  </div>
-                )}
-                {activeTab === "Beweismittel" && (
-                  <div>
-                    <div className="flex items-center justify-between mb-3">
-                      <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Hochgeladene Beweismittel</h3>
-                      <button
-                        onClick={() => { setShowAddEvidence(v => !v); setAddEvidenceFiles([]); }}
-                        className="flex items-center gap-1.5 px-2.5 py-1 text-xs bg-[#1a3d7c]/60 hover:bg-[#1a3d7c] border border-[#2a5bb0]/50 text-blue-300 rounded transition-colors"
-                        data-testid="button-upload-evidence"
-                      >
-                        <Plus className="w-3 h-3" />
-                        Hochladen
-                      </button>
-                    </div>
-                    {showAddEvidence && (
-                      <div className="mb-4 p-3 bg-[#0a0f1a] border border-[#1e2d4a] rounded-lg">
-                        <EvidenceUpload files={addEvidenceFiles} onChange={setAddEvidenceFiles} />
-                        <div className="flex gap-2 mt-3">
-                          <button
-                            type="button"
-                            onClick={() => { setShowAddEvidence(false); setAddEvidenceFiles([]); }}
-                            className="flex-1 py-1.5 bg-[#1e2d4a] text-gray-300 text-xs rounded transition-colors hover:bg-[#253650]"
-                          >
-                            Abbrechen
-                          </button>
-                          <button
-                            type="button"
-                            onClick={handleAddEvidence}
-                            disabled={addEvidenceUploading || addEvidenceFiles.length === 0}
-                            className="flex-1 py-1.5 bg-[#1a3d7c] hover:bg-[#1e4a94] text-white text-xs font-medium rounded transition-colors disabled:opacity-60"
-                          >
-                            {addEvidenceUploading ? "Hochladen..." : `${addEvidenceFiles.length} Datei${addEvidenceFiles.length !== 1 ? "en" : ""} hochladen`}
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                    {evidenceLoading ? (
-                      <p className="text-xs text-gray-500 py-4 text-center">Laden...</p>
-                    ) : evidenceFiles.length === 0 ? (
-                      <div className="flex flex-col items-center justify-center py-10 gap-2">
-                        <ImageIcon className="w-8 h-8 text-gray-700" />
-                        <p className="text-xs text-gray-500">Keine Beweismittel vorhanden.</p>
-                        <p className="text-[10px] text-gray-600">Klicken Sie auf "Hochladen", um Bilder und Videos hinzuzufügen.</p>
-                      </div>
-                    ) : (
-                      <div className="grid grid-cols-4 gap-3">
-                        {evidenceFiles.map((f, i) => (
-                          <div key={i} className="group relative rounded-lg overflow-hidden bg-[#0a0f1a] border border-[#1e2d4a] hover:border-[#c9a227]/40 transition-colors">
-                            {/* Delete button — appears on hover */}
-                            <button
-                              onClick={e => { e.stopPropagation(); requestDeleteEvidence(f.filename); }}
-                              disabled={deletingFile === f.filename}
-                              className="absolute top-1 right-1 z-10 opacity-0 group-hover:opacity-100 transition-opacity bg-black/70 hover:bg-red-900/80 text-red-400 hover:text-red-300 rounded p-0.5 disabled:opacity-50"
-                              title="Beweismittel löschen"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                            {f.type === "image" ? (
-                              <div className="relative cursor-pointer" onClick={() => setLightboxUrl(f.url)}>
-                                <img src={f.url} alt={f.filename} className="w-full h-24 object-cover" />
-                                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center">
-                                  <ZoomIn className="w-5 h-5 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
-                                </div>
-                                <div className="absolute bottom-0 left-0 right-0 bg-black/60 px-1.5 py-1">
-                                  <p className="text-[9px] text-gray-300 truncate">{f.filename}</p>
-                                </div>
-                              </div>
-                            ) : f.type === "video" ? (
-                              <div className="relative cursor-pointer" onClick={() => setVideoUrl(f.url)}>
-                                <div className="w-full h-24 flex flex-col items-center justify-center gap-1 bg-[#0a1020]">
-                                  <Film className="w-6 h-6 text-blue-400" />
-                                  <span className="text-[9px] text-gray-500 px-1 truncate w-full text-center">{f.filename}</span>
-                                </div>
-                                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center">
-                                  <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <span className="text-white text-xs ml-0.5">▶</span>
-                                  </div>
-                                </div>
-                              </div>
-                            ) : (
-                              <div className="w-full h-24 flex flex-col items-center justify-center gap-1">
-                                <ImageIcon className="w-5 h-5 text-gray-500" />
-                                <p className="text-[9px] text-gray-500 truncate px-1">{f.filename}</p>
-                              </div>
-                            )}
-                            <div className="px-1.5 py-1 border-t border-[#1e2d4a] space-y-0.5">
-                              <p className="text-[9px] text-gray-400 truncate" title={f.uploadedBy ?? "Unbekannt"}>{f.uploadedBy ?? "Unbekannt"}</p>
-                              <div className="flex items-center justify-between gap-1">
-                                <span className="text-[9px] text-gray-600">{new Date(f.uploadedAt).toLocaleDateString("de-DE")}</span>
-                                <span className="text-[9px] text-gray-600">{(f.size / 1024).toFixed(0)} KB</span>
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
-                {!["Übersicht", "Personen", "Agenten", "Beweismittel"].includes(activeTab) && (
+                {activeTab !== "Übersicht" && (
                   <p className="text-xs text-gray-500 py-4 text-center">Keine Daten für diesen Bereich vorhanden.</p>
                 )}
               </div>
