@@ -9,7 +9,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import {
   Activity, FolderOpen, CheckCircle, Package, AlertTriangle, X
 } from "lucide-react";
-import EvidenceUpload, { type UploadFile, uploadEvidenceFiles } from "@/components/EvidenceUpload";
+import EvidenceUpload, { type UploadFile, uploadEvidenceFiles, allDescriptionsFilled } from "@/components/EvidenceUpload";
 import CaseOverview from "@/components/CaseOverview";
 import { STRAFTATEN } from "@/lib/straftaten";
 
@@ -196,7 +196,7 @@ export default function Dashboard() {
               )}
               <div className="flex gap-3 pt-2">
                 <button type="button" onClick={() => { setShowNewCase(false); setStraftatenOpen(false); setNewCaseError(null); }} className="flex-1 py-2 bg-[#1e2d4a] text-gray-300 text-sm rounded transition-colors hover:bg-[#253650]">Abbrechen</button>
-                <button type="submit" disabled={newCaseSubmitting} className="flex-1 py-2 bg-[#1a3d7c] hover:bg-[#1e4a94] text-white text-sm font-medium rounded transition-colors disabled:opacity-60">
+                <button type="submit" disabled={newCaseSubmitting || !allDescriptionsFilled(newCaseFiles)} className="flex-1 py-2 bg-[#1a3d7c] hover:bg-[#1e4a94] text-white text-sm font-medium rounded transition-colors disabled:opacity-60">
                   {newCaseSubmitting ? "Anlegen..." : "Fall anlegen"}
                 </button>
               </div>

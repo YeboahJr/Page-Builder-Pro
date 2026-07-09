@@ -24,6 +24,7 @@ export const evidenceFilesTable = pgTable("evidence_files", {
   originalName: text("original_name").notNull(),
   mimetype: text("mimetype").notNull(),
   size: bigint("size", { mode: "number" }).notNull(),
+  description: text("description"),
   uploadedBy: text("uploaded_by"),
   uploadedAt: timestamp("uploaded_at", { withTimezone: true }).notNull().defaultNow(),
 });

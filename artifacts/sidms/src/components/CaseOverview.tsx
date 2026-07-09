@@ -14,7 +14,7 @@ import {
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Plus, X, Film, ImageIcon, ZoomIn, Trash2, Download } from "lucide-react";
-import EvidenceUpload, { type UploadFile, uploadEvidenceFiles } from "@/components/EvidenceUpload";
+import EvidenceUpload, { type UploadFile, uploadEvidenceFiles, allDescriptionsFilled } from "@/components/EvidenceUpload";
 import DeleteConfirmModal from "@/components/DeleteConfirmModal";
 import { useAuth } from "@/contexts/AuthContext";
 import { hasFullAccess } from "@/lib/ranks";
@@ -58,9 +58,13 @@ export default function CaseOverview({ filterStatus, emptyText, title = "Fallüb
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState("Übersicht");
 
-  const [evidenceFiles, setEvidenceFiles] = useState<Array<{ filename: string; url: string; type: string; size: number; uploadedAt: string; uploadedBy: string | null }>>([]);
+  const [evidenceFiles, setEvidenceFiles] = useState<Array<{ filename: string; url: string; type: string; size: number; uploadedAt: string; uploadedBy: string | null; description: string | null }>>([]);
   const [evidenceLoading, setEvidenceLoading] = useState(false);
-  const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
+  const [lightbox, setLightbox] = useState<{ url: string; description: string | null } | null>(null);
+  const [editingDesc, setEditingDesc] = useState<string | null>(null);
+  const [editDescValue, setEditDescValue] = useState("");
+  const [savingDesc, setSavingDesc] = useState(false);
+  const [descError, setDescError] = useState<string | null>(null);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [showAddEvidence, setShowAddEvidence] = useState(false);
   const [addEvidenceFiles, setAddEvidenceFiles] = useState<UploadFile[]>([]);
@@ -190,8 +194,42 @@ export default function CaseOverview({ filterStatus, emptyText, title = "Fallüb
     }
   };
 
+  const saveDescription = async (filename: string) => {
+    if (!selectedId) return;
+    setSavingDesc(true);
+    setDescError(null);
+    try {
+      const res = await fetch(`/api/cases/${selectedId}/evidence/${encodeURIComponent(filename)}/description`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${sessionStorage.getItem("sidms_token") ?? ""}`,
+        },
+        body: JSON.stringify({ description: editDescValue }),
+      });
+      if (!res.ok) {
+        let message = `Speichern fehlgeschlagen (Status ${res.status}).`;
+        try {
+          const body = await res.json();
+          if (body?.error) message = body.error;
+        } catch {
+          // keep status-based message
+        }
+        setDescError(message);
+        return;
+      }
+      const body = await res.json();
+      setEvidenceFiles(prev => prev.map(f => f.filename === filename ? { ...f, description: body.description ?? null } : f));
+      setEditingDesc(null);
+    } catch {
+      setDescError("Netzwerkfehler – die Beschreibung konnte nicht gespeichert werden.");
+    } finally {
+      setSavingDesc(false);
+    }
+  };
+
   const handleAddEvidence = async () => {
-    if (!selectedId || addEvidenceFiles.length === 0) return;
+    if (!selectedId || addEvidenceFiles.length === 0 || !allDescriptionsFilled(addEvidenceFiles)) return;
     setAddEvidenceUploading(true);
     try {
       await uploadEvidenceFiles(selectedId, addEvidenceFiles);
@@ -249,12 +287,17 @@ export default function CaseOverview({ filterStatus, emptyText, title = "Fallüb
   return (
     <div className="flex gap-4 flex-1 min-h-0">
       {/* Image Lightbox */}
-      {lightboxUrl && (
-        <div className="fixed inset-0 bg-black/90 z-[100] flex items-center justify-center p-4" onClick={() => setLightboxUrl(null)}>
-          <button className="absolute top-4 right-4 text-white hover:text-gray-300 z-10" onClick={() => setLightboxUrl(null)}>
+      {lightbox && (
+        <div className="fixed inset-0 bg-black/90 z-[100] flex flex-col items-center justify-center p-4 gap-3" onClick={() => setLightbox(null)}>
+          <button className="absolute top-4 right-4 text-white hover:text-gray-300 z-10" onClick={() => setLightbox(null)}>
             <X className="w-7 h-7" />
           </button>
-          <img src={lightboxUrl} alt="Beweismittel" className="max-w-full max-h-full object-contain rounded shadow-2xl" onClick={e => e.stopPropagation()} />
+          <img src={lightbox.url} alt={lightbox.description ?? "Beweismittel"} className="max-w-full max-h-[85vh] object-contain rounded shadow-2xl" onClick={e => e.stopPropagation()} />
+          {lightbox.description && (
+            <p className="text-sm text-gray-200 text-center max-w-2xl px-4" onClick={e => e.stopPropagation()} data-testid="text-lightbox-description">
+              {lightbox.description}
+            </p>
+          )}
         </div>
       )}
       {/* Video Player */}
@@ -563,12 +606,15 @@ export default function CaseOverview({ filterStatus, emptyText, title = "Fallüb
                         <button
                           type="button"
                           onClick={handleAddEvidence}
-                          disabled={addEvidenceUploading || addEvidenceFiles.length === 0}
+                          disabled={addEvidenceUploading || addEvidenceFiles.length === 0 || !allDescriptionsFilled(addEvidenceFiles)}
                           className="flex-1 py-1.5 bg-[#1a3d7c] hover:bg-[#1e4a94] text-white text-xs font-medium rounded transition-colors disabled:opacity-60"
                         >
                           {addEvidenceUploading ? "Hochladen..." : `${addEvidenceFiles.length} Datei${addEvidenceFiles.length !== 1 ? "en" : ""} hochladen`}
                         </button>
                       </div>
+                      {addEvidenceFiles.length > 0 && !allDescriptionsFilled(addEvidenceFiles) && (
+                        <p className="text-[10px] text-amber-500 mt-2">Bitte zu jedem Beweismittel eine Bildbeschreibung eintragen.</p>
+                      )}
                     </div>
                   )}
                   {evidenceLoading ? (
@@ -593,8 +639,8 @@ export default function CaseOverview({ filterStatus, emptyText, title = "Fallüb
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
                           {f.type === "image" ? (
-                            <div className="relative cursor-pointer" onClick={() => setLightboxUrl(f.url)}>
-                              <img src={f.url} alt={f.filename} className="w-full h-24 object-cover" />
+                            <div className="relative cursor-pointer" onClick={() => setLightbox({ url: f.url, description: f.description })}>
+                              <img src={f.url} alt={f.description ?? f.filename} className="w-full h-24 object-cover" />
                               <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center">
                                 <ZoomIn className="w-5 h-5 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
                               </div>
@@ -621,6 +667,50 @@ export default function CaseOverview({ filterStatus, emptyText, title = "Fallüb
                             </div>
                           )}
                           <div className="px-1.5 py-1 border-t border-[#1e2d4a] space-y-0.5">
+                            {editingDesc === f.filename ? (
+                              <div className="space-y-1 py-0.5" onClick={e => e.stopPropagation()}>
+                                <textarea
+                                  value={editDescValue}
+                                  onChange={e => setEditDescValue(e.target.value)}
+                                  rows={2}
+                                  maxLength={2000}
+                                  autoFocus
+                                  placeholder="Bildbeschreibung..."
+                                  data-testid={`input-edit-description-${i}`}
+                                  className="w-full bg-[#0d1526] border border-[#1e2d4a] rounded px-1.5 py-1 text-[10px] text-gray-200 placeholder-gray-600 resize-none focus:outline-none focus:border-[#c9a227]/60"
+                                />
+                                {descError && <p className="text-[9px] text-red-400">{descError}</p>}
+                                <div className="flex gap-1">
+                                  <button
+                                    onClick={() => { setEditingDesc(null); setDescError(null); }}
+                                    className="flex-1 py-0.5 text-[9px] bg-[#1e2d4a] text-gray-300 rounded hover:bg-[#253650]"
+                                  >
+                                    Abbrechen
+                                  </button>
+                                  <button
+                                    onClick={() => saveDescription(f.filename)}
+                                    disabled={savingDesc || !editDescValue.trim()}
+                                    data-testid={`button-save-description-${i}`}
+                                    className="flex-1 py-0.5 text-[9px] bg-[#1a3d7c] hover:bg-[#1e4a94] text-white rounded disabled:opacity-50"
+                                  >
+                                    {savingDesc ? "..." : "Speichern"}
+                                  </button>
+                                </div>
+                              </div>
+                            ) : (
+                              <button
+                                onClick={e => { e.stopPropagation(); setEditingDesc(f.filename); setEditDescValue(f.description ?? ""); setDescError(null); }}
+                                className="w-full text-left group/desc"
+                                title={f.description ? "Beschreibung bearbeiten" : "Beschreibung hinzufügen"}
+                                data-testid={`button-edit-description-${i}`}
+                              >
+                                {f.description ? (
+                                  <p className="text-[9px] text-gray-300 line-clamp-2 hover:text-[#c9a227] transition-colors">{f.description}</p>
+                                ) : (
+                                  <p className="text-[9px] text-amber-600/80 italic hover:text-[#c9a227] transition-colors">+ Beschreibung hinzufügen</p>
+                                )}
+                              </button>
+                            )}
                             <p className="text-[9px] text-gray-400 truncate" title={f.uploadedBy ?? "Unbekannt"}>{f.uploadedBy ?? "Unbekannt"}</p>
                             <div className="flex items-center justify-between gap-1">
                               <span className="text-[9px] text-gray-600">{new Date(f.uploadedAt).toLocaleDateString("de-DE")}</span>

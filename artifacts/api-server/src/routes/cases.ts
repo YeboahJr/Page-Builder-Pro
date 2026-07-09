@@ -550,7 +550,15 @@ router.post("/:id/evidence/upload", upload.array("files", 20), async (req, res) 
   const bucket = objectStorageClient.bucket(bucketName);
   const uploadedBy = access.officer.name;
 
-  const results = await Promise.all(files.map(async (f) => {
+  // Per-file descriptions, aligned by index with the uploaded files.
+  const rawDescriptions = (req.body as Record<string, unknown> | undefined)?.descriptions;
+  const descriptions: string[] = Array.isArray(rawDescriptions)
+    ? rawDescriptions.map((d) => String(d))
+    : rawDescriptions != null
+      ? [String(rawDescriptions)]
+      : [];
+
+  const results = await Promise.all(files.map(async (f, idx) => {
     const ext = path.extname(f.originalname);
     const unique = `${Date.now()}-${randomUUID()}${ext}`;
     // Object name in GCS: <gcsPrefix>/case-<id>/<unique>  (e.g. ".private/case-1/uuid.jpg")
@@ -561,12 +569,15 @@ router.post("/:id/evidence/upload", upload.array("files", 20), async (req, res) 
     // objectPath = /objects/<entityId> where entityId is relative to PRIVATE_OBJECT_DIR
     const objectPath = evidenceObjectPath(caseId, unique);
 
+    const description = descriptions[idx]?.trim() || null;
+
     const [row] = await db.insert(evidenceFilesTable).values({
       caseId,
       objectPath,
       originalName: f.originalname,
       mimetype: f.mimetype,
       size: f.size,
+      description,
       uploadedBy,
     }).returning();
 
@@ -577,6 +588,7 @@ router.post("/:id/evidence/upload", upload.array("files", 20), async (req, res) 
       size: f.size,
       url: `/api/storage${objectPath}`,
       objectPath,
+      description: row.description,
       uploadedBy: row.uploadedBy,
       uploadedAt: row.uploadedAt.toISOString(),
     };
@@ -628,6 +640,39 @@ router.delete("/:id/evidence/:filename", async (req, res) => {
   res.status(204).send();
 });
 
+// Update the description ("Bildbeschreibung") of an uploaded evidence file.
+router.patch("/:id/evidence/:filename/description", async (req, res) => {
+  const { filename } = req.params;
+  const id = parseCaseIdParam(req.params.id);
+  if (id === null) {
+    res.status(400).json({ error: "Ungültige ID" });
+    return;
+  }
+
+  const access = await loadAccessibleCase(req, res, id);
+  if (!access) return;
+
+  const raw = (req.body as { description?: unknown } | undefined)?.description;
+  if (typeof raw !== "string" || raw.length > 2000) {
+    res.status(400).json({ error: "Ungültige Beschreibung" });
+    return;
+  }
+  const description = raw.trim() || null;
+
+  const objectPath = evidenceObjectPath(id, filename);
+  const [row] = await db.update(evidenceFilesTable)
+    .set({ description })
+    .where(and(eq(evidenceFilesTable.caseId, id), eq(evidenceFilesTable.objectPath, objectPath)))
+    .returning();
+
+  if (!row) {
+    res.status(404).json({ error: "Datei nicht gefunden" });
+    return;
+  }
+
+  res.json({ filename, description: row.description });
+});
+
 // Renders the case file ("Akte") as a downloadable PDF modeled after the FIB
 // paper template. Access follows the same involvement rules as the case itself.
 router.get("/:id/akte", async (req, res) => {
@@ -656,7 +701,7 @@ router.get("/:id/akte", async (req, res) => {
   const MAX_EMBEDDED_IMAGES = 20;
   const MAX_EMBEDDED_BYTES = 60 * 1024 * 1024;
   let embeddedBytes = 0;
-  const images: Array<{ filename: string; data: Buffer }> = [];
+  const images: Array<{ filename: string; description: string | null; data: Buffer }> = [];
   const otherFiles: string[] = [];
   const embeddable = new Set([".jpg", ".jpeg", ".png"]);
 
@@ -676,7 +721,7 @@ router.get("/:id/akte", async (req, res) => {
         const objectName = evidenceObjectName(gcsPrefix, caseId, filename);
         const [buf] = await objectStorageClient.bucket(bucketName).file(objectName).download();
         embeddedBytes += buf.length;
-        images.push({ filename: r.originalName || filename, data: buf });
+        images.push({ filename: r.originalName || filename, description: r.description?.trim() || null, data: buf });
       } catch (err) {
         req.log.warn({ err, filename }, "Akte-PDF: Beweisbild konnte nicht geladen werden");
         otherFiles.push(r.originalName || filename);
@@ -701,7 +746,7 @@ router.get("/:id/akte", async (req, res) => {
           }
           const buf = fs.readFileSync(filePath);
           embeddedBytes += buf.length;
-          images.push({ filename: name, data: buf });
+          images.push({ filename: name, description: null, data: buf });
         } catch {
           otherFiles.push(name);
         }
@@ -763,7 +808,7 @@ router.get("/:id/evidence/files", async (req, res) => {
     return "other";
   }
 
-  type FileEntry = { filename: string; url: string; objectPath: string; type: string; size: number; uploadedAt: string; uploadedBy: string | null };
+  type FileEntry = { filename: string; url: string; objectPath: string; type: string; size: number; uploadedAt: string; uploadedBy: string | null; description: string | null };
 
   // Read evidence file metadata from the DB (source of truth — avoids GCS round-trips).
   const rows = await db.select().from(evidenceFilesTable)
@@ -780,6 +825,7 @@ router.get("/:id/evidence/files", async (req, res) => {
       size: r.size,
       uploadedAt: r.uploadedAt.toISOString(),
       uploadedBy: r.uploadedBy,
+      description: r.description,
     };
   });
 
@@ -799,6 +845,7 @@ router.get("/:id/evidence/files", async (req, res) => {
         size: stat.size,
         uploadedAt: stat.mtime.toISOString(),
         uploadedBy: null,
+        description: null,
       });
     }
   }

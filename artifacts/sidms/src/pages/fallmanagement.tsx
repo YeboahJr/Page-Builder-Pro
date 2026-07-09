@@ -3,7 +3,7 @@ import { useGetCases, useCreateCase, useUpdateCase, useDeleteCase, getGetCasesQu
 import type { Case } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Plus, Trash2, Edit3, X } from "lucide-react";
-import EvidenceUpload, { type UploadFile, uploadEvidenceFiles } from "@/components/EvidenceUpload";
+import EvidenceUpload, { type UploadFile, uploadEvidenceFiles, allDescriptionsFilled } from "@/components/EvidenceUpload";
 import DeleteConfirmModal from "@/components/DeleteConfirmModal";
 import { STRAFTATEN } from "@/lib/straftaten";
 
@@ -263,7 +263,7 @@ export default function Fallmanagement() {
               {formError && <p className="text-xs text-red-400" data-testid="text-case-form-error">{formError}</p>}
               <div className="flex gap-3 pt-2">
                 <button type="button" onClick={closeForm} className="flex-1 py-2 bg-[#1e2d4a] text-gray-300 text-sm rounded transition-colors hover:bg-[#253650]">Abbrechen</button>
-                <button type="submit" disabled={submitting} className="flex-1 py-2 bg-[#1a3d7c] hover:bg-[#1e4a94] text-white text-sm font-medium rounded transition-colors disabled:opacity-60" data-testid={editingId !== null ? "button-submit-edit-case" : "button-submit-new-case"}>
+                <button type="submit" disabled={submitting || (editingId === null && !allDescriptionsFilled(uploadFiles))} className="flex-1 py-2 bg-[#1a3d7c] hover:bg-[#1e4a94] text-white text-sm font-medium rounded transition-colors disabled:opacity-60" data-testid={editingId !== null ? "button-submit-edit-case" : "button-submit-new-case"}>
                   {submitting ? "Speichern..." : editingId !== null ? "Änderungen speichern" : "Fall anlegen"}
                 </button>
               </div>

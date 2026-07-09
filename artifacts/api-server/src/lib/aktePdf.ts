@@ -28,7 +28,7 @@ export interface AktePdfData {
   tatWer: string | null;
   createdAt: Date;
   agents: Array<{ name: string; role: string }>;
-  images: Array<{ filename: string; data: Buffer }>;
+  images: Array<{ filename: string; description: string | null; data: Buffer }>;
   otherFiles: string[];
 }
 
@@ -156,20 +156,17 @@ export function buildAktePdf(data: AktePdfData): PDFKit.PDFDocument {
     doc.moveDown(1);
   }
 
-  // ---------- Bilder (caption above image, like the template) ----------
+  // ---------- Bilder (Bildbeschreibung unter dem Bild) ----------
   if (data.images.length > 0) {
     let imgIndex = 0;
     for (const img of data.images) {
       imgIndex += 1;
       const renderedHeight = imageDisplayHeight(img.data, pageWidth, 320);
-      const caption = `Bild ${imgIndex}: ${img.filename}`;
+      const caption = `Bild ${imgIndex}: ${img.description || img.filename}`;
       doc.font("Helvetica").fontSize(11);
       const captionHeight = doc.heightOfString(caption, { width: pageWidth, lineGap: 1 });
-      // Reserve caption + image together so they stay on the same page.
+      // Reserve image + caption together so they stay on the same page.
       ensureSpace(doc, captionHeight + renderedHeight + 20);
-      doc.fillColor(BLACK)
-        .text(caption, left, doc.y, { width: pageWidth, lineGap: 1 });
-      doc.moveDown(0.4);
       try {
         doc.image(img.data, left, doc.y, { fit: [pageWidth, 320] });
         // pdfkit does not advance y past a fitted image reliably; compute manually.
@@ -177,6 +174,9 @@ export function buildAktePdf(data: AktePdfData): PDFKit.PDFDocument {
       } catch {
         doc.font("Helvetica-Oblique").fontSize(10).text("(Bild konnte nicht eingebettet werden)", left, doc.y);
       }
+      doc.moveDown(0.3);
+      doc.font("Helvetica").fontSize(11).fillColor(BLACK)
+        .text(caption, left, doc.y, { width: pageWidth, lineGap: 1 });
       doc.moveDown(1);
     }
   }

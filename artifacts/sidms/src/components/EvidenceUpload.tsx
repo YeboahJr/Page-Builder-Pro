@@ -5,6 +5,7 @@ export interface UploadFile {
   file: File;
   preview: string | null;
   type: "image" | "video" | "other";
+  description: string;
 }
 
 interface Props {
@@ -19,6 +20,7 @@ function makeUploadFile(file: File): UploadFile {
     file,
     preview: isImage ? URL.createObjectURL(file) : null,
     type: isImage ? "image" : isVideo ? "video" : "other",
+    description: "",
   };
 }
 
@@ -68,36 +70,51 @@ export default function EvidenceUpload({ files, onChange }: Props) {
         onChange={e => addFiles(e.target.files)}
       />
 
-      {/* Previews */}
+      {/* Previews with per-file description */}
       {files.length > 0 && (
-        <div className="grid grid-cols-4 gap-2 mt-1">
+        <div className="space-y-2 mt-1">
           {files.map((f, i) => (
-            <div key={i} className="relative group rounded-lg overflow-hidden bg-[#0a0f1a] border border-[#1e2d4a]">
-              {f.type === "image" && f.preview ? (
-                <img src={f.preview} alt={f.file.name} className="w-full h-16 object-cover" />
-              ) : f.type === "video" ? (
-                <div className="w-full h-16 flex flex-col items-center justify-center gap-1">
-                  <Film className="w-5 h-5 text-blue-400" />
-                  <span className="text-[9px] text-gray-500 px-1 truncate w-full text-center">{f.file.name}</span>
+            <div key={i} className="flex gap-2 items-stretch rounded-lg bg-[#0a0f1a] border border-[#1e2d4a] p-2">
+              <div className="relative w-20 shrink-0 rounded overflow-hidden bg-[#0d1526]">
+                {f.type === "image" && f.preview ? (
+                  <img src={f.preview} alt={f.file.name} className="w-20 h-16 object-cover" />
+                ) : f.type === "video" ? (
+                  <div className="w-20 h-16 flex flex-col items-center justify-center gap-1">
+                    <Film className="w-5 h-5 text-blue-400" />
+                  </div>
+                ) : (
+                  <div className="w-20 h-16 flex flex-col items-center justify-center gap-1">
+                    <FileWarning className="w-5 h-5 text-gray-500" />
+                  </div>
+                )}
+              </div>
+              <div className="flex-1 min-w-0 flex flex-col gap-1">
+                <div className="flex items-center gap-1">
+                  <p className="text-[10px] text-gray-400 truncate flex-1" title={f.file.name}>{f.file.name}</p>
+                  <button
+                    type="button"
+                    onClick={() => remove(i)}
+                    className="text-gray-500 hover:text-red-400 transition-colors shrink-0"
+                    title="Entfernen"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
                 </div>
-              ) : (
-                <div className="w-full h-16 flex flex-col items-center justify-center gap-1">
-                  <FileWarning className="w-5 h-5 text-gray-500" />
-                  <span className="text-[9px] text-gray-500 px-1 truncate w-full text-center">{f.file.name}</span>
-                </div>
-              )}
-              <button
-                type="button"
-                onClick={() => remove(i)}
-                className="absolute top-0.5 right-0.5 bg-black/70 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
-              >
-                <X className="w-3 h-3" />
-              </button>
-              {f.type === "image" && (
-                <div className="absolute bottom-0 left-0 right-0 bg-black/50 px-1 py-0.5">
-                  <p className="text-[9px] text-gray-300 truncate">{f.file.name}</p>
-                </div>
-              )}
+                <textarea
+                  value={f.description}
+                  onChange={e => {
+                    const updated = files.slice();
+                    updated[i] = { ...f, description: e.target.value };
+                    onChange(updated);
+                  }}
+                  placeholder="Bildbeschreibung (Pflichtfeld) – erscheint unter dem Bild in der Akte"
+                  rows={2}
+                  maxLength={2000}
+                  data-testid={`input-evidence-description-${i}`}
+                  className={`w-full bg-[#0d1526] border rounded px-2 py-1 text-xs text-gray-200 placeholder-gray-600 resize-none focus:outline-none focus:border-[#c9a227]/60
+                    ${f.description.trim() ? "border-[#1e2d4a]" : "border-amber-700/60"}`}
+                />
+              </div>
             </div>
           ))}
         </div>
@@ -106,10 +123,15 @@ export default function EvidenceUpload({ files, onChange }: Props) {
   );
 }
 
+export function allDescriptionsFilled(files: UploadFile[]): boolean {
+  return files.every(f => f.description.trim().length > 0);
+}
+
 export async function uploadEvidenceFiles(caseId: number, files: UploadFile[]): Promise<void> {
   if (!files.length) return;
   const formData = new FormData();
   files.forEach(f => formData.append("files", f.file));
+  files.forEach(f => formData.append("descriptions", f.description.trim()));
   await fetch(`/api/cases/${caseId}/evidence/upload`, {
     method: "POST",
     body: formData,
