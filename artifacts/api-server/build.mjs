@@ -96,6 +96,9 @@ async function buildAll() {
       "wrangler",
       "zeromq",
       "zeromq-prebuilt",
+      // pdfkit reads its .afm font metric files from disk relative to its
+      // package dir, so it must run from node_modules instead of the bundle.
+      "pdfkit",
       "playwright",
       "puppeteer",
       "puppeteer-core",

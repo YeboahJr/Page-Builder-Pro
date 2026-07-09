@@ -7,6 +7,7 @@ import path from "path";
 import fs from "fs";
 import { randomUUID } from "crypto";
 import { objectStorageClient } from "../lib/objectStorage";
+import { buildAktePdf } from "../lib/aktePdf";
 import {
   parsePrivateObjectDir,
   evidenceObjectName,
@@ -625,6 +626,111 @@ router.delete("/:id/evidence/:filename", async (req, res) => {
   }
 
   res.status(204).send();
+});
+
+// Renders the case file ("Akte") as a downloadable PDF modeled after the FIB
+// paper template. Access follows the same involvement rules as the case itself.
+router.get("/:id/akte", async (req, res) => {
+  const caseId = parseCaseIdParam(req.params.id);
+  if (caseId === null) {
+    res.status(400).json({ error: "Ungültige ID" });
+    return;
+  }
+  const access = await loadAccessibleCase(req, res, caseId);
+  if (!access) return;
+  const c = access.case;
+
+  const [leadOfficer] = await db
+    .select({ dienstnummer: officersTable.dienstnummer })
+    .from(officersTable)
+    .where(eq(officersTable.name, c.leadAgent));
+
+  const agents = await db
+    .select({ name: caseAgentsTable.name, role: caseAgentsTable.role })
+    .from(caseAgentsTable)
+    .where(eq(caseAgentsTable.caseId, caseId));
+
+  // Collect embeddable evidence images (PDFKit supports JPEG + PNG only).
+  // Caps keep the in-memory footprint bounded for cases with many/large files;
+  // anything beyond the caps is listed by name instead of embedded.
+  const MAX_EMBEDDED_IMAGES = 20;
+  const MAX_EMBEDDED_BYTES = 60 * 1024 * 1024;
+  let embeddedBytes = 0;
+  const images: Array<{ filename: string; data: Buffer }> = [];
+  const otherFiles: string[] = [];
+  const embeddable = new Set([".jpg", ".jpeg", ".png"]);
+
+  const rows = await db.select().from(evidenceFilesTable)
+    .where(eq(evidenceFilesTable.caseId, caseId))
+    .orderBy(desc(evidenceFilesTable.uploadedAt));
+
+  const privateObjectDir = process.env.PRIVATE_OBJECT_DIR;
+  for (const r of rows) {
+    const filename = r.objectPath.slice(r.objectPath.lastIndexOf("/") + 1);
+    const ext = path.extname(r.originalName || filename).toLowerCase();
+    const withinCaps = images.length < MAX_EMBEDDED_IMAGES
+      && embeddedBytes + r.size <= MAX_EMBEDDED_BYTES;
+    if (embeddable.has(ext) && privateObjectDir && withinCaps) {
+      try {
+        const { bucketName, gcsPrefix } = parsePrivateObjectDir(privateObjectDir);
+        const objectName = evidenceObjectName(gcsPrefix, caseId, filename);
+        const [buf] = await objectStorageClient.bucket(bucketName).file(objectName).download();
+        embeddedBytes += buf.length;
+        images.push({ filename: r.originalName || filename, data: buf });
+      } catch (err) {
+        req.log.warn({ err, filename }, "Akte-PDF: Beweisbild konnte nicht geladen werden");
+        otherFiles.push(r.originalName || filename);
+      }
+    } else {
+      otherFiles.push(r.originalName || filename);
+    }
+  }
+
+  // Local fallback files (backward compatibility with pre-GCS uploads).
+  const localDir = path.join(LOCAL_UPLOADS_DIR, `case-${caseId}`);
+  if (fs.existsSync(localDir)) {
+    for (const name of fs.readdirSync(localDir)) {
+      const ext = path.extname(name).toLowerCase();
+      if (embeddable.has(ext) && images.length < MAX_EMBEDDED_IMAGES && embeddedBytes < MAX_EMBEDDED_BYTES) {
+        try {
+          const buf = fs.readFileSync(path.join(localDir, name));
+          embeddedBytes += buf.length;
+          images.push({ filename: name, data: buf });
+        } catch {
+          otherFiles.push(name);
+        }
+      } else {
+        otherFiles.push(name);
+      }
+    }
+  }
+
+  const safeNumber = c.caseNumber.replace(/[^A-Za-z0-9._-]+/g, "_");
+  res.setHeader("Content-Type", "application/pdf");
+  res.setHeader("Content-Disposition", `attachment; filename="Akte_${safeNumber}.pdf"`);
+
+  const doc = buildAktePdf({
+    caseNumber: c.caseNumber,
+    title: c.title,
+    category: c.category,
+    priority: c.priority,
+    status: c.status,
+    leadAgent: c.leadAgent,
+    leadAgentDienstnummer: leadOfficer?.dienstnummer ?? null,
+    description: c.description,
+    details: c.details,
+    verhandlungsfuehrung: c.verhandlungsfuehrung,
+    straftaten: c.straftaten,
+    tatDatum: c.tatDatum,
+    tatWann: c.tatWann,
+    tatWo: c.tatWo,
+    tatWer: c.tatWer,
+    createdAt: c.createdAt,
+    agents,
+    images,
+    otherFiles,
+  });
+  doc.pipe(res);
 });
 
 router.get("/:id/evidence/files", async (req, res) => {
