@@ -164,22 +164,9 @@ export function buildAktePdf(data: AktePdfData): PDFKit.PDFDocument {
     bodyText(data.verhandlungsfuehrung.trim());
   }
 
-  // ---------- Geiseln & Forderungen (zwischen Verhandlungsführung und Details) ----------
-  if (data.geiseln?.trim()) {
-    heading("Geiseln:");
-    bodyText(data.geiseln.trim());
-  }
-  if (data.forderungen?.trim()) {
-    heading("Forderungen:");
-    bodyText(data.forderungen.trim());
-  }
-
-  // ---------- Seite 2: Details & Vorgeworfene Straftaten ----------
+  // ---------- Details (ebenfalls Seite 1) ----------
   const hasTatFacts = data.tatDatum || data.tatWann || data.tatWo || data.tatWer;
   const hasStraftaten = (data.straftaten?.length ?? 0) > 0;
-  if (data.details?.trim() || hasTatFacts || hasStraftaten) {
-    doc.addPage();
-  }
   if (data.details?.trim() || hasTatFacts) {
     heading("Details:");
     if (data.details?.trim()) {
@@ -204,7 +191,20 @@ export function buildAktePdf(data: AktePdfData): PDFKit.PDFDocument {
     doc.moveDown(1);
   }
 
-  // ---------- Vorgeworfene Straftaten (ebenfalls Seite 2) ----------
+  // ---------- Seite 2: Geiseln, Forderungen & Vorgeworfene Straftaten ----------
+  const hasGeiseln = Boolean(data.geiseln?.trim());
+  const hasForderungen = Boolean(data.forderungen?.trim());
+  if (hasGeiseln || hasForderungen || hasStraftaten) {
+    doc.addPage();
+  }
+  if (hasGeiseln) {
+    heading("Geiseln:");
+    bodyText(data.geiseln!.trim());
+  }
+  if (hasForderungen) {
+    heading("Forderungen:");
+    bodyText(data.forderungen!.trim());
+  }
   if (hasStraftaten) {
     heading("Vorgeworfene Straftaten:");
     for (const s of data.straftaten!) {
