@@ -22,6 +22,8 @@ export const casesTable = pgTable("cases", {
   tatWann: text("tat_wann"),
   tatWo: text("tat_wo"),
   tatWer: text("tat_wer"),
+  geiseln: text("geiseln"),
+  forderungen: text("forderungen"),
   closedAt: timestamp("closed_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),

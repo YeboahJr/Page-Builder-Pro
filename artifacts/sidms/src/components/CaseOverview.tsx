@@ -434,6 +434,8 @@ export default function CaseOverview({ filterStatus, emptyText, title = "Fallüb
                       ["Wann", caseDetail.tatWann ?? "–"],
                       ["Wo", caseDetail.tatWo ?? "–"],
                       ["Wer", caseDetail.tatWer ?? "–"],
+                      ["Geiseln", caseDetail.geiseln ?? "–"],
+                      ["Forderungen", caseDetail.forderungen ?? "–"],
                       ["Erstellungsdatum", caseDetail.createdAt],
                       ["Letzte Änderung", caseDetail.lastModified],
                       ["Abschlussdatum", caseDetail.closedAt ?? "–"],

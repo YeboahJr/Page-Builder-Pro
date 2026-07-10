@@ -27,10 +27,12 @@ interface CaseForm {
   caseNumber: string; title: string; category: string; priority: string; status: string; leadAgent: string;
   description: string; details: string;
   verhandlungsfuehrung: string; straftaten: string[]; tatDatum: string; tatWann: string; tatWo: string; tatWer: string;
+  geiseln: string; forderungen: string;
 }
 const EMPTY_FORM: CaseForm = {
   caseNumber: "", title: "", category: "Gang", priority: "Mittel", status: "Offen", leadAgent: "", description: "", details: "",
   verhandlungsfuehrung: "Federal Investigation Bureau", straftaten: [], tatDatum: "", tatWann: "", tatWo: "", tatWer: "",
+  geiseln: "", forderungen: "",
 };
 
 export default function Fallmanagement() {
@@ -80,6 +82,8 @@ export default function Fallmanagement() {
       tatWann: c.tatWann ?? "",
       tatWo: c.tatWo ?? "",
       tatWer: c.tatWer ?? "",
+      geiseln: c.geiseln ?? "",
+      forderungen: c.forderungen ?? "",
     });
     setUploadFiles([]);
     setShowForm(true);
@@ -245,6 +249,14 @@ export default function Fallmanagement() {
                 <div>
                   <label className="text-xs text-gray-400 block mb-1">Wer</label>
                   <input value={form.tatWer} onChange={e => setForm(f => ({ ...f, tatWer: e.target.value }))} placeholder="Beteiligte Personen" className="w-full bg-[#0a0f1a] border border-[#1e2d4a] text-white text-sm px-3 py-2 rounded focus:outline-none focus:border-[#c9a227]/50" data-testid="input-tat-wer" />
+                </div>
+                <div>
+                  <label className="text-xs text-gray-400 block mb-1">Geiseln</label>
+                  <input value={form.geiseln} onChange={e => setForm(f => ({ ...f, geiseln: e.target.value }))} placeholder="Geiseln" className="w-full bg-[#0a0f1a] border border-[#1e2d4a] text-white text-sm px-3 py-2 rounded focus:outline-none focus:border-[#c9a227]/50" data-testid="input-geiseln" />
+                </div>
+                <div>
+                  <label className="text-xs text-gray-400 block mb-1">Forderungen</label>
+                  <input value={form.forderungen} onChange={e => setForm(f => ({ ...f, forderungen: e.target.value }))} placeholder="Forderungen" className="w-full bg-[#0a0f1a] border border-[#1e2d4a] text-white text-sm px-3 py-2 rounded focus:outline-none focus:border-[#c9a227]/50" data-testid="input-forderungen" />
                 </div>
                 <div className="col-span-2">
                   <label className="text-xs text-gray-400 block mb-1">Beschreibung</label>

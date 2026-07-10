@@ -179,7 +179,9 @@ export const GetCasesResponseItem = zod.object({
   "tatDatum": zod.string().nullish(),
   "tatWann": zod.string().nullish(),
   "tatWo": zod.string().nullish(),
-  "tatWer": zod.string().nullish()
+  "tatWer": zod.string().nullish(),
+  "geiseln": zod.string().nullish(),
+  "forderungen": zod.string().nullish()
 })
 export const GetCasesResponse = zod.array(GetCasesResponseItem)
 
@@ -201,7 +203,9 @@ export const CreateCaseBody = zod.object({
   "tatDatum": zod.string().optional(),
   "tatWann": zod.string().optional(),
   "tatWo": zod.string().optional(),
-  "tatWer": zod.string().optional()
+  "tatWer": zod.string().optional(),
+  "geiseln": zod.string().optional(),
+  "forderungen": zod.string().optional()
 })
 
 export const CreateCaseResponse = zod.object({
@@ -222,7 +226,9 @@ export const CreateCaseResponse = zod.object({
   "tatDatum": zod.string().nullish(),
   "tatWann": zod.string().nullish(),
   "tatWo": zod.string().nullish(),
-  "tatWer": zod.string().nullish()
+  "tatWer": zod.string().nullish(),
+  "geiseln": zod.string().nullish(),
+  "forderungen": zod.string().nullish()
 })
 
 
@@ -253,7 +259,9 @@ export const GetCaseResponse = zod.object({
   "tatDatum": zod.string().nullish(),
   "tatWann": zod.string().nullish(),
   "tatWo": zod.string().nullish(),
-  "tatWer": zod.string().nullish()
+  "tatWer": zod.string().nullish(),
+  "geiseln": zod.string().nullish(),
+  "forderungen": zod.string().nullish()
 })
 
 
@@ -278,7 +286,9 @@ export const UpdateCaseBody = zod.object({
   "tatDatum": zod.string().optional(),
   "tatWann": zod.string().optional(),
   "tatWo": zod.string().optional(),
-  "tatWer": zod.string().optional()
+  "tatWer": zod.string().optional(),
+  "geiseln": zod.string().optional(),
+  "forderungen": zod.string().optional()
 })
 
 export const UpdateCaseResponse = zod.object({
@@ -299,7 +309,9 @@ export const UpdateCaseResponse = zod.object({
   "tatDatum": zod.string().nullish(),
   "tatWann": zod.string().nullish(),
   "tatWo": zod.string().nullish(),
-  "tatWer": zod.string().nullish()
+  "tatWer": zod.string().nullish(),
+  "geiseln": zod.string().nullish(),
+  "forderungen": zod.string().nullish()
 })
 
 

@@ -161,7 +161,7 @@ router.post("/", async (req, res) => {
     return;
   }
 
-  const { title, category, priority, status, leadAgent, description, details, verhandlungsfuehrung, straftaten, tatDatum, tatWann, tatWo, tatWer } = req.body;
+  const { title, category, priority, status, leadAgent, description, details, verhandlungsfuehrung, straftaten, tatDatum, tatWann, tatWo, tatWer, geiseln, forderungen } = req.body;
 
   if (straftaten !== undefined && straftaten !== null && (!Array.isArray(straftaten) || straftaten.some((s: unknown) => typeof s !== "string"))) {
     res.status(400).json({ error: "straftaten muss eine Liste von Zeichenketten sein" });
@@ -213,6 +213,8 @@ router.post("/", async (req, res) => {
     tatWann: tatWann ?? null,
     tatWo: tatWo ?? null,
     tatWer: tatWer ?? null,
+    geiseln: geiseln ?? null,
+    forderungen: forderungen ?? null,
   }).returning();
 
   await db.insert(caseAgentsTable).values({ caseId: newCase.id, name: leadAgent, role: "Leitender Agent" });
@@ -271,7 +273,7 @@ router.patch("/:id", async (req, res) => {
   if (rejectStaReadOnly(access, res)) return;
   const existing = access.case;
 
-  const { title, category, priority, status, leadAgent, description, details, verhandlungsfuehrung, straftaten, tatDatum, tatWann, tatWo, tatWer } = req.body;
+  const { title, category, priority, status, leadAgent, description, details, verhandlungsfuehrung, straftaten, tatDatum, tatWann, tatWo, tatWer, geiseln, forderungen } = req.body;
 
   if (straftaten !== undefined && straftaten !== null && (!Array.isArray(straftaten) || straftaten.some((s: unknown) => typeof s !== "string"))) {
     res.status(400).json({ error: "straftaten muss eine Liste von Zeichenketten sein" });
@@ -292,6 +294,8 @@ router.patch("/:id", async (req, res) => {
   if (tatWann !== undefined) updates.tatWann = tatWann;
   if (tatWo !== undefined) updates.tatWo = tatWo;
   if (tatWer !== undefined) updates.tatWer = tatWer;
+  if (geiseln !== undefined) updates.geiseln = geiseln;
+  if (forderungen !== undefined) updates.forderungen = forderungen;
 
   // Fallnummer: nur ändern, wenn eine neue, nicht-leere Nummer angegeben wurde.
   const newCaseNumber = typeof req.body.caseNumber === "string" ? req.body.caseNumber.trim() : "";

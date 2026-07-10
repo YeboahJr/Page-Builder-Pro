@@ -258,6 +258,10 @@ export interface Case {
   tatWo?: string | null;
   /** @nullable */
   tatWer?: string | null;
+  /** @nullable */
+  geiseln?: string | null;
+  /** @nullable */
+  forderungen?: string | null;
 }
 
 export interface CaseInput {
@@ -276,6 +280,8 @@ export interface CaseInput {
   tatWann?: string;
   tatWo?: string;
   tatWer?: string;
+  geiseln?: string;
+  forderungen?: string;
 }
 
 export interface CaseUpdate {
@@ -294,6 +300,8 @@ export interface CaseUpdate {
   tatWann?: string;
   tatWo?: string;
   tatWer?: string;
+  geiseln?: string;
+  forderungen?: string;
 }
 
 export interface CaseDetail {
@@ -327,6 +335,10 @@ export interface CaseDetail {
   tatWo?: string | null;
   /** @nullable */
   tatWer?: string | null;
+  /** @nullable */
+  geiseln?: string | null;
+  /** @nullable */
+  forderungen?: string | null;
 }
 
 export interface StatusHistoryEntry {

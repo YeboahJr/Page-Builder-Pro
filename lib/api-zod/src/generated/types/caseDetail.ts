@@ -37,4 +37,8 @@ export interface CaseDetail {
   tatWo?: string | null;
   /** @nullable */
   tatWer?: string | null;
+  /** @nullable */
+  geiseln?: string | null;
+  /** @nullable */
+  forderungen?: string | null;
 }

@@ -1375,6 +1375,10 @@ components:
           type: ["string", "null"]
         tatWer:
           type: ["string", "null"]
+        geiseln:
+          type: ["string", "null"]
+        forderungen:
+          type: ["string", "null"]
 
     CaseInput:
       type: object
@@ -1411,6 +1415,10 @@ components:
           type: string
         tatWer:
           type: string
+        geiseln:
+          type: string
+        forderungen:
+          type: string
 
     CaseUpdate:
       type: object
@@ -1445,6 +1453,10 @@ components:
         tatWo:
           type: string
         tatWer:
+          type: string
+        geiseln:
+          type: string
+        forderungen:
           type: string
 
     CaseDetail:
@@ -1494,6 +1506,10 @@ components:
         tatWo:
           type: ["string", "null"]
         tatWer:
+          type: ["string", "null"]
+        geiseln:
+          type: ["string", "null"]
+        forderungen:
           type: ["string", "null"]
 
     StatusHistoryEntry:

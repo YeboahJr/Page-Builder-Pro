@@ -22,4 +22,6 @@ export interface CaseInput {
   tatWann?: string;
   tatWo?: string;
   tatWer?: string;
+  geiseln?: string;
+  forderungen?: string;
 }

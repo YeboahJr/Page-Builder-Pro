@@ -22,4 +22,6 @@ export interface CaseUpdate {
   tatWann?: string;
   tatWo?: string;
   tatWer?: string;
+  geiseln?: string;
+  forderungen?: string;
 }
