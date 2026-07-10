@@ -123,6 +123,14 @@ export default function Dashboard() {
                     {VERHANDLUNGSFUEHRUNG_OPTIONS.map(v => <option key={v}>{v}</option>)}
                   </select>
                 </div>
+                <div className="col-span-2">
+                  <label className="text-xs text-gray-400 block mb-1">Geiseln</label>
+                  <textarea value={newCaseForm.geiseln} onChange={e => setNewCaseForm(f => ({ ...f, geiseln: e.target.value }))} rows={3} placeholder="Geiseln" className="w-full bg-[#0a0f1a] border border-[#1e2d4a] text-white text-sm px-3 py-2 rounded focus:outline-none focus:border-[#c9a227]/50 resize-none" data-testid="textarea-geiseln" />
+                </div>
+                <div className="col-span-2">
+                  <label className="text-xs text-gray-400 block mb-1">Forderungen</label>
+                  <textarea value={newCaseForm.forderungen} onChange={e => setNewCaseForm(f => ({ ...f, forderungen: e.target.value }))} rows={3} placeholder="Forderungen" className="w-full bg-[#0a0f1a] border border-[#1e2d4a] text-white text-sm px-3 py-2 rounded focus:outline-none focus:border-[#c9a227]/50 resize-none" data-testid="textarea-forderungen" />
+                </div>
                 <div className="relative">
                   <label className="text-xs text-gray-400 block mb-1">Vorgeworfene Straftaten</label>
                   <button
@@ -180,14 +188,6 @@ export default function Dashboard() {
                 <div>
                   <label className="text-xs text-gray-400 block mb-1">Wer</label>
                   <input value={newCaseForm.tatWer} onChange={e => setNewCaseForm(f => ({ ...f, tatWer: e.target.value }))} placeholder="Beteiligte Personen" className="w-full bg-[#0a0f1a] border border-[#1e2d4a] text-white text-sm px-3 py-2 rounded focus:outline-none focus:border-[#c9a227]/50" data-testid="input-tat-wer" />
-                </div>
-                <div className="col-span-2">
-                  <label className="text-xs text-gray-400 block mb-1">Geiseln</label>
-                  <textarea value={newCaseForm.geiseln} onChange={e => setNewCaseForm(f => ({ ...f, geiseln: e.target.value }))} rows={3} placeholder="Geiseln" className="w-full bg-[#0a0f1a] border border-[#1e2d4a] text-white text-sm px-3 py-2 rounded focus:outline-none focus:border-[#c9a227]/50 resize-none" data-testid="textarea-geiseln" />
-                </div>
-                <div className="col-span-2">
-                  <label className="text-xs text-gray-400 block mb-1">Forderungen</label>
-                  <textarea value={newCaseForm.forderungen} onChange={e => setNewCaseForm(f => ({ ...f, forderungen: e.target.value }))} rows={3} placeholder="Forderungen" className="w-full bg-[#0a0f1a] border border-[#1e2d4a] text-white text-sm px-3 py-2 rounded focus:outline-none focus:border-[#c9a227]/50 resize-none" data-testid="textarea-forderungen" />
                 </div>
                 <div className="col-span-2">
                   <label className="text-xs text-gray-400 block mb-1">Beschreibung</label>
