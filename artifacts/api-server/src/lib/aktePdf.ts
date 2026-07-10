@@ -21,6 +21,8 @@ export interface AktePdfData {
   description: string | null;
   details: string | null;
   verhandlungsfuehrung: string | null;
+  geiseln: string | null;
+  forderungen: string | null;
   straftaten: string[] | null;
   tatDatum: string | null;
   tatWann: string | null;
@@ -160,6 +162,16 @@ export function buildAktePdf(data: AktePdfData): PDFKit.PDFDocument {
   if (data.verhandlungsfuehrung?.trim()) {
     heading("Verhandlungsführung:");
     bodyText(data.verhandlungsfuehrung.trim());
+  }
+
+  // ---------- Geiseln & Forderungen (zwischen Verhandlungsführung und Details) ----------
+  if (data.geiseln?.trim()) {
+    heading("Geiseln:");
+    bodyText(data.geiseln.trim());
+  }
+  if (data.forderungen?.trim()) {
+    heading("Forderungen:");
+    bodyText(data.forderungen.trim());
   }
 
   // ---------- Seite 2: Details & Vorgeworfene Straftaten ----------

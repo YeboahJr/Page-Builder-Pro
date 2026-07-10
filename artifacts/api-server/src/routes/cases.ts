@@ -814,6 +814,8 @@ router.get("/:id/akte", async (req, res) => {
     description: c.description,
     details: c.details,
     verhandlungsfuehrung: c.verhandlungsfuehrung,
+    geiseln: c.geiseln,
+    forderungen: c.forderungen,
     straftaten: c.straftaten,
     tatDatum: c.tatDatum,
     tatWann: c.tatWann,
