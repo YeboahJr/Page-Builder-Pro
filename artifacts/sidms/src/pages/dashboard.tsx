@@ -181,13 +181,13 @@ export default function Dashboard() {
                   <label className="text-xs text-gray-400 block mb-1">Wer</label>
                   <input value={newCaseForm.tatWer} onChange={e => setNewCaseForm(f => ({ ...f, tatWer: e.target.value }))} placeholder="Beteiligte Personen" className="w-full bg-[#0a0f1a] border border-[#1e2d4a] text-white text-sm px-3 py-2 rounded focus:outline-none focus:border-[#c9a227]/50" data-testid="input-tat-wer" />
                 </div>
-                <div>
+                <div className="col-span-2">
                   <label className="text-xs text-gray-400 block mb-1">Geiseln</label>
-                  <input value={newCaseForm.geiseln} onChange={e => setNewCaseForm(f => ({ ...f, geiseln: e.target.value }))} placeholder="Geiseln" className="w-full bg-[#0a0f1a] border border-[#1e2d4a] text-white text-sm px-3 py-2 rounded focus:outline-none focus:border-[#c9a227]/50" data-testid="input-geiseln" />
+                  <textarea value={newCaseForm.geiseln} onChange={e => setNewCaseForm(f => ({ ...f, geiseln: e.target.value }))} rows={3} placeholder="Geiseln" className="w-full bg-[#0a0f1a] border border-[#1e2d4a] text-white text-sm px-3 py-2 rounded focus:outline-none focus:border-[#c9a227]/50 resize-none" data-testid="textarea-geiseln" />
                 </div>
-                <div>
+                <div className="col-span-2">
                   <label className="text-xs text-gray-400 block mb-1">Forderungen</label>
-                  <input value={newCaseForm.forderungen} onChange={e => setNewCaseForm(f => ({ ...f, forderungen: e.target.value }))} placeholder="Forderungen" className="w-full bg-[#0a0f1a] border border-[#1e2d4a] text-white text-sm px-3 py-2 rounded focus:outline-none focus:border-[#c9a227]/50" data-testid="input-forderungen" />
+                  <textarea value={newCaseForm.forderungen} onChange={e => setNewCaseForm(f => ({ ...f, forderungen: e.target.value }))} rows={3} placeholder="Forderungen" className="w-full bg-[#0a0f1a] border border-[#1e2d4a] text-white text-sm px-3 py-2 rounded focus:outline-none focus:border-[#c9a227]/50 resize-none" data-testid="textarea-forderungen" />
                 </div>
                 <div className="col-span-2">
                   <label className="text-xs text-gray-400 block mb-1">Beschreibung</label>
