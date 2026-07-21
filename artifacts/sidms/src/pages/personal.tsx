@@ -156,9 +156,6 @@ export default function Personal() {
       );
   }, [officers]);
 
-  // STA-Mitglieder werden in einem eigenen Sektor "Staatsanwaltschaft" gelistet.
-  const fibOfficers = useMemo(() => sortedOfficers.filter(o => o.role !== "STA"), [sortedOfficers]);
-  const staOfficers = useMemo(() => sortedOfficers.filter(o => o.role === "STA"), [sortedOfficers]);
 
   const startEdit = (o: Officer) => {
     setRowError(null);
@@ -482,21 +479,7 @@ export default function Personal() {
                 </tr>
               );
             };
-            return (
-              <>
-                {fibOfficers.map(renderRow)}
-                {staOfficers.length > 0 && (
-                  <>
-                    <tr className="bg-[#0a0f1a] border-y border-[#1e2d4a]">
-                      <td colSpan={totalCols} className="px-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-[#c9a227]" data-testid="section-staatsanwaltschaft">
-                        Staatsanwaltschaft
-                      </td>
-                    </tr>
-                    {staOfficers.map(renderRow)}
-                  </>
-                )}
-              </>
-            );
+            return <>{sortedOfficers.map(renderRow)}</>;
             })()}
           </tbody>
         </table>

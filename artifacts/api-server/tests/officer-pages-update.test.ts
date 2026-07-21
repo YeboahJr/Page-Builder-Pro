@@ -189,33 +189,7 @@ describe("PUT /officers/:id/pages", () => {
     expect(res.json.allowedPages).toEqual([]);
   });
 
-  it("lets leadership assign the STA role together with page rights", async () => {
-    const res = await api(`/officers/${targetId}/pages`, {
-      method: "PUT",
-      token: tokenLead,
-      body: { allowedPages: ["dashboard"], role: "STA" },
-    });
-    expect(res.status).toBe(200);
-    expect(res.json.role).toBe("STA");
-    expect(res.json.allowedPages).toEqual(["dashboard"]);
 
-    const [target] = await db
-      .select()
-      .from(officersTable)
-      .where(eq(officersTable.id, targetId));
-    expect(target.role).toBe("STA");
-    expect(target.allowedPages).toEqual(["dashboard"]);
-  });
-
-  it("STA has no full access and may not change page rights", async () => {
-    const tokenTarget = await login(TARGET_DN);
-    const res = await api(`/officers/${targetId}/pages`, {
-      method: "PUT",
-      token: tokenTarget,
-      body: { allowedPages: ["dashboard", "archiv"] },
-    });
-    expect(res.status).toBe(403);
-  });
 
   it("rejects an unknown role with 400", async () => {
     const res = await api(`/officers/${targetId}/pages`, {

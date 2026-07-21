@@ -99,7 +99,7 @@ export default function Administration() {
         <Shield className="w-5 h-5 text-[#c9a227]" />
         <div>
           <h1 className="text-base font-semibold text-white">Administration</h1>
-          <p className="text-xs text-gray-400">Rollen und Seitenrechte der Officer verwalten. Direktion und Leitung haben immer alle Rechte; Seitenrechte gelten für Agenten und STA.</p>
+          <p className="text-xs text-gray-400">Rollen und Seitenrechte der Officer verwalten. Direktion und Leitung haben immer alle Rechte; Seitenrechte gelten für Agenten.</p>
         </div>
       </div>
 

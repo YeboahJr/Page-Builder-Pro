@@ -15,7 +15,6 @@ import Dashboard from "@/pages/dashboard";
 import Registrierungen from "@/pages/registrierungen";
 import Leitstelle from "@/pages/leitstelle";
 import Fallmanagement from "@/pages/fallmanagement";
-import Staatsanwaltschaft from "@/pages/staatsanwaltschaft";
 import Beweismittel from "@/pages/beweismittel";
 import Personal from "@/pages/personal";
 import IdChange from "@/pages/id-change";
@@ -91,7 +90,6 @@ function Router() {
       <Route path="/dashboard" component={() => <ProtectedRoute component={Dashboard} pageKey="dashboard" />} />
       <Route path="/leitstelle" component={() => <ProtectedRoute component={Leitstelle} pageKey="leitstelle" />} />
       <Route path="/fallmanagement" component={() => <ProtectedRoute component={Fallmanagement} pageKey="fallmanagement" />} />
-      <Route path="/staatsanwaltschaft" component={() => <ProtectedRoute component={Staatsanwaltschaft} pageKey="staatsanwaltschaft" />} />
       <Route path="/beweismittel" component={() => <ProtectedRoute component={Beweismittel} pageKey="fallmanagement" />} />
       <Route path="/personal" component={() => <ProtectedRoute component={Personal} pageKey="personal" />} />
       <Route path="/personal/id-change" component={() => <ProtectedRoute component={IdChange} pageKey="personal" />} />

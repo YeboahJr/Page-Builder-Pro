@@ -1126,7 +1126,7 @@ components:
             type: string
         role:
           type: string
-          enum: [Direktion, Leitung, Agent, STA]
+          enum: [Direktion, Leitung, Agent]
           description: "Optionale Rollenänderung (Admin-Rolle ist nicht änderbar)"
 
     ChangePasswordInput:

@@ -116,7 +116,7 @@ router.post("/:id/approve", async (req, res) => {
   return res.json(stripHash(updated));
 });
 
-const ASSIGNABLE_ROLES = new Set<string>(["Direktion", "Leitung", "Agent", "STA"]);
+const ASSIGNABLE_ROLES = new Set<string>(["Direktion", "Leitung", "Agent"]);
 
 router.put("/:id/pages", async (req, res) => {
   const current = await resolveOfficer(req);

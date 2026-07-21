@@ -13,10 +13,5 @@ Officers without a full-access role only see/edit cases where they are involved;
 
 **How to apply:** When adding case-related routes, enforce access via the shared involvement check in the cases router (401 unauthenticated, 403 foreign case). On case creation the creator is auto-linked with a `case_agents` row of role `Ersteller` (skipped when creator is the lead agent); the detail view's supportingAgents list filters out `Leitender Agent`, `Supervisor`, and `Ersteller` roles. If officers are ever renamed, name-based involvement silently breaks — migrate to officer IDs in that case.
 
-## STA-Sonderfall (Lesezugriff auf übergebene Akten)
 
-**Rule:** Offiziere mit Rolle `STA` sehen zusätzlich alle Fälle mit Status "An STA übergeben" (Konstante bewusst in Backend und Frontend dupliziert, gleiche Präzedenz wie Seiten-Keys) — aber NUR lesend. Der Fall-Loader liefert ein `staReadOnly`-Flag; jede schreibende Route muss es prüfen und mit 403 ablehnen.
-
-**Why:** "Sichtbar für STA" heißt Lesezugriff; ohne die Trennung würde der Sichtbarkeits-Pfad automatisch PATCH/DELETE/Evidence-Mutationen freischalten (Privilege Escalation, vom Review gefunden). Wechselt der Status zurück, verliert STA den Zugriff wieder.
-
-**How to apply:** Neue mutierende Case-Routen müssen nach dem Access-Check das Read-only-Flag ablehnen; Regressionstests dafür liegen in der Case-Visibility-Testsuite.
+Hinweis (Juli 2026): Die STA-Rolle und die Staatsanwaltschaft-Seite wurden komplett entfernt; es gibt keinen Sonder-Lesezugriff mehr.

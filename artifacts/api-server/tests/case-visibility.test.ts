@@ -9,19 +9,16 @@ const RUN_ID = `${Date.now()}-${Math.floor(Math.random() * 100000)}`;
 const OFFICER_A_DN = `test-cv-a-${RUN_ID}`;
 const OFFICER_B_DN = `test-cv-b-${RUN_ID}`;
 const LEADER_DN = `test-cv-l-${RUN_ID}`;
-const STA_DN = `test-cv-sta-${RUN_ID}`;
 const PASSWORD = "test-passwort";
 const NAME_A = `Test CV Officer A ${RUN_ID}`;
 const NAME_B = `Test CV Officer B ${RUN_ID}`;
 const NAME_L = `Test CV Leader ${RUN_ID}`;
-const NAME_STA = `Test CV STA ${RUN_ID}`;
 
 let server: Server;
 let baseUrl: string;
 let tokenA: string;
 let tokenB: string;
 let tokenL: string;
-let tokenSta: string;
 const createdCaseIds: number[] = [];
 
 async function api(
@@ -51,7 +48,7 @@ async function cleanup() {
   const officers = await db
     .select({ id: officersTable.id })
     .from(officersTable)
-    .where(inArray(officersTable.dienstnummer, [OFFICER_A_DN, OFFICER_B_DN, LEADER_DN, STA_DN]));
+    .where(inArray(officersTable.dienstnummer, [OFFICER_A_DN, OFFICER_B_DN, LEADER_DN]));
   const ids = officers.map((o) => o.id);
   if (ids.length > 0) {
     await db.delete(sessionsTable).where(inArray(sessionsTable.officerId, ids));
@@ -78,7 +75,6 @@ beforeAll(async () => {
     { ...base, dienstnummer: OFFICER_A_DN, name: NAME_A, rank: "Special Agent", allowedPages: ["dashboard", "fallmanagement"] },
     { ...base, dienstnummer: OFFICER_B_DN, name: NAME_B, rank: "Special Agent", allowedPages: ["dashboard", "fallmanagement"] },
     { ...base, dienstnummer: LEADER_DN, name: NAME_L, rank: "Division Chief", role: "Leitung" },
-    { ...base, dienstnummer: STA_DN, name: NAME_STA, rank: "Staatsanwalt", role: "STA", allowedPages: ["staatsanwaltschaft"] },
   ]);
 
   await new Promise<void>((resolve) => {
@@ -93,7 +89,6 @@ beforeAll(async () => {
   tokenA = await login(OFFICER_A_DN);
   tokenB = await login(OFFICER_B_DN);
   tokenL = await login(LEADER_DN);
-  tokenSta = await login(STA_DN);
 });
 
 afterAll(async () => {
@@ -223,74 +218,7 @@ describe("case visibility", () => {
     expect(patch.status).toBe(200);
   });
 
-  it("hides cases from STA officers before they are handed over", async () => {
-    const list = await api("/cases", { token: tokenSta });
-    expect(list.status).toBe(200);
-    const ids = list.json.map((c: { id: number }) => c.id);
-    expect(ids).not.toContain(caseAId);
-    expect(ids).not.toContain(caseForeignLeadId);
 
-    const detail = await api(`/cases/${caseAId}`, { token: tokenSta });
-    expect(detail.status).toBe(403);
-  });
 
-  it("lets STA officers see a case once it is handed to the Staatsanwaltschaft", async () => {
-    const patch = await api(`/cases/${caseAId}`, {
-      method: "PATCH",
-      token: tokenL,
-      body: { status: "An STA übergeben" },
-    });
-    expect(patch.status).toBe(200);
 
-    const list = await api("/cases", { token: tokenSta });
-    expect(list.status).toBe(200);
-    const ids = list.json.map((c: { id: number }) => c.id);
-    expect(ids).toContain(caseAId);
-    expect(ids).not.toContain(caseForeignLeadId);
-
-    const detail = await api(`/cases/${caseAId}`, { token: tokenSta });
-    expect(detail.status).toBe(200);
-
-    // Sub-resources follow the same involvement rules.
-    const history = await api(`/cases/${caseAId}/status-history`, { token: tokenSta });
-    expect(history.status).toBe(200);
-  });
-
-  it("keeps STA access read-only on handed-over cases", async () => {
-    const patch = await api(`/cases/${caseAId}`, {
-      method: "PATCH",
-      token: tokenSta,
-      body: { title: "hijacked by STA" },
-    });
-    expect(patch.status).toBe(403);
-
-    const del = await api(`/cases/${caseAId}`, { method: "DELETE", token: tokenSta });
-    expect(del.status).toBe(403);
-
-    const desc = await api(`/cases/${caseAId}/evidence/somefile.png/description`, {
-      method: "PATCH",
-      token: tokenSta,
-      body: { description: "x" },
-    });
-    expect(desc.status).toBe(403);
-
-    const addAgent = await api(`/cases/${caseAId}/agents`, {
-      method: "POST",
-      token: tokenSta,
-      body: { name: NAME_STA, role: "Unterstützender Agent" },
-    });
-    expect(addAgent.status).toBe(403);
-  });
-
-  it("hides the case from STA again when it leaves the Staatsanwaltschaft status", async () => {
-    const patch = await api(`/cases/${caseAId}`, {
-      method: "PATCH",
-      token: tokenL,
-      body: { status: "Aktiv" },
-    });
-    expect(patch.status).toBe(200);
-
-    const detail = await api(`/cases/${caseAId}`, { token: tokenSta });
-    expect(detail.status).toBe(403);
-  });
 });

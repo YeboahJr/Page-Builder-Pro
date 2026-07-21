@@ -43,7 +43,6 @@ const navItems: NavItem[] = [
   { icon: LayoutDashboard, label: "Dashboard", href: "/dashboard", pageKey: "dashboard" },
   { icon: Radio, label: "Leitstelle", href: "/leitstelle", pageKey: "leitstelle" },
   { icon: Briefcase, label: "Fallmanagement", href: "/fallmanagement", pageKey: "fallmanagement" },
-  { icon: Scale, label: "Staatsanwaltschaft", href: "/staatsanwaltschaft", pageKey: "staatsanwaltschaft" },
   {
     icon: Users,
     label: "Personal",

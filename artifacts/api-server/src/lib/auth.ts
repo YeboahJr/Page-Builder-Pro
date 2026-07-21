@@ -11,10 +11,10 @@ export function generateToken(): string {
 }
 
 // Unsichtbare Berechtigungsrollen (officers.role):
-// Admin, Direktion und Leitung haben alle Rechte; Agent und STA haben nur
+// Admin, Direktion und Leitung haben alle Rechte; Agenten haben nur
 // die ihnen per allowedPages zugewiesenen Seitenrechte. Die sichtbaren
 // FIB-Ränge (officers.rank) sind rein kosmetisch und vergeben keine Rechte mehr.
-export const ROLES = ["Admin", "Direktion", "Leitung", "Agent", "STA"] as const;
+export const ROLES = ["Admin", "Direktion", "Leitung", "Agent"] as const;
 export type Role = (typeof ROLES)[number];
 
 export const FULL_ACCESS_ROLES = new Set<string>(["Admin", "Direktion", "Leitung"]);
