@@ -159,6 +159,9 @@ class DocBuilder {
       },
     });
     this.idx += 1;
+    this.empty();
+    // Ausrichtung NACH empty() setzen: empty() stylt seinen (und damit auch
+    // den Bild-)Absatz auf JUSTIFIED und würde die Ausrichtung überschreiben.
     if (opts?.align) {
       this.requests.push({
         updateParagraphStyle: {
@@ -168,7 +171,6 @@ class DocBuilder {
         },
       });
     }
-    this.empty();
   }
 }
 
@@ -252,7 +254,7 @@ export function buildAkteDocRequests(data: AkteDocData): object[] {
   // mit Schreibschrift-Name), da die Docs-API keine überlappenden Elemente kann.
   b.empty();
   if (data.stampUrl) {
-    b.image(data.stampUrl, { widthPt: 230, align: "START" });
+    b.image(data.stampUrl, { widthPt: 230, align: "END" });
   } else {
     // Fallback ohne Stempelbild (z. B. wenn Object Storage nicht erreichbar ist).
     b.text("Federal Investigation Bureau", { bold: true, size: 12, align: "CENTER" });

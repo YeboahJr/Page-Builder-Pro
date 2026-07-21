@@ -18,7 +18,7 @@ function ensureFont(): void {
   }
 }
 
-const INK = "#3b4da0";
+const INK = "#000000";
 
 export async function renderStampImage(opts: { name: string; rang: string | null }): Promise<Buffer> {
   ensureFont();
@@ -34,7 +34,10 @@ export async function renderStampImage(opts: { name: string; rang: string | null
   const seal = await loadImage(Buffer.from(fibStampBlueB64, "base64"));
   const sealW = 470;
   const sealH = sealW * (seal.height / seal.width);
+  // Siegel deutlich transparenter, damit die Schrift darüber klar lesbar ist.
+  ctx.globalAlpha = 0.35;
   ctx.drawImage(seal, 100, 115, sealW, sealH);
+  ctx.globalAlpha = 1;
 
   // Überschrift in Fett (überlappt den oberen Siegelrand wie in der Vorlage).
   ctx.fillStyle = INK;
@@ -43,7 +46,7 @@ export async function renderStampImage(opts: { name: string; rang: string | null
 
   // Name in blauer Schreibschrift über dem Siegel; bei langen Namen wird die
   // Schriftgröße reduziert, damit der Name auf den Stempel passt.
-  ctx.fillStyle = "#5a6bc7";
+  ctx.fillStyle = INK;
   let size = 96;
   ctx.font = `${size}px GreatVibes`;
   while (ctx.measureText(opts.name).width > 560 && size > 40) {
