@@ -210,6 +210,24 @@ function parseObjectPath(path: string): {
   };
 }
 
+// Lädt ein kurzlebiges Akten-Asset (z. B. Siegel/Stempel-PNG für die
+// Google-Docs-Akte) in den privaten Bucket und gibt eine signierte GET-URL
+// zurück, damit Google das Bild beim Einbetten abrufen kann.
+export async function uploadAkteAsset(
+  buffer: Buffer,
+  key: string,
+  contentType: string = "image/png",
+): Promise<string> {
+  const dir = process.env.PRIVATE_OBJECT_DIR || "";
+  if (!dir) {
+    throw new Error("PRIVATE_OBJECT_DIR not set");
+  }
+  const fullPath = `${dir.replace(/\/+$/, "")}/akte-assets/${key}`;
+  const { bucketName, objectName } = parseObjectPath(fullPath);
+  await objectStorageClient.bucket(bucketName).file(objectName).save(buffer, { contentType });
+  return signObjectURL({ bucketName, objectName, method: "GET", ttlSec: 900 });
+}
+
 export async function signObjectURL({
   bucketName,
   objectName,

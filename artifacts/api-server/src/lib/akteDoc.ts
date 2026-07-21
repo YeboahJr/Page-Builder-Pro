@@ -27,6 +27,10 @@ export interface AkteDocData {
   // Einbetten abrufen kann (insertInlineImage lädt die Bilddaten serverseitig).
   images: Array<{ filename: string; description: string | null; url: string }>;
   otherFiles: string[];
+  // Signierte URLs für das Kopfzeilen-Siegel und den Unterschriften-Stempel
+  // (null = ohne Bild, z. B. wenn Object Storage nicht verfügbar ist).
+  sealUrl: string | null;
+  stampUrl: string | null;
 }
 
 export interface AkteDocResult {
@@ -142,18 +146,28 @@ class DocBuilder {
     this.text(SEPARATOR, { align: "JUSTIFIED" });
   }
 
-  image(uri: string) {
+  image(uri: string, opts?: { widthPt?: number; align?: Align }) {
     // Ein Inline-Bild belegt einen Index; danach folgt eine neue Zeile.
+    const start = this.idx;
     this.requests.push({
       insertInlineImage: {
-        location: this.loc(this.idx),
+        location: this.loc(start),
         uri,
         objectSize: {
-          width: { magnitude: 467, unit: "PT" },
+          width: { magnitude: opts?.widthPt ?? 467, unit: "PT" },
         },
       },
     });
     this.idx += 1;
+    if (opts?.align) {
+      this.requests.push({
+        updateParagraphStyle: {
+          range: this.range(start, start + 1),
+          paragraphStyle: { alignment: opts.align },
+          fields: "alignment",
+        },
+      });
+    }
     this.empty();
   }
 }
@@ -234,15 +248,21 @@ export function buildAkteDocRequests(data: AkteDocData): object[] {
     }
   }
 
-  // Signaturblock
+  // Signatur: kompletter Stempel als vorgerendertes Bild (Siegel-Wasserzeichen
+  // mit Schreibschrift-Name), da die Docs-API keine überlappenden Elemente kann.
   b.empty();
-  b.text("Federal Investigation Bureau", { bold: true, size: 12, align: "CENTER" });
-  b.text(data.leadAgent, { italic: true, size: 14, align: "CENTER", color: { r: 0.12, g: 0.23, b: 0.58 } });
-  const rangZeile = [
-    data.leadAgentRank?.trim() || null,
-    data.leadAgentDienstnummer ? `DN-${data.leadAgentDienstnummer}` : null,
-  ].filter(Boolean).join(" | ");
-  if (rangZeile) b.text(rangZeile, { align: "CENTER" });
+  if (data.stampUrl) {
+    b.image(data.stampUrl, { widthPt: 230, align: "START" });
+  } else {
+    // Fallback ohne Stempelbild (z. B. wenn Object Storage nicht erreichbar ist).
+    b.text("Federal Investigation Bureau", { bold: true, size: 12, align: "CENTER" });
+    b.text(data.leadAgent, { italic: true, size: 14, align: "CENTER", color: { r: 0.12, g: 0.23, b: 0.58 } });
+    const rangZeile = [
+      data.leadAgentRank?.trim() || null,
+      data.leadAgentDienstnummer ? `DN-${data.leadAgentDienstnummer}` : null,
+    ].filter(Boolean).join(" | ");
+    if (rangZeile) b.text(rangZeile, { align: "CENTER" });
+  }
 
   return b.requests;
 }
@@ -267,18 +287,16 @@ function documentStyleRequest(): object {
   };
 }
 
-// Kopfzeilen-Inhalt: DOJ/FIB-Titelzeilen, danach wird die 3-Spalten-Tabelle
-// ans Segment-Ende angehängt (Zellen werden in einem Folgeschritt befüllt,
-// weil die Zell-Indizes erst nach dem Einfügen der Tabelle bekannt sind).
+// Kopfzeilen-Gerüst: zwei Tabellen ans Segment-Ende anhängen —
+// Tabelle 1 (1x2): links DOJ/FIB-Titelzeilen, rechts das FIB-Siegel;
+// Tabelle 2 (1x3): Aktenzeichen | Sachbearbeiter | Datum.
+// Die Zellen werden in einem Folgeschritt befüllt, weil die Zell-Indizes
+// erst nach dem Einfügen der Tabellen bekannt sind.
 function buildHeaderRequests(headerId: string): object[] {
-  const b = new DocBuilder({ segmentId: headerId, startIndex: 0 });
-  b.text("U.S. Department of Justice", { size: 18, align: "START" });
-  b.text("Federal Investigation Bureau", { size: 18, bold: true, align: "START" });
-  const requests = b.requests;
-  requests.push({
-    insertTable: { rows: 1, columns: 3, endOfSegmentLocation: { segmentId: headerId } },
-  });
-  return requests;
+  return [
+    { insertTable: { rows: 1, columns: 2, endOfSegmentLocation: { segmentId: headerId } } },
+    { insertTable: { rows: 1, columns: 3, endOfSegmentLocation: { segmentId: headerId } } },
+  ];
 }
 
 function buildFooterRequests(footerId: string): object[] {
@@ -299,94 +317,175 @@ interface DocsStructuralElement {
   table?: { tableRows: Array<{ tableCells: DocsTableCell[] }> };
 }
 
-// Befüllt die Kopfzeilen-Tabelle (Aktenzeichen | Sachbearbeiter | Datum) und
-// blendet die Zellrahmen aus (weiß, wie im Referenz-Doc). Die Einfügungen
-// erfolgen in absteigender Index-Reihenfolge, damit frühere Indizes durch
-// spätere Einfügungen nicht verschoben werden.
+// Weißer (unsichtbarer) Zellrahmen wie im Referenz-Doc.
+const WHITE_BORDER = {
+  color: { color: { rgbColor: { red: 1, green: 1, blue: 1 } } },
+  width: { magnitude: 1, unit: "PT" },
+  dashStyle: "SOLID",
+};
+
+function whiteCellBordersRequest(headerId: string, tableStartIndex: number): object {
+  return {
+    updateTableCellStyle: {
+      tableStartLocation: { segmentId: headerId, index: tableStartIndex },
+      tableCellStyle: {
+        borderLeft: WHITE_BORDER,
+        borderRight: WHITE_BORDER,
+        borderTop: WHITE_BORDER,
+        borderBottom: WHITE_BORDER,
+      },
+      fields: "borderLeft,borderRight,borderTop,borderBottom",
+    },
+  };
+}
+
+function columnWidthRequest(headerId: string, tableStartIndex: number, column: number, widthPt: number): object {
+  return {
+    updateTableColumnProperties: {
+      tableStartLocation: { segmentId: headerId, index: tableStartIndex },
+      columnIndices: [column],
+      tableColumnProperties: { widthType: "FIXED_WIDTH", width: { magnitude: widthPt, unit: "PT" } },
+      fields: "widthType,width",
+    },
+  };
+}
+
+// Text-Spans in eine Tabellenzelle einfügen und stylen.
+function fillCellRequests(headerId: string, insertAt: number, spans: Span[]): object[] {
+  const requests: object[] = [];
+  const raw = spans.map((s) => s.t).join("");
+  requests.push({ insertText: { location: { segmentId: headerId, index: insertAt }, text: raw } });
+  let cursor = insertAt;
+  for (const s of spans) {
+    const sStart = cursor;
+    const sEnd = cursor + s.t.length;
+    cursor = sEnd;
+    const styleEnd = s.t.endsWith("\n") ? sEnd - 1 : sEnd;
+    if (styleEnd <= sStart) continue;
+    requests.push({
+      updateTextStyle: {
+        range: { segmentId: headerId, startIndex: sStart, endIndex: styleEnd },
+        textStyle: {
+          bold: s.bold ?? false,
+          fontSize: { magnitude: s.size ?? 10, unit: "PT" },
+          weightedFontFamily: { fontFamily: FONT },
+        },
+        fields: "bold,fontSize,weightedFontFamily",
+      },
+    });
+  }
+  return requests;
+}
+
+// Befüllt die Kopfzeilen-Tabellen (Titel + Siegel, Aktenzeichen-Zeile), zieht
+// die Linien (unter "Federal Investigation Bureau" und am unteren Rand der
+// Kopfzeile) und blendet alle Zellrahmen aus. Die Einfügungen erfolgen in
+// absteigender Index-Reihenfolge, damit frühere Indizes durch spätere
+// Einfügungen nicht verschoben werden.
 function buildHeaderTableFillRequests(
   headerId: string,
   headerContent: DocsStructuralElement[],
   data: AkteDocData,
 ): object[] {
-  const tableEl = headerContent.find((el) => el.table);
-  if (!tableEl?.table) return [];
-  const cells = tableEl.table.tableRows[0]?.tableCells ?? [];
-  if (cells.length < 3) return [];
+  const tables = headerContent.filter((el) => el.table);
+  if (tables.length < 2) return [];
+  const titleTable = tables[0];
+  const infoTable = tables[1];
+  const titleCells = titleTable.table!.tableRows[0]?.tableCells ?? [];
+  const infoCells = infoTable.table!.tableRows[0]?.tableCells ?? [];
+  if (titleCells.length < 2 || infoCells.length < 3) return [];
 
+  const requests: object[] = [];
+
+  // Untere Abschlusslinie der Kopfzeile: erster Absatz NACH der Info-Tabelle
+  // bekommt eine untere Rahmenlinie (reine Style-Änderung, verschiebt nichts).
+  const infoTableEnd = (infoTable as { endIndex?: number }).endIndex;
+  const afterPara = headerContent.find(
+    (el) => !el.table && infoTableEnd !== undefined && el.startIndex >= infoTableEnd,
+  ) as ({ startIndex: number; endIndex?: number } | undefined);
+  if (afterPara?.endIndex !== undefined) {
+    requests.push({
+      updateParagraphStyle: {
+        range: { segmentId: headerId, startIndex: afterPara.startIndex, endIndex: afterPara.endIndex },
+        paragraphStyle: {
+          borderBottom: {
+            width: { magnitude: 1, unit: "PT" },
+            padding: { magnitude: 1, unit: "PT" },
+            dashStyle: "SOLID",
+            color: { color: { rgbColor: { red: 0, green: 0, blue: 0 } } },
+          },
+        },
+        fields: "borderBottom",
+      },
+    });
+  }
+
+  // --- Info-Tabelle (höhere Indizes zuerst befüllen) ---
   const sachbearbeiter = data.leadAgentDienstnummer
     ? `DN-${data.leadAgentDienstnummer} | ${data.leadAgent}`
     : data.leadAgent;
-  const cellSpans: Span[][] = [
+  const infoSpans: Span[][] = [
     [{ t: "Aktenzeichen:\n", bold: true }, { t: data.caseNumber }],
     [{ t: "Sachbearbeiter:\n", bold: true }, { t: sachbearbeiter }],
     [{ t: "Datum:\n", bold: true }, { t: formatDateDe(data.createdAt) }],
   ];
-
-  const requests: object[] = [];
-  // Zellen von hinten nach vorne befüllen.
-  for (let c = cells.length - 1; c >= 0; c--) {
-    const spans = cellSpans[c];
+  for (let c = infoCells.length - 1; c >= 0; c--) {
+    const spans = infoSpans[c];
     if (!spans) continue;
-    // Erste Absatz-Position innerhalb der Zelle (Zellenstart + 1).
-    const insertAt = cells[c].startIndex + 1;
-    const raw = spans.map((s) => s.t).join("");
-    requests.push({ insertText: { location: { segmentId: headerId, index: insertAt }, text: raw } });
-    let cursor = insertAt;
-    for (const s of spans) {
-      const sStart = cursor;
-      const sEnd = cursor + s.t.length;
-      cursor = sEnd;
-      const styleEnd = s.t.endsWith("\n") ? sEnd - 1 : sEnd;
-      if (styleEnd <= sStart) continue;
-      requests.push({
-        updateTextStyle: {
-          range: { segmentId: headerId, startIndex: sStart, endIndex: styleEnd },
-          textStyle: {
-            bold: s.bold ?? false,
-            fontSize: { magnitude: 10, unit: "PT" },
-            weightedFontFamily: { fontFamily: FONT },
-          },
-          fields: "bold,fontSize,weightedFontFamily",
-        },
-      });
-    }
+    requests.push(...fillCellRequests(headerId, infoCells[c].startIndex + 1, spans));
+  }
+  requests.push(whiteCellBordersRequest(headerId, infoTable.startIndex));
+  requests.push(columnWidthRequest(headerId, infoTable.startIndex, 0, 222));
+  requests.push(columnWidthRequest(headerId, infoTable.startIndex, 1, 118.5));
+
+  // --- Titel-Tabelle: rechte Zelle (Siegel), dann linke Zelle (Titelzeilen) ---
+  if (data.sealUrl) {
+    const sealAt = titleCells[1].startIndex + 1;
+    requests.push({
+      insertInlineImage: {
+        location: { segmentId: headerId, index: sealAt },
+        uri: data.sealUrl,
+        objectSize: { width: { magnitude: 68, unit: "PT" } },
+      },
+    });
+    requests.push({
+      updateParagraphStyle: {
+        range: { segmentId: headerId, startIndex: sealAt, endIndex: sealAt + 1 },
+        paragraphStyle: { alignment: "END" },
+        fields: "alignment",
+      },
+    });
   }
 
-  // Zellrahmen weiß (unsichtbar) wie im Referenz-Doc.
-  const whiteBorder = {
-    color: { color: { rgbColor: { red: 1, green: 1, blue: 1 } } },
-    width: { magnitude: 1, unit: "PT" },
-    dashStyle: "SOLID",
-  };
+  const titleAt = titleCells[0].startIndex + 1;
+  const line1 = "U.S. Department of Justice\n";
+  const line2 = "Federal Investigation Bureau";
+  requests.push(
+    ...fillCellRequests(headerId, titleAt, [
+      { t: line1, size: 18 },
+      { t: line2, size: 18, bold: true },
+    ]),
+  );
+  // Linie unter "Federal Investigation Bureau" (wie in der Vorlage).
+  const line2Start = titleAt + line1.length;
   requests.push({
-    updateTableCellStyle: {
-      tableStartLocation: { segmentId: headerId, index: tableEl.startIndex },
-      tableCellStyle: {
-        borderLeft: whiteBorder,
-        borderRight: whiteBorder,
-        borderTop: whiteBorder,
-        borderBottom: whiteBorder,
+    updateParagraphStyle: {
+      range: { segmentId: headerId, startIndex: line2Start, endIndex: line2Start + line2.length + 1 },
+      paragraphStyle: {
+        borderBottom: {
+          width: { magnitude: 2, unit: "PT" },
+          padding: { magnitude: 2, unit: "PT" },
+          dashStyle: "SOLID",
+          color: { color: { rgbColor: { red: 0, green: 0, blue: 0 } } },
+        },
       },
-      fields: "borderLeft,borderRight,borderTop,borderBottom",
+      fields: "borderBottom",
     },
   });
-  // Spaltenbreiten wie im Referenz-Doc (222 | 118.5 | Rest).
-  requests.push({
-    updateTableColumnProperties: {
-      tableStartLocation: { segmentId: headerId, index: tableEl.startIndex },
-      columnIndices: [0],
-      tableColumnProperties: { widthType: "FIXED_WIDTH", width: { magnitude: 222, unit: "PT" } },
-      fields: "widthType,width",
-    },
-  });
-  requests.push({
-    updateTableColumnProperties: {
-      tableStartLocation: { segmentId: headerId, index: tableEl.startIndex },
-      columnIndices: [1],
-      tableColumnProperties: { widthType: "FIXED_WIDTH", width: { magnitude: 118.5, unit: "PT" } },
-      fields: "widthType,width",
-    },
-  });
+  requests.push(whiteCellBordersRequest(headerId, titleTable.startIndex));
+  requests.push(columnWidthRequest(headerId, titleTable.startIndex, 0, 380));
+  requests.push(columnWidthRequest(headerId, titleTable.startIndex, 1, 87));
+
   return requests;
 }
 
@@ -465,23 +564,26 @@ export async function createAkteDoc(data: AkteDocData): Promise<AkteDocResult> {
   // Dokument lesen (die Docs-API vergibt sie beim Einfügen der Tabelle).
   if (headerId) {
     const getRes = await connectors.proxy("google-docs", `/v1/documents/${documentId}`);
-    if (getRes.ok) {
-      const fullDoc = (await getRes.json()) as {
-        headers?: Record<string, { content: DocsStructuralElement[] }>;
-      };
-      const headerContent = fullDoc.headers?.[headerId]?.content;
-      if (headerContent) {
-        const fillRequests = buildHeaderTableFillRequests(headerId, headerContent, data);
-        if (fillRequests.length > 0) {
-          const fillRes = await batchUpdate(connectors, documentId, fillRequests);
-          if (!fillRes.ok) {
-            const body = await fillRes.text();
-            throw new Error(
-              `Google Docs: Kopfzeilen-Tabelle konnte nicht befüllt werden (HTTP ${fillRes.status}): ${body.slice(0, 300)}`,
-            );
-          }
-        }
-      }
+    if (!getRes.ok) {
+      throw new Error(`Google Docs: Dokument konnte nicht gelesen werden (HTTP ${getRes.status})`);
+    }
+    const fullDoc = (await getRes.json()) as {
+      headers?: Record<string, { content: DocsStructuralElement[] }>;
+    };
+    const headerContent = fullDoc.headers?.[headerId]?.content;
+    if (!headerContent) {
+      throw new Error("Google Docs: Kopfzeilen-Inhalt fehlt im Dokument");
+    }
+    const fillRequests = buildHeaderTableFillRequests(headerId, headerContent, data);
+    if (fillRequests.length === 0) {
+      throw new Error("Google Docs: Kopfzeilen-Tabellen wurden nicht wie erwartet angelegt");
+    }
+    const fillRes = await batchUpdate(connectors, documentId, fillRequests);
+    if (!fillRes.ok) {
+      const body = await fillRes.text();
+      throw new Error(
+        `Google Docs: Kopfzeilen-Tabelle konnte nicht befüllt werden (HTTP ${fillRes.status}): ${body.slice(0, 300)}`,
+      );
     }
   }
 

@@ -6,8 +6,10 @@ import multer from "multer";
 import path from "path";
 import fs from "fs";
 import { randomUUID } from "crypto";
-import { objectStorageClient, signObjectURL } from "../lib/objectStorage";
+import { objectStorageClient, signObjectURL, uploadAkteAsset } from "../lib/objectStorage";
 import { createAkteDoc } from "../lib/akteDoc";
+import { renderStampImage } from "../lib/stampImage";
+import fibEmblemGray from "../assets/fib-emblem-gray.png";
 import {
   parsePrivateObjectDir,
   evidenceObjectName,
@@ -773,6 +775,25 @@ router.get("/:id/akte", async (req, res) => {
     }
   }
 
+  // Kopfzeilen-Siegel und Unterschriften-Stempel als kurzlebig signierte URLs
+  // bereitstellen (Google lädt die Bilder beim Einbetten serverseitig).
+  // Fällt der Upload aus, wird die Akte ohne Bilder erzeugt (Text-Fallback).
+  let sealUrl: string | null = null;
+  let stampUrl: string | null = null;
+  try {
+    sealUrl = await uploadAkteAsset(Buffer.from(fibEmblemGray, "base64"), "fib-seal.png");
+  } catch (err) {
+    req.log.warn({ err }, "Akte: Kopfzeilen-Siegel konnte nicht hochgeladen werden");
+  }
+  try {
+    const stampPng = await renderStampImage({ name: c.leadAgent, rang: leadOfficer?.rank ?? null });
+    // Eindeutiger Key pro Aufruf, damit parallele Akte-Erstellungen sich nicht
+    // gegenseitig überschreiben.
+    stampUrl = await uploadAkteAsset(stampPng, `stamp-case-${caseId}-${Date.now()}.png`);
+  } catch (err) {
+    req.log.warn({ err, caseId }, "Akte: Unterschriften-Stempel konnte nicht erzeugt werden");
+  }
+
   try {
     const result = await createAkteDoc({
       caseNumber: c.caseNumber,
@@ -793,6 +814,8 @@ router.get("/:id/akte", async (req, res) => {
       createdAt: c.createdAt,
       images,
       otherFiles,
+      sealUrl,
+      stampUrl,
     });
     res.json(result);
   } catch (err) {

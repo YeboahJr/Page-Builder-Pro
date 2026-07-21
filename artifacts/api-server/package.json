@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@google-cloud/storage": "^7.21.0",
+    "@napi-rs/canvas": "^1.0.2",
     "@replit/connectors-sdk": "^0.4.1",
     "@swc/helpers": "^0.5.23",
     "@workspace/api-zod": "workspace:*",

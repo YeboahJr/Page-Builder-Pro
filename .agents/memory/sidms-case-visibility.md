@@ -5,7 +5,7 @@ description: How per-officer case access is determined (name-based matching, Ers
 
 # Case visibility
 
-Non-leadership officers only see/edit cases where they are involved; leadership (same rank set as in auth lib) sees everything.
+Officers without a full-access role only see/edit cases where they are involved; full-access roles (per `hasFullAccess(role)`: Admin/Direktion/Leitung) see everything.
 
 **Rule:** Involvement = `cases.leadAgent === officer.name` (exact match) OR a `case_agents` row with that officer's exact `name`. There is no FK to officers — matching is by free-text name, so the lead-agent input must exactly equal the officer's stored name for access to work.
 
