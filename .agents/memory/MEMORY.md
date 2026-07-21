@@ -4,4 +4,3 @@
 - [SIDMS Rollen](sidms-roles.md) — Rechte hängen an unsichtbarer officers.role (Admin/Direktion/Leitung = alles, Agent = nur allowedPages); Rang rein kosmetisch; Admin-User nur in Dev-DB geseedet.
 - [SIDMS Seitenrechte](sidms-page-rights.md) — allowedPages null = KEINE Seiten (seit Rollensystem); Keys in api-server und sidms bewusst dupliziert; Daten-APIs via requirePages gegated; Voll-Rollen sehen immer alles.
 - [SIDMS Fall-Sichtbarkeit](sidms-case-visibility.md) — involvement is matched by exact officer name (free-text leadAgent/case_agents), creator auto-linked as role "Ersteller"; renames break access.
-- [SIDMS Akte-PDF](sidms-akte-pdf.md) — pdfkit external im Bundle (+@swc/helpers), base64-Loader; Briefkopf via pageAdded auf jeder Seite: Header-/Signatur-Texte höhenbegrenzen, sonst rekursive Seitenerzeugung.

@@ -16,4 +16,4 @@ Die frühere PDF-Generierung (pdfkit) wurde komplett entfernt. `GET /api/cases/:
 - Docs-API-Falle: `updateTextStyle` mit leerer Range (Leerzeilen) → HTTP 400 „The range should not be empty". Leerzeilen dürfen nur Paragraph-Style bekommen.
 - Beweisbilder werden über kurzlebig signierte GCS-URLs (`signObjectURL`, 900 s) per `insertInlineImage` eingebettet; scheitert das batchUpdate, Fallback ohne Bilder (nur namentliche Auflistung).
 
-**Test-Rezept:** Login `POST /api/auth/login` mit Body-Feldern `dienstnummer`/`passwort` (NICHT username/password), Admin/1234. Case anlegen → `GET /api/cases/$ID/akte` → JSON prüfen; Inhalt via `export?format=docx` laden und `word/document.xml` aus dem ZIP greppen. Danach Case löschen.
+**Test-Rezept:** Login `POST /api/auth/login` mit Body-Feldern `dienstnummer`/`passwort` (NICHT username/password); Dev-Seed-Admin-Zugangsdaten stehen im Seed-Skript. Case anlegen → `GET /api/cases/$ID/akte` → JSON prüfen; Inhalt via `export?format=docx` laden und `word/document.xml` aus dem ZIP greppen. Danach Case löschen.
