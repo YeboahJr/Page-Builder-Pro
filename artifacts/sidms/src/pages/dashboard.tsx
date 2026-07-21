@@ -11,6 +11,9 @@ import {
 } from "lucide-react";
 import EvidenceUpload, { type UploadFile, uploadEvidenceFiles, allDescriptionsFilled } from "@/components/EvidenceUpload";
 import CaseOverview from "@/components/CaseOverview";
+import RazziaSection from "@/components/RazziaSection";
+import { useAuth } from "@/contexts/AuthContext";
+import { hasFullAccess } from "@/lib/ranks";
 import { STRAFTATEN } from "@/lib/straftaten";
 
 const CATEGORIES_NEW = ["Gang", "Familie"];
@@ -37,6 +40,10 @@ export default function Dashboard() {
   const [newCaseSubmitting, setNewCaseSubmitting] = useState(false);
   const [newCaseError, setNewCaseError] = useState<string | null>(null);
   const [straftatenOpen, setStraftatenOpen] = useState(false);
+  const [showRazzia, setShowRazzia] = useState(false);
+  const { officer } = useAuth();
+  // Razzia-Anträge sind nur für Direktion/Leitung (und Admin) sichtbar.
+  const leadership = hasFullAccess(officer?.role);
 
   const { data: stats } = useGetDashboardStats();
   const createCase = useCreateCase();
@@ -236,7 +243,11 @@ export default function Dashboard() {
       </div>
 
       {/* Main content */}
-      <CaseOverview onNewCase={() => setShowNewCase(true)} />
+      <CaseOverview
+        onNewCase={() => setShowNewCase(true)}
+        onNewRazzia={leadership ? () => setShowRazzia(true) : undefined}
+      />
+      {leadership && <RazziaSection createOpen={showRazzia} onCreateClose={() => setShowRazzia(false)} />}
     </div>
   );
 }

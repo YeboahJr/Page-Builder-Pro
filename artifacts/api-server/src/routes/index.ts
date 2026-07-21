@@ -8,8 +8,9 @@ import patrolsRouter from "./patrols";
 import officersRouter from "./officers";
 import idChangesRouter from "./idchanges";
 import evidenceRouter from "./evidence";
+import razziaRouter from "./razzia";
 import storageRouter from "./storage";
-import { requirePages } from "../middlewares/requirePages";
+import { requirePages, requireLeadership } from "../middlewares/requirePages";
 
 const router: IRouter = Router();
 
@@ -27,6 +28,7 @@ router.use("/patrols", requirePages("leitstelle"), patrolsRouter);
 router.use("/officers", officersRouter);
 router.use("/idchanges", requirePages("personal"), idChangesRouter);
 router.use("/evidence", requirePages("fallmanagement"), evidenceRouter);
+router.use("/razzia-antraege", requireLeadership(), razziaRouter);
 router.use(storageRouter);
 
 export default router;

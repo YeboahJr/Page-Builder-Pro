@@ -406,6 +406,103 @@ export const RemoveCaseAgentResponse = zod.void()
 
 
 /**
+ * @summary List all Razzia-Anträge (nur Direktion/Leitung)
+ */
+export const GetRazziaAntraegeResponseItem = zod.object({
+  "id": zod.number(),
+  "target": zod.string().describe('Gegen wen der Durchsuchungsbefehl beantragt wird'),
+  "caseIds": zod.array(zod.number()),
+  "createdBy": zod.string().nullish(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string(),
+  "cases": zod.array(zod.object({
+  "id": zod.number(),
+  "caseNumber": zod.string(),
+  "title": zod.string(),
+  "status": zod.string()
+})).optional().describe('Kurzinfo der verknüpften Akten')
+})
+export const GetRazziaAntraegeResponse = zod.array(GetRazziaAntraegeResponseItem)
+
+
+/**
+ * @summary Neuen Razzia-Antrag erstellen (nur Direktion/Leitung)
+ */
+export const CreateRazziaAntragBody = zod.object({
+  "target": zod.string(),
+  "caseIds": zod.array(zod.number())
+})
+
+export const CreateRazziaAntragResponse = zod.object({
+  "id": zod.number(),
+  "target": zod.string().describe('Gegen wen der Durchsuchungsbefehl beantragt wird'),
+  "caseIds": zod.array(zod.number()),
+  "createdBy": zod.string().nullish(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string(),
+  "cases": zod.array(zod.object({
+  "id": zod.number(),
+  "caseNumber": zod.string(),
+  "title": zod.string(),
+  "status": zod.string()
+})).optional().describe('Kurzinfo der verknüpften Akten')
+})
+
+
+/**
+ * @summary Razzia-Antrag bearbeiten (nur Direktion/Leitung)
+ */
+export const UpdateRazziaAntragParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateRazziaAntragBody = zod.object({
+  "target": zod.string(),
+  "caseIds": zod.array(zod.number())
+})
+
+export const UpdateRazziaAntragResponse = zod.object({
+  "id": zod.number(),
+  "target": zod.string().describe('Gegen wen der Durchsuchungsbefehl beantragt wird'),
+  "caseIds": zod.array(zod.number()),
+  "createdBy": zod.string().nullish(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string(),
+  "cases": zod.array(zod.object({
+  "id": zod.number(),
+  "caseNumber": zod.string(),
+  "title": zod.string(),
+  "status": zod.string()
+})).optional().describe('Kurzinfo der verknüpften Akten')
+})
+
+
+/**
+ * @summary Razzia-Antrag löschen (nur Direktion/Leitung)
+ */
+export const DeleteRazziaAntragParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteRazziaAntragResponse = zod.void()
+
+
+/**
+ * @summary Razzia-Antrag als Google-Docs-Dokument erzeugen (nur Direktion/Leitung)
+ */
+export const GetRazziaAntragDokumentParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetRazziaAntragDokumentResponse = zod.object({
+  "documentId": zod.string(),
+  "url": zod.string(),
+  "exportUrl": zod.string(),
+  "title": zod.string()
+})
+
+
+/**
  * @summary List all reports/meldungen
  */
 export const GetReportsQueryParams = zod.object({

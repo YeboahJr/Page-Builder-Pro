@@ -38,6 +38,7 @@ import type {
   EvidenceInput,
   GetCasesParams,
   GetEvidenceParams,
+  GetRazziaAntragDokument200,
   GetReportsParams,
   HealthStatus,
   IdChange,
@@ -48,6 +49,8 @@ import type {
   Patrol,
   PatrolInput,
   PatrolUpdate,
+  RazziaAntrag,
+  RazziaAntragInput,
   RegisterInput,
   RegisterResult,
   Report,
@@ -1353,6 +1356,371 @@ export const useRemoveCaseAgent = <TError = ErrorType<void>,
       > => {
       return useMutation(getRemoveCaseAgentMutationOptions(options));
     }
+
+export const getGetRazziaAntraegeUrl = () => {
+
+
+
+
+  return `/api/razzia-antraege`
+}
+
+/**
+ * @summary List all Razzia-Anträge (nur Direktion/Leitung)
+ */
+export const getRazziaAntraege = async ( options?: RequestInit): Promise<RazziaAntrag[]> => {
+
+  return customFetch<RazziaAntrag[]>(getGetRazziaAntraegeUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetRazziaAntraegeQueryKey = () => {
+    return [
+    `/api/razzia-antraege`
+    ] as const;
+    }
+
+
+export const getGetRazziaAntraegeQueryOptions = <TData = Awaited<ReturnType<typeof getRazziaAntraege>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getRazziaAntraege>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetRazziaAntraegeQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getRazziaAntraege>>> = ({ signal }) => getRazziaAntraege({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getRazziaAntraege>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetRazziaAntraegeQueryResult = NonNullable<Awaited<ReturnType<typeof getRazziaAntraege>>>
+export type GetRazziaAntraegeQueryError = ErrorType<void>
+
+
+/**
+ * @summary List all Razzia-Anträge (nur Direktion/Leitung)
+ */
+
+export function useGetRazziaAntraege<TData = Awaited<ReturnType<typeof getRazziaAntraege>>, TError = ErrorType<void>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getRazziaAntraege>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetRazziaAntraegeQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateRazziaAntragUrl = () => {
+
+
+
+
+  return `/api/razzia-antraege`
+}
+
+/**
+ * @summary Neuen Razzia-Antrag erstellen (nur Direktion/Leitung)
+ */
+export const createRazziaAntrag = async (razziaAntragInput: RazziaAntragInput, options?: RequestInit): Promise<RazziaAntrag> => {
+
+  return customFetch<RazziaAntrag>(getCreateRazziaAntragUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(razziaAntragInput)
+  }
+);}
+
+
+
+
+export const getCreateRazziaAntragMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createRazziaAntrag>>, TError,{data: BodyType<RazziaAntragInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createRazziaAntrag>>, TError,{data: BodyType<RazziaAntragInput>}, TContext> => {
+
+const mutationKey = ['createRazziaAntrag'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createRazziaAntrag>>, {data: BodyType<RazziaAntragInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createRazziaAntrag(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateRazziaAntragMutationResult = NonNullable<Awaited<ReturnType<typeof createRazziaAntrag>>>
+    export type CreateRazziaAntragMutationBody = BodyType<RazziaAntragInput>
+    export type CreateRazziaAntragMutationError = ErrorType<void>
+
+    /**
+ * @summary Neuen Razzia-Antrag erstellen (nur Direktion/Leitung)
+ */
+export const useCreateRazziaAntrag = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createRazziaAntrag>>, TError,{data: BodyType<RazziaAntragInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createRazziaAntrag>>,
+        TError,
+        {data: BodyType<RazziaAntragInput>},
+        TContext
+      > => {
+      return useMutation(getCreateRazziaAntragMutationOptions(options));
+    }
+
+export const getUpdateRazziaAntragUrl = (id: number,) => {
+
+
+
+
+  return `/api/razzia-antraege/${id}`
+}
+
+/**
+ * @summary Razzia-Antrag bearbeiten (nur Direktion/Leitung)
+ */
+export const updateRazziaAntrag = async (id: number,
+    razziaAntragInput: RazziaAntragInput, options?: RequestInit): Promise<RazziaAntrag> => {
+
+  return customFetch<RazziaAntrag>(getUpdateRazziaAntragUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(razziaAntragInput)
+  }
+);}
+
+
+
+
+export const getUpdateRazziaAntragMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateRazziaAntrag>>, TError,{id: number;data: BodyType<RazziaAntragInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateRazziaAntrag>>, TError,{id: number;data: BodyType<RazziaAntragInput>}, TContext> => {
+
+const mutationKey = ['updateRazziaAntrag'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateRazziaAntrag>>, {id: number;data: BodyType<RazziaAntragInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateRazziaAntrag(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateRazziaAntragMutationResult = NonNullable<Awaited<ReturnType<typeof updateRazziaAntrag>>>
+    export type UpdateRazziaAntragMutationBody = BodyType<RazziaAntragInput>
+    export type UpdateRazziaAntragMutationError = ErrorType<void>
+
+    /**
+ * @summary Razzia-Antrag bearbeiten (nur Direktion/Leitung)
+ */
+export const useUpdateRazziaAntrag = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateRazziaAntrag>>, TError,{id: number;data: BodyType<RazziaAntragInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateRazziaAntrag>>,
+        TError,
+        {id: number;data: BodyType<RazziaAntragInput>},
+        TContext
+      > => {
+      return useMutation(getUpdateRazziaAntragMutationOptions(options));
+    }
+
+export const getDeleteRazziaAntragUrl = (id: number,) => {
+
+
+
+
+  return `/api/razzia-antraege/${id}`
+}
+
+/**
+ * @summary Razzia-Antrag löschen (nur Direktion/Leitung)
+ */
+export const deleteRazziaAntrag = async (id: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteRazziaAntragUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteRazziaAntragMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteRazziaAntrag>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteRazziaAntrag>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['deleteRazziaAntrag'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteRazziaAntrag>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteRazziaAntrag(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteRazziaAntragMutationResult = NonNullable<Awaited<ReturnType<typeof deleteRazziaAntrag>>>
+
+    export type DeleteRazziaAntragMutationError = ErrorType<void>
+
+    /**
+ * @summary Razzia-Antrag löschen (nur Direktion/Leitung)
+ */
+export const useDeleteRazziaAntrag = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteRazziaAntrag>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteRazziaAntrag>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getDeleteRazziaAntragMutationOptions(options));
+    }
+
+export const getGetRazziaAntragDokumentUrl = (id: number,) => {
+
+
+
+
+  return `/api/razzia-antraege/${id}/dokument`
+}
+
+/**
+ * @summary Razzia-Antrag als Google-Docs-Dokument erzeugen (nur Direktion/Leitung)
+ */
+export const getRazziaAntragDokument = async (id: number, options?: RequestInit): Promise<GetRazziaAntragDokument200> => {
+
+  return customFetch<GetRazziaAntragDokument200>(getGetRazziaAntragDokumentUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetRazziaAntragDokumentQueryKey = (id: number,) => {
+    return [
+    `/api/razzia-antraege/${id}/dokument`
+    ] as const;
+    }
+
+
+export const getGetRazziaAntragDokumentQueryOptions = <TData = Awaited<ReturnType<typeof getRazziaAntragDokument>>, TError = ErrorType<void>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getRazziaAntragDokument>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetRazziaAntragDokumentQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getRazziaAntragDokument>>> = ({ signal }) => getRazziaAntragDokument(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getRazziaAntragDokument>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetRazziaAntragDokumentQueryResult = NonNullable<Awaited<ReturnType<typeof getRazziaAntragDokument>>>
+export type GetRazziaAntragDokumentQueryError = ErrorType<void>
+
+
+/**
+ * @summary Razzia-Antrag als Google-Docs-Dokument erzeugen (nur Direktion/Leitung)
+ */
+
+export function useGetRazziaAntragDokument<TData = Awaited<ReturnType<typeof getRazziaAntragDokument>>, TError = ErrorType<void>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getRazziaAntragDokument>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetRazziaAntragDokumentQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 
 export const getGetReportsUrl = (params?: GetReportsParams,) => {
   const normalizedParams = new URLSearchParams();

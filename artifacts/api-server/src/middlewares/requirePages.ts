@@ -35,3 +35,22 @@ export function requirePages(...keys: PageKey[]): RequestHandler {
     res.status(403).json({ error: "Keine Berechtigung für diese Seite" });
   };
 }
+
+/**
+ * Nur für Vollzugriffs-Rollen (Admin/Direktion/Leitung) — z. B. Razzia-Anträge.
+ * Seitenrechte (allowedPages) reichen hier bewusst NICHT aus.
+ */
+export function requireLeadership(): RequestHandler {
+  return async (req: Request, res: Response, next: NextFunction) => {
+    const officer = await resolveOfficer(req);
+    if (!officer) {
+      res.status(401).json({ error: "Nicht angemeldet" });
+      return;
+    }
+    if (hasFullAccess(officer.role)) {
+      next();
+      return;
+    }
+    res.status(403).json({ error: "Keine Berechtigung" });
+  };
+}

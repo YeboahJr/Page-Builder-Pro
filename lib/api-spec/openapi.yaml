@@ -411,6 +411,137 @@ paths:
         "404":
           description: Case or agent not found
 
+  /razzia-antraege:
+    get:
+      operationId: getRazziaAntraege
+      tags: [razzia]
+      summary: List all Razzia-Anträge (nur Direktion/Leitung)
+      responses:
+        "200":
+          description: Liste der Razzia-Anträge
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/RazziaAntrag"
+        "401":
+          description: Not authenticated
+        "403":
+          description: Keine Berechtigung
+    post:
+      operationId: createRazziaAntrag
+      tags: [razzia]
+      summary: Neuen Razzia-Antrag erstellen (nur Direktion/Leitung)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RazziaAntragInput"
+      responses:
+        "201":
+          description: Razzia-Antrag erstellt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RazziaAntrag"
+        "400":
+          description: Ungültige Eingabe
+        "401":
+          description: Not authenticated
+        "403":
+          description: Keine Berechtigung
+
+  /razzia-antraege/{id}:
+    patch:
+      operationId: updateRazziaAntrag
+      tags: [razzia]
+      summary: Razzia-Antrag bearbeiten (nur Direktion/Leitung)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RazziaAntragInput"
+      responses:
+        "200":
+          description: Razzia-Antrag aktualisiert
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RazziaAntrag"
+        "400":
+          description: Ungültige Eingabe
+        "401":
+          description: Not authenticated
+        "403":
+          description: Keine Berechtigung
+        "404":
+          description: Nicht gefunden
+    delete:
+      operationId: deleteRazziaAntrag
+      tags: [razzia]
+      summary: Razzia-Antrag löschen (nur Direktion/Leitung)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Gelöscht
+        "401":
+          description: Not authenticated
+        "403":
+          description: Keine Berechtigung
+        "404":
+          description: Nicht gefunden
+
+  /razzia-antraege/{id}/dokument:
+    get:
+      operationId: getRazziaAntragDokument
+      tags: [razzia]
+      summary: Razzia-Antrag als Google-Docs-Dokument erzeugen (nur Direktion/Leitung)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Links zum erzeugten Dokument
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [documentId, url, exportUrl, title]
+                properties:
+                  documentId:
+                    type: string
+                  url:
+                    type: string
+                  exportUrl:
+                    type: string
+                  title:
+                    type: string
+        "401":
+          description: Not authenticated
+        "403":
+          description: Keine Berechtigung
+        "404":
+          description: Nicht gefunden
+        "502":
+          description: Dokument konnte nicht erstellt werden
+
   /reports:
     get:
       operationId: getReports
@@ -1330,6 +1461,52 @@ components:
           type: ["integer", "null"]
         caseNumber:
           type: ["string", "null"]
+
+    RazziaAntrag:
+      type: object
+      required: [id, target, caseIds, createdAt, updatedAt]
+      properties:
+        id:
+          type: integer
+        target:
+          type: string
+          description: "Gegen wen der Durchsuchungsbefehl beantragt wird"
+        caseIds:
+          type: array
+          items:
+            type: integer
+        createdBy:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+        cases:
+          type: array
+          description: "Kurzinfo der verknüpften Akten"
+          items:
+            type: object
+            required: [id, caseNumber, title, status]
+            properties:
+              id:
+                type: integer
+              caseNumber:
+                type: string
+              title:
+                type: string
+              status:
+                type: string
+
+    RazziaAntragInput:
+      type: object
+      required: [target, caseIds]
+      properties:
+        target:
+          type: string
+        caseIds:
+          type: array
+          items:
+            type: integer
 
     Case:
       type: object

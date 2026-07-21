@@ -40,6 +40,22 @@ export interface AkteDocResult {
   title: string;
 }
 
+// Daten für den "Antrag auf Durchsuchungsbefehl" (Razzia-Antrag).
+// Kopfzeile/Fußzeile identisch zur Akte; der Textkörper folgt der vom User
+// vorgegebenen Antrags-Vorlage (Anschreiben an die Generalstaatsanwaltschaft).
+export interface RazziaDocData {
+  target: string;
+  antragNumber: string;
+  createdBy: string;
+  createdByDienstnummer: string | null;
+  createdByRank: string | null;
+  createdAt: Date;
+  // Angehängte (abgeschlossene) Akten in Auswahlreihenfolge.
+  cases: Array<{ caseNumber: string; title: string; straftaten: string[] | null }>;
+  sealUrl: string | null;
+  stampUrl: string | null;
+}
+
 const FONT = "Montserrat";
 const SEPARATOR = "____________________________________________________________________________________";
 
@@ -384,10 +400,20 @@ function fillCellRequests(headerId: string, insertAt: number, spans: Span[]): ob
 // Kopfzeile) und blendet alle Zellrahmen aus. Die Einfügungen erfolgen in
 // absteigender Index-Reihenfolge, damit frühere Indizes durch spätere
 // Einfügungen nicht verschoben werden.
+// Nur die Felder, die die Kopfzeile wirklich braucht — so ist die Kopfzeile
+// für Akte UND Razzia-Antrag wiederverwendbar.
+interface HeaderData {
+  caseNumber: string;
+  leadAgent: string;
+  leadAgentDienstnummer: string | null;
+  createdAt: Date;
+  sealUrl: string | null;
+}
+
 function buildHeaderTableFillRequests(
   headerId: string,
   headerContent: DocsStructuralElement[],
-  data: AkteDocData,
+  data: HeaderData,
 ): object[] {
   const tables = headerContent.filter((el) => el.table);
   if (tables.length < 2) return [];
@@ -503,18 +529,23 @@ async function batchUpdate(
   });
 }
 
-// Erstellt das Google-Docs-Dokument, befüllt es und gibt es per Link frei
-// ("Jeder mit dem Link kann ansehen"), damit Öffnen/Download ohne Google-Login
-// des jeweiligen Beamten funktionieren.
-export async function createAkteDoc(data: AkteDocData): Promise<AkteDocResult> {
+// Erstellt ein Google-Docs-Dokument mit FIB-Kopf-/Fußzeile, befüllt es und
+// gibt es per Link frei ("Jeder mit dem Link kann ansehen"), damit
+// Öffnen/Download ohne Google-Login des jeweiligen Beamten funktionieren.
+async function createFibDoc(opts: {
+  title: string;
+  header: HeaderData;
+  buildBody: () => object[];
+  // Fallback-Body ohne eingebettete Bilder (z. B. wenn ein Bild nicht abrufbar ist).
+  buildBodyFallback?: () => object[];
+}): Promise<AkteDocResult> {
   // Client nie cachen — der Connector-Proxy kümmert sich um Token-Refresh.
   const connectors = new ReplitConnectors();
 
-  const title = `Akte ${data.caseNumber} – ${data.title}`;
   const createRes = await connectors.proxy("google-docs", "/v1/documents", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ title }),
+    body: JSON.stringify({ title: opts.title }),
   });
   if (!createRes.ok) {
     throw new Error(`Google Docs: Dokument konnte nicht erstellt werden (HTTP ${createRes.status})`);
@@ -528,16 +559,11 @@ export async function createAkteDoc(data: AkteDocData): Promise<AkteDocResult> {
     { createHeader: { type: "DEFAULT" } },
     { createFooter: { type: "DEFAULT" } },
   ];
-  let updateRes = await batchUpdate(connectors, documentId, [...baseRequests, ...buildAkteDocRequests(data)]);
-  if (!updateRes.ok && data.images.length > 0) {
+  let updateRes = await batchUpdate(connectors, documentId, [...baseRequests, ...opts.buildBody()]);
+  if (!updateRes.ok && opts.buildBodyFallback) {
     // Bild-Einbettung kann scheitern (z. B. zu groß / URL nicht abrufbar) —
     // dann ohne eingebettete Bilder erneut versuchen und sie nur auflisten.
-    const fallback: AkteDocData = {
-      ...data,
-      images: [],
-      otherFiles: [...data.images.map((i) => i.filename), ...data.otherFiles],
-    };
-    updateRes = await batchUpdate(connectors, documentId, [...baseRequests, ...buildAkteDocRequests(fallback)]);
+    updateRes = await batchUpdate(connectors, documentId, [...baseRequests, ...opts.buildBodyFallback()]);
   }
   if (!updateRes.ok) {
     const body = await updateRes.text();
@@ -576,7 +602,7 @@ export async function createAkteDoc(data: AkteDocData): Promise<AkteDocResult> {
     if (!headerContent) {
       throw new Error("Google Docs: Kopfzeilen-Inhalt fehlt im Dokument");
     }
-    const fillRequests = buildHeaderTableFillRequests(headerId, headerContent, data);
+    const fillRequests = buildHeaderTableFillRequests(headerId, headerContent, opts.header);
     if (fillRequests.length === 0) {
       throw new Error("Google Docs: Kopfzeilen-Tabellen wurden nicht wie erwartet angelegt");
     }
@@ -603,6 +629,119 @@ export async function createAkteDoc(data: AkteDocData): Promise<AkteDocResult> {
     documentId,
     url: `https://docs.google.com/document/d/${documentId}/edit`,
     exportUrl: `https://docs.google.com/document/d/${documentId}/export?format=docx`,
-    title,
+    title: opts.title,
   };
+}
+
+export async function createAkteDoc(data: AkteDocData): Promise<AkteDocResult> {
+  const fallback: AkteDocData = {
+    ...data,
+    images: [],
+    otherFiles: [...data.images.map((i) => i.filename), ...data.otherFiles],
+  };
+  return createFibDoc({
+    title: `Akte ${data.caseNumber} – ${data.title}`,
+    header: {
+      caseNumber: data.caseNumber,
+      leadAgent: data.leadAgent,
+      leadAgentDienstnummer: data.leadAgentDienstnummer,
+      createdAt: data.createdAt,
+      sealUrl: data.sealUrl,
+    },
+    buildBody: () => buildAkteDocRequests(data),
+    buildBodyFallback: data.images.length > 0 ? () => buildAkteDocRequests(fallback) : undefined,
+  });
+}
+
+// Textkörper des Razzia-Antrags nach der vom User vorgegebenen Vorlage:
+// Anschreiben an die Generalstaatsanwaltschaft (Zielname fett), gesammelte
+// Straftaten, Grußformel mit Stempel, danach pro angehängter Akte ein
+// Abschnitt "Akte N:" mit deren Straftaten und Fallnummer-Referenz.
+export function buildRazziaDocRequests(data: RazziaDocData): object[] {
+  const b = new DocBuilder();
+  const ziel = data.target.trim();
+
+  b.empty();
+  b.spans([{ t: "Antrag auf Durchsuchungsbefehl:\n", bold: true, size: 16 }, { t: ziel, bold: true, size: 16 }]);
+  b.empty();
+
+  b.text("Sehr geehrte Generalstaatsanwaltschaft,");
+  b.spans([
+    { t: "hiermit fordert das Federal Investigation Bureau einen Durchsuchungsbeschluss für " },
+    { t: ziel, bold: true },
+    { t: " an. Bei diesem Antrag geht es um die Erlaubnis, die Mitglieder sowie den Hauptsitz von " },
+    { t: ziel, bold: true },
+    { t: " zu durchsuchen und entsprechend bei Auffindung illegaler Gegenstände diese zu konfiszieren." },
+  ]);
+  b.text("Das Federal Investigation Bureau sieht eine Razzia aus folgenden Gründen als dringend notwendig an:");
+  b.text("Wiederholungsgefahr, Verdunklungsgefahr, Fluchtgefahr zwecks Warnung von Komplizen und Gefährdung der allgemeinen Sicherheit.");
+  b.spans([
+    { t: ziel, bold: true },
+    { t: " schreckt aktuell nicht davor zurück, gegen Gesetze des Staates San Andreas zu verstoßen. Im Wesentlichen wird vorgeworfen:" },
+  ]);
+  b.empty();
+
+  // Gesammelte Straftaten aller angehängten Akten (ohne Duplikate).
+  const alleStraftaten: string[] = [];
+  for (const c of data.cases) {
+    for (const s of c.straftaten ?? []) {
+      const t = s.trim();
+      if (t && !alleStraftaten.includes(t)) alleStraftaten.push(t);
+    }
+  }
+  if (alleStraftaten.length > 0) {
+    for (const s of alleStraftaten) b.spans(straftatSpans(s), { align: "START" });
+    b.empty();
+  }
+
+  b.text("Die einzelnen Fallakten entnehmen Sie bitte dem Anhang.");
+  b.text("Für Rückfragen stehen wir Ihnen gerne zur Verfügung.");
+  b.empty();
+  b.text("Mit freundlichen Grüßen");
+  b.empty();
+  if (data.stampUrl) {
+    b.image(data.stampUrl, { widthPt: 230, align: "END" });
+  } else {
+    b.text("Federal Investigation Bureau", { bold: true, size: 12, align: "CENTER" });
+    b.text(data.createdBy, { italic: true, size: 14, align: "CENTER", color: { r: 0.12, g: 0.23, b: 0.58 } });
+    const rangZeile = [
+      data.createdByRank?.trim() || null,
+      data.createdByDienstnummer ? `DN-${data.createdByDienstnummer}` : null,
+    ].filter(Boolean).join(" | ");
+    if (rangZeile) b.text(rangZeile, { align: "CENTER" });
+  }
+  b.empty();
+
+  // Anhang: pro Akte ein Abschnitt mit deren Straftaten + Fallnummer-Referenz.
+  data.cases.forEach((c, i) => {
+    b.separator();
+    b.empty();
+    b.spans([{ t: `Akte ${i + 1}: `, bold: true }, { t: c.title, bold: true }]);
+    b.spans([{ t: "Aktenzeichen: ", bold: true }, { t: c.caseNumber }], { align: "START" });
+    b.empty();
+    const straftaten = (c.straftaten ?? []).map((s) => s.trim()).filter(Boolean);
+    if (straftaten.length > 0) {
+      b.text("Vorgeworfene Straftaten:", { bold: true, align: "START" });
+      for (const s of straftaten) b.spans(straftatSpans(s), { align: "START" });
+    } else {
+      b.text("Keine Straftaten in der Akte hinterlegt.", { italic: true, align: "START" });
+    }
+    b.empty();
+  });
+
+  return b.requests;
+}
+
+export async function createRazziaDoc(data: RazziaDocData): Promise<AkteDocResult> {
+  return createFibDoc({
+    title: `Antrag auf Durchsuchungsbefehl: ${data.target.trim()}`,
+    header: {
+      caseNumber: data.antragNumber,
+      leadAgent: data.createdBy,
+      leadAgentDienstnummer: data.createdByDienstnummer,
+      createdAt: data.createdAt,
+      sealUrl: data.sealUrl,
+    },
+    buildBody: () => buildRazziaDocRequests(data),
+  });
 }

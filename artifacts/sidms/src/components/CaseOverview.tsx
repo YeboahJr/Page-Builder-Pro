@@ -49,11 +49,13 @@ interface CaseOverviewProps {
   title?: string;
   /** "Neuer Fall"-Button anzeigen und diesen Callback auslösen. */
   onNewCase?: () => void;
+  /** "Razzia Antrag"-Button (nur Direktion/Leitung) neben "Neuer Fall". */
+  onNewRazzia?: () => void;
   /** data-testid für den Leer-Zustand. */
   emptyTestId?: string;
 }
 
-export default function CaseOverview({ filterStatus, emptyText, title = "Fallübersicht", onNewCase, emptyTestId }: CaseOverviewProps) {
+export default function CaseOverview({ filterStatus, emptyText, title = "Fallübersicht", onNewCase, onNewRazzia, emptyTestId }: CaseOverviewProps) {
   const qc = useQueryClient();
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState("Übersicht");
@@ -342,6 +344,17 @@ export default function CaseOverview({ filterStatus, emptyText, title = "Fallüb
         <div className="bg-[#0d1526] border border-[#1e2d4a] rounded flex flex-col">
           <div className="flex items-center justify-between px-4 py-3 border-b border-[#1e2d4a]">
             <h2 className="text-sm font-semibold text-white">{title}</h2>
+            <div className="flex items-center gap-2">
+            {onNewRazzia && (
+              <button
+                onClick={onNewRazzia}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-[#7c1a1a]/60 hover:bg-[#7c1a1a] border border-[#b02a2a]/50 text-red-300 rounded transition-colors"
+                data-testid="button-new-razzia"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                Razzia Antrag
+              </button>
+            )}
             {onNewCase && (
               <button
                 onClick={onNewCase}
@@ -352,6 +365,7 @@ export default function CaseOverview({ filterStatus, emptyText, title = "Fallüb
                 Neuer Fall
               </button>
             )}
+            </div>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-xs">

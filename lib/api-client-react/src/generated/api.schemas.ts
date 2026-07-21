@@ -227,6 +227,31 @@ export interface ActivityEntry {
   caseNumber?: string | null;
 }
 
+export type RazziaAntragCasesItem = {
+  id: number;
+  caseNumber: string;
+  title: string;
+  status: string;
+};
+
+export interface RazziaAntrag {
+  id: number;
+  /** Gegen wen der Durchsuchungsbefehl beantragt wird */
+  target: string;
+  caseIds: number[];
+  /** @nullable */
+  createdBy?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  /** Kurzinfo der verknüpften Akten */
+  cases?: RazziaAntragCasesItem[];
+}
+
+export interface RazziaAntragInput {
+  target: string;
+  caseIds: number[];
+}
+
 export interface Case {
   id: number;
   caseNumber: string;
@@ -518,6 +543,13 @@ vehiclePlate?: string;
 missionNumber?: string;
 dateFrom?: string;
 dateTo?: string;
+};
+
+export type GetRazziaAntragDokument200 = {
+  documentId: string;
+  url: string;
+  exportUrl: string;
+  title: string;
 };
 
 export type GetReportsParams = {
