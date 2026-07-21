@@ -6,8 +6,8 @@ import multer from "multer";
 import path from "path";
 import fs from "fs";
 import { randomUUID } from "crypto";
-import { objectStorageClient } from "../lib/objectStorage";
-import { buildAktePdf } from "../lib/aktePdf";
+import { objectStorageClient, signObjectURL } from "../lib/objectStorage";
+import { createAkteDoc } from "../lib/akteDoc";
 import {
   parsePrivateObjectDir,
   evidenceObjectName,
@@ -715,8 +715,9 @@ router.patch("/:id/evidence/:filename/description", async (req, res) => {
   res.json({ filename, description: row.description });
 });
 
-// Renders the case file ("Akte") as a downloadable PDF modeled after the FIB
-// paper template. Access follows the same involvement rules as the case itself.
+// Erstellt die Fallakte als Google-Docs-Dokument (statt PDF) und liefert die
+// Links zum Öffnen und Herunterladen zurück. Zugriff folgt denselben
+// Beteiligungsregeln wie der Fall selbst.
 router.get("/:id/akte", async (req, res) => {
   const caseId = parseCaseIdParam(req.params.id);
   if (caseId === null) {
@@ -732,18 +733,11 @@ router.get("/:id/akte", async (req, res) => {
     .from(officersTable)
     .where(eq(officersTable.name, c.leadAgent));
 
-  const agents = await db
-    .select({ name: caseAgentsTable.name, role: caseAgentsTable.role })
-    .from(caseAgentsTable)
-    .where(eq(caseAgentsTable.caseId, caseId));
-
-  // Collect embeddable evidence images (PDFKit supports JPEG + PNG only).
-  // Caps keep the in-memory footprint bounded for cases with many/large files;
-  // anything beyond the caps is listed by name instead of embedded.
+  // Beweisbilder als kurzlebig signierte URLs sammeln, damit Google sie beim
+  // Einbetten in das Dokument abrufen kann. Nicht einbettbare Dateien werden
+  // nur namentlich aufgelistet.
   const MAX_EMBEDDED_IMAGES = 20;
-  const MAX_EMBEDDED_BYTES = 60 * 1024 * 1024;
-  let embeddedBytes = 0;
-  const images: Array<{ filename: string; description: string | null; data: Buffer }> = [];
+  const images: Array<{ filename: string; description: string | null; url: string }> = [];
   const otherFiles: string[] = [];
   const embeddable = new Set([".jpg", ".jpeg", ".png"]);
 
@@ -755,17 +749,14 @@ router.get("/:id/akte", async (req, res) => {
   for (const r of rows) {
     const filename = r.objectPath.slice(r.objectPath.lastIndexOf("/") + 1);
     const ext = path.extname(r.originalName || filename).toLowerCase();
-    const withinCaps = images.length < MAX_EMBEDDED_IMAGES
-      && embeddedBytes + r.size <= MAX_EMBEDDED_BYTES;
-    if (embeddable.has(ext) && privateObjectDir && withinCaps) {
+    if (embeddable.has(ext) && privateObjectDir && images.length < MAX_EMBEDDED_IMAGES) {
       try {
         const { bucketName, gcsPrefix } = parsePrivateObjectDir(privateObjectDir);
         const objectName = evidenceObjectName(gcsPrefix, caseId, filename);
-        const [buf] = await objectStorageClient.bucket(bucketName).file(objectName).download();
-        embeddedBytes += buf.length;
-        images.push({ filename: r.originalName || filename, description: r.description?.trim() || null, data: buf });
+        const url = await signObjectURL({ bucketName, objectName, method: "GET", ttlSec: 900 });
+        images.push({ filename: r.originalName || filename, description: r.description?.trim() || null, url });
       } catch (err) {
-        req.log.warn({ err, filename }, "Akte-PDF: Beweisbild konnte nicht geladen werden");
+        req.log.warn({ err, filename }, "Akte: Beweisbild-URL konnte nicht signiert werden");
         otherFiles.push(r.originalName || filename);
       }
     } else {
@@ -773,60 +764,41 @@ router.get("/:id/akte", async (req, res) => {
     }
   }
 
-  // Local fallback files (backward compatibility with pre-GCS uploads).
+  // Lokale Fallback-Dateien (Uploads aus der Zeit vor GCS): Google kann sie
+  // nicht abrufen, daher werden sie nur namentlich aufgeführt.
   const localDir = path.join(LOCAL_UPLOADS_DIR, `case-${caseId}`);
   if (fs.existsSync(localDir)) {
     for (const name of fs.readdirSync(localDir)) {
-      const ext = path.extname(name).toLowerCase();
-      if (embeddable.has(ext) && images.length < MAX_EMBEDDED_IMAGES && embeddedBytes < MAX_EMBEDDED_BYTES) {
-        try {
-          const filePath = path.join(localDir, name);
-          const size = fs.statSync(filePath).size;
-          if (embeddedBytes + size > MAX_EMBEDDED_BYTES) {
-            otherFiles.push(name);
-            continue;
-          }
-          const buf = fs.readFileSync(filePath);
-          embeddedBytes += buf.length;
-          images.push({ filename: name, description: null, data: buf });
-        } catch {
-          otherFiles.push(name);
-        }
-      } else {
-        otherFiles.push(name);
-      }
+      otherFiles.push(name);
     }
   }
 
-  const safeNumber = c.caseNumber.replace(/[^A-Za-z0-9._-]+/g, "_");
-  res.setHeader("Content-Type", "application/pdf");
-  res.setHeader("Content-Disposition", `attachment; filename="Akte_${safeNumber}.pdf"`);
-
-  const doc = buildAktePdf({
-    caseNumber: c.caseNumber,
-    title: c.title,
-    category: c.category,
-    priority: c.priority,
-    status: c.status,
-    leadAgent: c.leadAgent,
-    leadAgentDienstnummer: leadOfficer?.dienstnummer ?? null,
-    leadAgentRank: leadOfficer?.rank ?? null,
-    description: c.description,
-    details: c.details,
-    verhandlungsfuehrung: c.verhandlungsfuehrung,
-    geiseln: c.geiseln,
-    forderungen: c.forderungen,
-    straftaten: c.straftaten,
-    tatDatum: c.tatDatum,
-    tatWann: c.tatWann,
-    tatWo: c.tatWo,
-    tatWer: c.tatWer,
-    createdAt: c.createdAt,
-    agents,
-    images,
-    otherFiles,
-  });
-  doc.pipe(res);
+  try {
+    const result = await createAkteDoc({
+      caseNumber: c.caseNumber,
+      title: c.title,
+      leadAgent: c.leadAgent,
+      leadAgentDienstnummer: leadOfficer?.dienstnummer ?? null,
+      leadAgentRank: leadOfficer?.rank ?? null,
+      description: c.description,
+      details: c.details,
+      verhandlungsfuehrung: c.verhandlungsfuehrung,
+      geiseln: c.geiseln,
+      forderungen: c.forderungen,
+      straftaten: c.straftaten,
+      tatDatum: c.tatDatum,
+      tatWann: c.tatWann,
+      tatWo: c.tatWo,
+      tatWer: c.tatWer,
+      createdAt: c.createdAt,
+      images,
+      otherFiles,
+    });
+    res.json(result);
+  } catch (err) {
+    req.log.error({ err, caseId }, "Akte: Google-Docs-Dokument konnte nicht erstellt werden");
+    res.status(502).json({ error: "Akte konnte nicht als Google-Docs-Dokument erstellt werden. Bitte später erneut versuchen." });
+  }
 });
 
 router.get("/:id/evidence/files", async (req, res) => {

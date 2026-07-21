@@ -13,7 +13,7 @@ import {
   getGetCaseAgentsQueryKey,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Plus, X, Film, ImageIcon, ZoomIn, Trash2, Download } from "lucide-react";
+import { Plus, X, Film, ImageIcon, ZoomIn, Trash2, Download, ExternalLink } from "lucide-react";
 import EvidenceUpload, { type UploadFile, uploadEvidenceFiles, allDescriptionsFilled } from "@/components/EvidenceUpload";
 import DeleteConfirmModal from "@/components/DeleteConfirmModal";
 import { useAuth } from "@/contexts/AuthContext";
@@ -241,13 +241,17 @@ export default function CaseOverview({ filterStatus, emptyText, title = "Fallüb
     }
   };
 
-  const [downloading, setDownloading] = useState(false);
+  const [downloading, setDownloading] = useState<"download" | "open" | null>(null);
   const [downloadError, setDownloadError] = useState<string | null>(null);
 
-  const handleDownloadAkte = async () => {
+  // Erstellt die Akte als Google-Docs-Dokument und liefert die Links zurück.
+  // "download" lädt die Docs-Datei herunter, "open" öffnet sie direkt in Google Docs.
+  const handleAkte = async (mode: "download" | "open") => {
     if (!selectedId) return;
-    setDownloading(true);
+    setDownloading(mode);
     setDownloadError(null);
+    // Popup-Blocker umgehen: Fenster synchron öffnen, URL nach dem Erstellen setzen.
+    const win = mode === "open" ? window.open("", "_blank") : null;
     try {
       const res = await fetch(`/api/cases/${selectedId}/akte`, {
         headers: { Authorization: `Bearer ${sessionStorage.getItem("sidms_token") ?? ""}` },
@@ -261,23 +265,29 @@ export default function CaseOverview({ filterStatus, emptyText, title = "Fallüb
           // no JSON body; keep default message
         }
         setDownloadError(message);
+        win?.close();
         return;
       }
-      const blob = await res.blob();
-      const disposition = res.headers.get("Content-Disposition") ?? "";
-      const match = /filename="([^"]+)"/.exec(disposition);
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = match?.[1] ?? "Akte.pdf";
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
+      const doc: { url: string; exportUrl: string } = await res.json();
+      if (mode === "open") {
+        if (win) {
+          win.location.href = doc.url;
+        } else {
+          window.open(doc.url, "_blank");
+        }
+      } else {
+        // Der Export-Link liefert die Docs-Datei mit Download-Header aus.
+        const a = document.createElement("a");
+        a.href = doc.exportUrl;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+      }
     } catch {
-      setDownloadError("Netzwerkfehler – Akte konnte nicht heruntergeladen werden.");
+      setDownloadError("Netzwerkfehler – Akte konnte nicht erstellt werden.");
+      win?.close();
     } finally {
-      setDownloading(false);
+      setDownloading(null);
     }
   };
 
@@ -394,13 +404,22 @@ export default function CaseOverview({ filterStatus, emptyText, title = "Fallüb
               <div className="flex items-center gap-2 flex-shrink-0">
                 {downloadError && <span className="text-[10px] text-red-400">{downloadError}</span>}
                 <button
-                  onClick={handleDownloadAkte}
-                  disabled={downloading}
+                  onClick={() => handleAkte("download")}
+                  disabled={downloading !== null}
                   className="flex items-center gap-1.5 px-2.5 py-1 text-xs bg-[#1a3d7c]/60 hover:bg-[#1a3d7c] border border-[#2a5bb0]/50 text-blue-300 rounded transition-colors disabled:opacity-50"
                   data-testid="button-download-akte"
                 >
                   <Download className="w-3 h-3" />
-                  {downloading ? "Wird erstellt..." : "Akte herunterladen"}
+                  {downloading === "download" ? "Wird erstellt..." : "Akte herunterladen"}
+                </button>
+                <button
+                  onClick={() => handleAkte("open")}
+                  disabled={downloading !== null}
+                  className="flex items-center gap-1.5 px-2.5 py-1 text-xs bg-[#1a3d7c]/60 hover:bg-[#1a3d7c] border border-[#2a5bb0]/50 text-blue-300 rounded transition-colors disabled:opacity-50"
+                  data-testid="button-open-akte"
+                >
+                  <ExternalLink className="w-3 h-3" />
+                  {downloading === "open" ? "Wird erstellt..." : "Öffnen"}
                 </button>
               </div>
             </div>

@@ -1,4 +1,5 @@
 - [SIDMS Architecture](sidms-architecture.md) — Key decisions: API server builds before starting (pnpm run build && start), not hot-reloaded; must restart workflow to pick up route changes.
+- [SIDMS Akte als Google Doc](sidms-akte-pdf.md) — Akte ist seit Juli 2026 ein Google Doc (kein PDF); braucht Connectors google-docs UND google-drive; Link-Freigabe „anyone" gewollt.
 - [SIDMS Auth](sidms-auth.md) — seeded officers use plain dienstnummers (e.g. 08/34/39), not D-1xxx; self-registration → freigegeben gate (403 login) + leadership approve/reject only on pending.
 - [SIDMS Rollen](sidms-roles.md) — Rechte hängen an unsichtbarer officers.role (Admin/Direktion/Leitung = alles, Agent = nur allowedPages); Rang rein kosmetisch; Admin-User nur in Dev-DB geseedet.
 - [SIDMS Seitenrechte](sidms-page-rights.md) — allowedPages null = KEINE Seiten (seit Rollensystem); Keys in api-server und sidms bewusst dupliziert; Daten-APIs via requirePages gegated; Voll-Rollen sehen immer alles.
